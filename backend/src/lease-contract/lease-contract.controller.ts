@@ -1,0 +1,145 @@
+import {
+  Controller, Get, Post, Patch, Delete,
+  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags, ApiOperation, ApiParam,
+  ApiQuery, ApiBearerAuth,
+} from '@nestjs/swagger';
+import { LeaseContractService } from './lease-contract.service';
+import { CreateLeaseContractDto } from './dto/create-lease-contract.dto';
+import { UpdateLeaseContractDto } from './dto/update-lease-contract.dto';
+import { CreateContractItemDto } from './dto/create-contract-item.dto';
+import { CreateDepositDto, RefundDepositDto } from './dto/create-deposit.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@ApiTags('Lease Contracts')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('lease-contracts')
+export class LeaseContractController {
+  constructor(private readonly leaseContractService: LeaseContractService) {}
+
+  // ─── CRUD ─────────────────────────────────────────────────────
+
+  @Post()
+  @ApiOperation({ summary: 'Créer un contrat de bail' })
+  create(@Body() dto: CreateLeaseContractDto) {
+    return this.leaseContractService.create(dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Lister tous les contrats' })
+  @ApiQuery({ name: 'tenantId', required: false })
+  @ApiQuery({ name: 'status',   required: false })
+  findAll(
+    @Query('tenantId') tenantId?: string,
+    @Query('status')   status?: string,
+  ) {
+    return this.leaseContractService.findAll(tenantId, status);
+  }
+
+  @Get('expiring')
+  @ApiOperation({ summary: 'Contrats expirant bientôt' })
+  @ApiQuery({ name: 'daysAhead', required: false, example: 30 })
+  getExpiringContracts(@Query('daysAhead') daysAhead?: string) {
+    return this.leaseContractService.getExpiringContracts(
+      daysAhead ? Number(daysAhead) : 30,
+    );
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Récupérer un contrat' })
+  @ApiParam({ name: 'id' })
+  findOne(@Param('id') id: string) {
+    return this.leaseContractService.findOne(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Mettre à jour un contrat' })
+  @ApiParam({ name: 'id' })
+  update(@Param('id') id: string, @Body() dto: UpdateLeaseContractDto) {
+    return this.leaseContractService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Supprimer un contrat' })
+  @ApiParam({ name: 'id' })
+  remove(@Param('id') id: string) {
+    return this.leaseContractService.remove(id);
+  }
+
+  // ─── ACTIONS ──────────────────────────────────────────────────
+
+  @Patch(':id/sign')
+  @ApiOperation({ summary: 'Signer un contrat (DRAFT → ACTIVE)' })
+  @ApiParam({ name: 'id' })
+  sign(@Param('id') id: string) {
+    return this.leaseContractService.sign(id);
+  }
+
+  @Patch(':id/terminate')
+  @ApiOperation({ summary: 'Résilier un contrat (ACTIVE → TERMINATED)' })
+  @ApiParam({ name: 'id' })
+  terminate(@Param('id') id: string) {
+    return this.leaseContractService.terminate(id);
+  }
+
+  @Patch(':id/renew')
+  @ApiOperation({ summary: 'Renouveler un contrat' })
+  @ApiParam({ name: 'id' })
+  @ApiQuery({ name: 'newEndDate', required: true, example: '2027-12-31' })
+  renew(
+    @Param('id') id: string,
+    @Query('newEndDate') newEndDate: string,
+  ) {
+    return this.leaseContractService.renew(id, newEndDate);
+  }
+
+  // ─── CONTRACT ITEMS ───────────────────────────────────────────
+
+  @Post(':id/items')
+  @ApiOperation({ summary: 'Ajouter un élément au contrat' })
+  @ApiParam({ name: 'id' })
+  addItem(
+    @Param('id') id: string,
+    @Body() dto: CreateContractItemDto,
+  ) {
+    return this.leaseContractService.addItem(id, dto);
+  }
+
+  @Delete(':id/items/:itemId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Supprimer un élément du contrat' })
+  @ApiParam({ name: 'id' })
+  @ApiParam({ name: 'itemId' })
+  removeItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.leaseContractService.removeItem(id, itemId);
+  }
+
+  // ─── DEPOSIT ──────────────────────────────────────────────────
+
+  @Post(':id/deposit')
+  @ApiOperation({ summary: 'Enregistrer le dépôt de garantie' })
+  @ApiParam({ name: 'id' })
+  createDeposit(
+    @Param('id') id: string,
+    @Body() dto: CreateDepositDto,
+  ) {
+    return this.leaseContractService.createDeposit(id, dto);
+  }
+
+  @Patch(':id/deposit/refund')
+  @ApiOperation({ summary: 'Rembourser le dépôt de garantie' })
+  @ApiParam({ name: 'id' })
+  refundDeposit(
+    @Param('id') id: string,
+    @Body() dto: RefundDepositDto,
+  ) {
+    return this.leaseContractService.refundDeposit(id, dto);
+  }
+}

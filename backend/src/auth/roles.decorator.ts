@@ -1,4 +1,5 @@
-// src/auth/roles.decorator.ts
 import { SetMetadata } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 
-export const Roles = (...roles: number[]) => SetMetadata('roles', roles);
+// ✅ Maintenant on passe des strings enum au lieu d'integers
+export const Roles = (...roles: UserRole[]) => SetMetadata('roles', roles);

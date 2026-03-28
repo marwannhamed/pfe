@@ -10,10 +10,12 @@ import {
   ResetPasswordReqDto,
 } from './dto/login.dto';
 import { ResponseDto } from '../utils/response.dto';
-import { UserDTO } from '../user/dto/create-user.dto';
+import { CreateUserDto } from '../user/dto/create-user.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthUserJWT } from '../utils/auth-user-jwt.decorator';
 import { AuthResponseDto } from './dto/auth-resp.dto';
+import { RegisterTenantDto } from './dto/register-tenant.dto';
+
 
 @Controller('auth')
 @ApiTags('auth')
@@ -36,9 +38,15 @@ export class AuthController {
     type: AuthResponseDto,
     isArray: false,
   })
-  register(@Body() user: UserDTO) {
+  register(@Body() user: CreateUserDto) {
     return this.authService.register(user);
   }
+
+  @Post('register-tenant')
+  @ApiOkResponse({ type: AuthResponseDto })
+  registerTenant(@Body() dto: RegisterTenantDto) {
+  return this.authService.registerTenant(dto);
+}
 
   @Post('refresh-token')
   @ApiBearerAuth()

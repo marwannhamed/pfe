@@ -1,93 +1,73 @@
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://www.linkedin.com/in/hassenamri005/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-yellow)](https://github.com/your-profile/your-repo/releases)
+# React + TypeScript + Vite
 
-# React TS Boilerplate 🚀
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-A React TypeScript boilerplate integrating **Authentication**, **Docker**, and **Docker Compose** for seamless development and production environments.
+Currently, two official plugins are available:
 
----
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Features
+## React Compiler
 
-This project combines the following technologies:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-- **React TS v18**: Modern React with TypeScript for type-safe development.
-- **Routing Handling**: Efficient routing with role-based authentication.
-  - **Role-Based Auth Routing**: Separate routes for **User** and **Admin** roles.
-- **Persistent Redux Store**: State management with Redux for a consistent user experience.
-- **Ant Design (Antd)**: UI library with a custom theme for a polished look.
-- **Prebuilt Pages**:
-  - Landing Page
-  - Login Page
-  - Admin Dashboard
-  - User Dashboard
-- **Docker Integration**:
-  - `Dockerfile.dev`: For a fast and easy development environment.
-  - `Dockerfile.prod`: For an optimized production environment.
-- **Docker Compose**:
-  - `docker-compose.yaml`: Simplifies setup for both development and production environments. Choose between `dev` or `prod` profiles.
+## Expanding the ESLint configuration
 
----
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Existing Routes
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- `/`: Landing page.
-- `/login`: Login page for authentication.
-- `/user/dashboard`: Dashboard for authenticated users with the `user` role.
-- `/admin/dashboard`: Dashboard for authenticated admins with the `admin` role.
-- `*`: Fallback route for unhandled or incorrect paths.
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
----
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-## How to Create a New Route
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-1. **Create Your Page**:
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-   - Add your new page component in the `src/pages` directory.
-
-2. **Update Routing**:
-
-   - Open `App.tsx`.
-   - Add your new route to either:
-     - **Public Routes**: Accessible to all users.
-     - **Private Routes**: Protected by role-based authentication.
-
-3. **Role Guard**:
-   - Ensure the route is protected by the appropriate role guard logic ( _inside admin or user routes_ ).
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Docker and Docker Compose installed.
-- Node.js and npm/yarn installed (for local development).
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   https://github.com/Hassenamri005/nest-react-boilerplate.git
-
-   cd your-repo
-   ```
-
-2. Start the development environment:
-
-   ```bash
-   docker-compose --profile dev up --build
-   ```
-
-3. For production:
-   ```bash
-   docker-compose --profile prod up --build
-   ```
-
----
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```

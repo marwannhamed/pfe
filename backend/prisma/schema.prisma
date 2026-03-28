@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
@@ -11,91 +8,633 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model user_role {
-  id       Int    @id @default(autoincrement())
-  roleName String
-  users    user[]
+model Tenant {
+  id                String          @id @default(uuid())
+  name              String
+  slug              String          @unique
+  contact_email     String
+  status            TenantStatus    @default(TRIAL)
+  subscription_plan String          @default("basic")
+  max_users         Int             @default(10)
+  max_spaces        Int             @default(5)
+  settings          Json?           @default("{}")
+  created_at        DateTime        @default(now())
+  auditLogs         AuditLog[]
+  bookings          Booking[]
+  invoices          Invoice[]
+  leaseContracts    LeaseContract[]
+  payments          Payment[]
+  sites             Site[]
+  users             User[]
+
+  @@map("tenants")
 }
 
-model company_type {
-  id       Int    @id @default(autoincrement())
-  typeName String
-  users    user[]
+model User {
+  id               String              @id @default(uuid())
+  tenant_id        String
+  role             UserRole            @default(EMPLOYEE)
+  email            String              @unique
+  password         String
+  refreshToken     String?             @db.VarChar(255)
+  first_name       String
+  last_name        String
+  status           UserStatus          @default(PENDING)
+  last_login_at    DateTime?
+  preferences      Json?               @default("{}")
+  created_at       DateTime            @default(now())
+  auditLogs        AuditLog[]
+  approvedBookings Booking[]           @relation("BookingApprover")
+  createdBookings  Booking[]           @relation("BookingCreator")
+  createdContracts LeaseContract[]
+  assignedTickets  MaintenanceTicket[] @relation("TicketAssignee")
+  createdTickets   MaintenanceTicket[] @relation("TicketCreator")
+  notifications    Notification[]
+  recordedPayments Payment[]
+  reports          Report[]
+  managedSites     Site[]              @relation("SiteManager")
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@map("users")
 }
 
-model user_pack {
-  id       Int    @id @default(autoincrement())
-  packName String
-  users    user[]
+model Site {
+  id              String          @id @default(uuid())
+  tenant_id       String
+  name            String
+  code            String          @unique
+  city            String
+  country         String
+  timezone        String          @default("UTC")
+  currency        String          @default("USD")
+  status          SiteStatus      @default(ACTIVE)
+  manager_user_id String?
+  opening_hours   Json?
+  created_at      DateTime        @default(now())
+  addOns          AddOnService[]
+  buildings       Building[]
+  pricePlans      PricePlan[]
+  promos          PromotionCode[]
+  manager         User?           @relation("SiteManager", fields: [manager_user_id], references: [id])
+  tenant          Tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@map("sites")
 }
 
-model car_type {
-  id       Int    @id @default(autoincrement())
-  typeName String
-  user     user[]
+model Building {
+  id             String   @id @default(uuid())
+  site_id        String
+  name           String
+  code           String
+  floors_count   Int      @default(1)
+  total_area_sqm Decimal  @db.Decimal(10, 2)
+  year_built     Int?
+  status         String   @default("ACTIVE")
+  created_at     DateTime @default(now())
+  site           Site     @relation(fields: [site_id], references: [id], onDelete: Cascade)
+  floors         Floor[]
+
+  @@map("buildings")
 }
 
-model user_dispo {
-  id       Int     @id @default(autoincrement())
-  goingTo  String?
-  startDay String?
-  endDay   String?
-  startAt  String?
-  endAt    String?
-  comment  String?
-  user     user?   @relation(fields: [userId], references: [id])
-  userId   Int?    @unique
+model Floor {
+  id             String   @id @default(uuid())
+  building_id    String
+  floor_number   Int
+  name           String
+  area_sqm       Decimal  @db.Decimal(10, 2)
+  floor_plan_url String?
+  status         String   @default("ACTIVE")
+  building       Building @relation(fields: [building_id], references: [id], onDelete: Cascade)
+  spaces         Space[]
+
+  @@map("floors")
 }
 
-model user {
-  id                 Int     @id @default(autoincrement())
-  firstName          String? @db.VarChar(20)
-  lastName           String? @db.VarChar(20)
-  phone              String? @db.VarChar(20)
-  email              String  @unique @db.VarChar(100)
-  companyName        String? @db.VarChar(50)
-  city               String? @db.VarChar(20)
-  country            String? @db.VarChar(20)
-  address            String? @db.VarChar(50)
-  websiteUrl         String? @db.VarChar(50)
-  commercialRegister String? @db.VarChar(20)
-  patent             String? @db.VarChar(20)
-  verified           Boolean @default(false)
-  password           String  @db.VarChar(255)
-  resetPasswordToken String? @db.VarChar(255)
-  carNumber          String?
-  carWidth           Float?
-  carHeight          Float?
-  carWeight          Float?
+model Space {
+  id                 String              @id @default(uuid())
+  floor_id           String
+  name               String
+  code               String              @unique
+  type               SpaceType
+  capacity           Int
+  area_sqm           Decimal             @db.Decimal(10, 2)
+  status             SpaceStatus         @default(AVAILABLE)
+  price_per_hour     Decimal?            @db.Decimal(10, 2)
+  price_per_day      Decimal?            @db.Decimal(10, 2)
+  price_per_month    Decimal?            @db.Decimal(10, 2)
+  currency           String              @default("USD")
+  requires_approval  Boolean             @default(false)
+  created_at         DateTime            @default(now())
+  bookings           Booking[]
+  contractItems      ContractItem[]
+  maintenanceTickets MaintenanceTicket[]
+  features           SpaceFeature[]
+  floor              Floor               @relation(fields: [floor_id], references: [id], onDelete: Cascade)
 
-  // company type relation
-  carType       car_type?     @relation(fields: [carTypeId], references: [id])
-  carTypeId     Int?
-  // company type relation
-  companyType   company_type? @relation(fields: [companyTypeId], references: [id])
-  companyTypeId Int?
-  // user pack
-  userPack      user_pack?    @relation(fields: [userPackId], references: [id])
-  userPackId    Int?
-  // role relation
-  role          user_role?    @relation(fields: [roleId], references: [id])
-  roleId        Int?          @default(3)
-
-  // One-to-one
-  disponibility user_dispo?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("spaces")
 }
 
-model article {
-  id          Int      @id @default(autoincrement())
-  title       String?  @unique
-  description String?
-  category    String?
-  body        String
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model SpaceFeature {
+  id           String  @id @default(uuid())
+  space_id     String
+  feature_type String
+  feature_name String
+  quantity     Int     @default(1)
+  is_available Boolean @default(true)
+  space        Space   @relation(fields: [space_id], references: [id], onDelete: Cascade)
+
+  @@map("space_features")
+}
+
+model PricePlan {
+  id            String       @id @default(uuid())
+  site_id       String
+  name          String
+  space_type    SpaceType
+  billing_cycle BillingCycle
+  price         Decimal      @db.Decimal(10, 2)
+  currency      String       @default("USD")
+  tax_rate      Decimal      @default(0) @db.Decimal(5, 2)
+  is_active     Boolean      @default(true)
+  valid_from    DateTime
+  valid_to      DateTime?
+  created_at    DateTime     @default(now())
+  bookings      Booking[]
+  site          Site         @relation(fields: [site_id], references: [id], onDelete: Cascade)
+
+  @@map("price_plans")
+}
+
+model AddOnService {
+  id            String         @id @default(uuid())
+  site_id       String
+  name          String
+  category      String
+  price         Decimal        @db.Decimal(10, 2)
+  currency      String         @default("USD")
+  billing_cycle BillingCycle
+  is_recurring  Boolean        @default(false)
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now())
+  site          Site           @relation(fields: [site_id], references: [id], onDelete: Cascade)
+  bookingAddOns BookingAddOn[]
+  contractItems ContractItem[]
+
+  @@map("addon_services")
+}
+
+model PromotionCode {
+  id             String       @id @default(uuid())
+  site_id        String?
+  code           String       @unique
+  discount_type  DiscountType
+  discount_value Decimal      @db.Decimal(10, 2)
+  max_uses       Int?
+  uses_count     Int          @default(0)
+  valid_from     DateTime
+  valid_to       DateTime?
+  is_active      Boolean      @default(true)
+  bookings       Booking[]
+  invoices       Invoice[]
+  site           Site?        @relation(fields: [site_id], references: [id])
+
+  @@map("promotion_codes")
+}
+
+model Booking {
+  id                  String         @id @default(uuid())
+  tenant_id           String
+  space_id            String
+  created_by_user_id  String
+  approved_by_user_id String?
+  booking_number      String         @unique
+  start_datetime      DateTime
+  end_datetime        DateTime
+  status              BookingStatus  @default(DRAFT)
+  price_plan_id       String?
+  promotion_code_id   String?
+  total_price         Decimal        @db.Decimal(10, 2)
+  currency            String         @default("USD")
+  attendee_count      Int            @default(1)
+  checked_in_at       DateTime?
+  checked_out_at      DateTime?
+  parent_booking_id   String?
+  created_at          DateTime       @default(now())
+  addOns              BookingAddOn[]
+  approvedBy          User?          @relation("BookingApprover", fields: [approved_by_user_id], references: [id])
+  createdBy           User           @relation("BookingCreator", fields: [created_by_user_id], references: [id])
+  parentBooking       Booking?       @relation("BookingChildren", fields: [parent_booking_id], references: [id])
+  childBookings       Booking[]      @relation("BookingChildren")
+  pricePlan           PricePlan?     @relation(fields: [price_plan_id], references: [id])
+  promotionCode       PromotionCode? @relation(fields: [promotion_code_id], references: [id])
+  space               Space          @relation(fields: [space_id], references: [id])
+  tenant              Tenant         @relation(fields: [tenant_id], references: [id])
+
+  @@map("bookings")
+}
+
+model BookingAddOn {
+  id               String       @id @default(uuid())
+  booking_id       String
+  addon_service_id String
+  quantity         Int          @default(1)
+  unit_price       Decimal      @db.Decimal(10, 2)
+  total_price      Decimal      @db.Decimal(10, 2)
+  addonService     AddOnService @relation(fields: [addon_service_id], references: [id])
+  booking          Booking      @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+
+  @@map("booking_addons")
+}
+
+model LeaseContract {
+  id                 String         @id @default(uuid())
+  tenant_id          String
+  created_by_user_id String
+  contract_number    String         @unique
+  status             ContractStatus @default(DRAFT)
+  start_date         DateTime
+  end_date           DateTime
+  monthly_rent       Decimal        @db.Decimal(10, 2)
+  deposit_amount     Decimal        @db.Decimal(10, 2)
+  currency           String         @default("USD")
+  payment_due_day    Int            @default(1)
+  auto_renew         Boolean        @default(false)
+  signed_at          DateTime?
+  created_at         DateTime       @default(now())
+  items              ContractItem[]
+  deposit            Deposit?
+  invoices           Invoice[]
+  createdBy          User           @relation(fields: [created_by_user_id], references: [id])
+  tenant             Tenant         @relation(fields: [tenant_id], references: [id])
+
+  @@map("lease_contracts")
+}
+
+model ContractItem {
+  id               String           @id @default(uuid())
+  contract_id      String
+  item_type        ContractItemType
+  space_id         String?
+  addon_service_id String?
+  description      String?
+  quantity         Int              @default(1)
+  unit_price       Decimal          @db.Decimal(10, 2)
+  currency         String           @default("USD")
+  addonService     AddOnService?    @relation(fields: [addon_service_id], references: [id])
+  contract         LeaseContract    @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+  space            Space?           @relation(fields: [space_id], references: [id])
+
+  @@map("contract_items")
+}
+
+model Deposit {
+  id              String              @id @default(uuid())
+  contract_id     String              @unique
+  amount          Decimal             @db.Decimal(10, 2)
+  currency        String              @default("USD")
+  paid_at         DateTime?
+  refund_status   DepositRefundStatus @default(PENDING)
+  refunded_amount Decimal?            @db.Decimal(10, 2)
+  refunded_at     DateTime?
+  notes           String?
+  contract        LeaseContract       @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+
+  @@map("deposits")
+}
+
+model Invoice {
+  id                String         @id @default(uuid())
+  tenant_id         String
+  contract_id       String?
+  promotion_code_id String?
+  invoice_number    String         @unique
+  type              InvoiceType
+  status            InvoiceStatus  @default(DRAFT)
+  issue_date        DateTime
+  due_date          DateTime
+  subtotal          Decimal        @db.Decimal(10, 2)
+  tax_amount        Decimal        @default(0) @db.Decimal(10, 2)
+  total_amount      Decimal        @db.Decimal(10, 2)
+  currency          String         @default("USD")
+  notes             String?
+  created_at        DateTime       @default(now())
+  lines             InvoiceLine[]
+  contract          LeaseContract? @relation(fields: [contract_id], references: [id])
+  promotionCode     PromotionCode? @relation(fields: [promotion_code_id], references: [id])
+  tenant            Tenant         @relation(fields: [tenant_id], references: [id])
+  payments          Payment[]
+
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id          String  @id @default(uuid())
+  invoice_id  String
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unit_price  Decimal @db.Decimal(10, 2)
+  tax_rate    Decimal @default(0) @db.Decimal(5, 2)
+  line_total  Decimal @db.Decimal(10, 2)
+  invoice     Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("invoice_lines")
+}
+
+model Payment {
+  id                  String        @id @default(uuid())
+  tenant_id           String
+  invoice_id          String
+  recorded_by_user_id String
+  payment_number      String        @unique
+  payment_method      PaymentMethod
+  amount              Decimal       @db.Decimal(10, 2)
+  currency            String        @default("USD")
+  payment_date        DateTime
+  status              PaymentStatus @default(PENDING)
+  reference_number    String?
+  created_at          DateTime      @default(now())
+  invoice             Invoice       @relation(fields: [invoice_id], references: [id])
+  recordedBy          User          @relation(fields: [recorded_by_user_id], references: [id])
+  tenant              Tenant        @relation(fields: [tenant_id], references: [id])
+
+  @@map("payments")
+}
+
+model MaintenanceTicket {
+  id                  String         @id @default(uuid())
+  space_id            String
+  created_by_user_id  String
+  assigned_to_user_id String?
+  ticket_number       String         @unique
+  title               String
+  category            TicketCategory
+  priority            TicketPriority @default(NORMAL)
+  status              TicketStatus   @default(OPEN)
+  reported_at         DateTime       @default(now())
+  resolved_at         DateTime?
+  estimated_hours     Decimal?       @db.Decimal(6, 2)
+  cost                Decimal?       @db.Decimal(10, 2)
+  created_at          DateTime       @default(now())
+  assignedTo          User?          @relation("TicketAssignee", fields: [assigned_to_user_id], references: [id])
+  createdBy           User           @relation("TicketCreator", fields: [created_by_user_id], references: [id])
+  space               Space          @relation(fields: [space_id], references: [id])
+
+  @@map("maintenance_tickets")
+}
+
+model Notification {
+  id         String               @id @default(uuid())
+  user_id    String
+  type       NotificationType
+  channel    NotificationChannel
+  title      String
+  message    String
+  is_read    Boolean              @default(false)
+  read_at    DateTime?
+  priority   NotificationPriority @default(NORMAL)
+  created_at DateTime             @default(now())
+  user       User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Report {
+  id                   String       @id @default(uuid())
+  generated_by_user_id String
+  report_type          ReportType
+  title                String
+  parameters           Json?
+  format               ReportFormat
+  file_url             String?
+  generated_at         DateTime     @default(now())
+  generatedBy          User         @relation(fields: [generated_by_user_id], references: [id])
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id            String        @id @default(uuid())
+  tenant_id     String
+  user_id       String?
+  action        AuditAction
+  resource_type String
+  resource_id   String
+  old_values    Json?
+  new_values    Json?
+  ip_address    String?
+  severity      AuditSeverity @default(INFO)
+  created_at    DateTime      @default(now())
+  tenant        Tenant        @relation(fields: [tenant_id], references: [id])
+  user          User?         @relation(fields: [user_id], references: [id])
+
+  @@map("audit_logs")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+  TRIAL
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  SITE_MANAGER
+  FINANCE
+  EMPLOYEE
+  MAINTENANCE
+  GUEST
+}
+
+enum SpaceType {
+  DEDICATED_OFFICE
+  FLEXIBLE_DESK
+  HOT_DESK
+  MEETING_ROOM
+  CONFERENCE_ROOM
+  PHONE_BOOTH
+  EVENT_SPACE
+}
+
+enum SpaceStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum SiteStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum BillingCycle {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum BookingStatus {
+  DRAFT
+  PENDING_APPROVAL
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  RENEWED
+}
+
+enum ContractItemType {
+  SPACE
+  ADDON_SERVICE
+}
+
+enum DepositRefundStatus {
+  PENDING
+  PARTIALLY_REFUNDED
+  FULLY_REFUNDED
+  FORFEITED
+}
+
+enum InvoiceType {
+  MONTHLY_RENT
+  USAGE_BASED
+  DEPOSIT
+  ADDON_SERVICE
+  LATE_FEE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  BANK_TRANSFER
+  CREDIT_CARD
+  ONLINE_PAYMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  EMERGENCY
+}
+
+enum TicketCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  CLEANING
+  FURNITURE
+  IT_EQUIPMENT
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  BOOKING_REMINDER
+  INVOICE_ISSUED
+  INVOICE_OVERDUE
+  PAYMENT_RECEIVED
+  TICKET_UPDATED
+  CONTRACT_EXPIRING
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ReportType {
+  OCCUPANCY_RATE
+  REVENUE_BY_SITE
+  BOOKING_ANALYTICS
+  PAYMENT_STATUS
+  MAINTENANCE_SUMMARY
+  FINANCIAL_SUMMARY
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+  EXCEL
+  JSON
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
 }

@@ -1,88 +1,46 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail, IsEnum, IsNotEmpty, IsOptional,
+  IsString, IsUUID, MinLength,
+} from 'class-validator';
+import { UserRole } from '@prisma/client';
+import { UserStatus } from '@prisma/client';
 
-export class UserDispoDTO {
-  @ApiProperty()
-  goingTo?: string;
+export class CreateUserDto {
+  @ApiProperty({ example: 'uuid-du-tenant' })
+  @IsUUID()
+  tenant_id: string;
 
-  @ApiProperty()
-  startDay?: string;
-
-  @ApiProperty()
-  endDay?: string;
-
-  @ApiProperty()
-  startAt?: string;
-
-  @ApiProperty()
-  endAt?: string;
-
-  @ApiProperty()
-  comment?: string;
-}
-export class UserDTO {
-  @ApiProperty()
-  firstName?: string | null;
-
-  @ApiProperty()
-  lastName?: string | null;
-
-  @ApiProperty()
-  phone?: string | null;
-
-  @ApiProperty()
+  @ApiProperty({ example: 'marwan@acme.com' })
+  @IsEmail()
   email: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'MotDePasse123!', minLength: 8 })
+  @IsString()
+  @MinLength(8)
   password: string;
 
-  @ApiProperty({ type: () => Number, required: false })
-  roleId?: number; // Adjust according to Prisma schema
+  @ApiProperty({ example: 'Marwan' })
+  @IsString()
+  @IsNotEmpty()
+  first_name: string;
 
-  @ApiProperty({ required: false })
-  companyName?: string | null;
+  @ApiProperty({ example: 'Amri' })
+  @IsString()
+  @IsNotEmpty()
+  last_name: string;
 
-  @ApiProperty({ required: false })
-  city?: string | null;
+  @ApiPropertyOptional({ enum: UserRole, default: UserRole.EMPLOYEE })
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole;
 
-  @ApiProperty({ required: false })
-  country?: string | null;
+  @ApiPropertyOptional({ enum: UserStatus, default: UserStatus.PENDING })
+  @IsEnum(UserStatus)
+  @IsOptional()
+  status?: UserStatus;
 
-  @ApiProperty({ required: false })
-  address?: string | null;
-
-  @ApiProperty({ required: false })
-  websiteUrl?: string | null;
-
-  @ApiProperty({ required: false })
-  commercialRegister?: string | null;
-
-  @ApiProperty({ required: false })
-  patent?: string | null;
-
-  @ApiProperty({ type: () => Number, required: false })
-  companyTypeId?: number | null;
-
-  @ApiProperty({ type: () => Number, required: false })
-  userPackId?: number | null;
-
-  @ApiProperty()
-  carNumber?: string;
-
-  @ApiProperty()
-  carTypeId?: number;
-
-  @ApiProperty()
-  carWidth?: number;
-
-  @ApiProperty()
-  carHeight?: number;
-
-  @ApiProperty()
-  carWeight?: number;
-
-  @ApiProperty({ type: () => UserDispoDTO, isArray: false })
-  disponibility?: UserDispoDTO | undefined;
-
-  @ApiProperty()
-  verified?: boolean;
+  @ApiPropertyOptional({ example: { notifications: true } })
+  @IsOptional()
+  preferences?: Record<string, any>;
 }

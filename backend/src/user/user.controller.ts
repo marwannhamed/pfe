@@ -1,90 +1,49 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
+  Controller, Get, Post, Patch, Delete,
+  Body, Param, Query, HttpCode, HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { UserDTO } from './dto/create-user.dto';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { ResponseDto } from '../utils/response.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
-@Controller('user')
-@ApiTags('user')
+@ApiTags('Users')
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
-  create(@Body() createUserDto: UserDTO) {
-    return this.userService.create(createUserDto);
+  @ApiOperation({ summary: 'Créer un utilisateur' })
+  create(@Body() dto: CreateUserDto) {
+    return this.userService.create(dto);
   }
 
   @Get()
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
-  findAll() {
-    return this.userService.findAll();
+  @ApiOperation({ summary: 'Lister les utilisateurs' })
+  @ApiQuery({ name: 'tenantId', required: false })
+  findAll(@Query('tenantId') tenantId?: string) {
+    return this.userService.findAll(tenantId);
   }
 
   @Get(':id')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  // @ApiBearerAuth()
-  // @UseGuards(JwtAuthGuard, RoleGuard)
-  // @Roles(3)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
+  @ApiOperation({ summary: 'Récupérer un utilisateur' })
+  @ApiParam({ name: 'id' })
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
-  update(@Param('id') id: string, @Body() userDto: UserDTO) {
-    return this.userService.updateUser(+id, userDto);
-  }
-
-  @Patch('verfieUser/:id')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
-  verifieUser(@Param('id') id: string) {
-    return this.userService.verifie(+id);
+  @ApiOperation({ summary: 'Mettre à jour un utilisateur' })
+  @ApiParam({ name: 'id' })
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({
-    description: 'users response',
-    type: ResponseDto,
-  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Supprimer un utilisateur' })
+  @ApiParam({ name: 'id' })
   remove(@Param('id') id: string) {
-    return this.userService.removeUser(+id);
+    return this.userService.remove(id);
   }
 }

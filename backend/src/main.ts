@@ -1,22 +1,36 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-const fs = require('fs');
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
+
+  // ── CORS ────────────────────────────────────────────────────────────────────
   app.enableCors({
     origin: [
-      `${process.env.FRONTEND_URL}`, // Allow requests from your frontend URL
-      'http://localhost:3000', // Allow requests from localhost:3000,
-      '*',
+      'http://localhost:5173',   // Vite dev server
+      'http://localhost:3000',   // in case you run frontend on 3000
+      'http://localhost:4173',   // Vite preview
     ],
-    methods: ['*'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
   });
+
+  // ── Global validation pipe ───────────────────────────────────────────────────
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,       // strip unknown fields
+      forbidNonWhitelisted: false,
+      transform: true,       // auto-transform types
+    }),
+  );
+
+  // ── Swagger ──────────────────────────────────────────────────────────────────
   const config = new DocumentBuilder()
-    .setTitle('TUNLOG')
-    .setDescription('Tunlog apis')
+    .setTitle('LeaseManager API')
+    .setDescription('Office Lease Management Platform')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -24,8 +38,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await fs.writeFileSync('./swagger.json', JSON.stringify(document));
-
-  await app.listen(6001);
+  // ── Start ────────────────────────────────────────────────────────────────────
+  const port = process.env.PORT ?? 6001;
+  await app.listen(port);
+  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`📚 Swagger docs at http://localhost:${port}/api`);
 }
+
 bootstrap();
