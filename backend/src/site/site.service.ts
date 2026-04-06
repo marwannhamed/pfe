@@ -1,5 +1,7 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSiteDto } from './dto/create-site.dto';
@@ -13,7 +15,8 @@ export class SiteService {
     const existing = await this.prisma.site.findUnique({
       where: { code: dto.code },
     });
-    if (existing) throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
+    if (existing)
+      throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
     return this.prisma.site.create({ data: dto });
   }
 

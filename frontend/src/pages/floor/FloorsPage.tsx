@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Input, Select, Skeleton, Empty } from 'antd';
-import { SearchOutlined, PlusOutlined, ReloadOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Input, Select, Skeleton, Empty, message } from 'antd';
+import { SearchOutlined, PlusOutlined, ReloadOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { floorApi, buildingApi, siteApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import type { Floor, Building, Site } from '../../types';
@@ -31,6 +31,7 @@ export default function FloorsPage() {
   const [view,           setView]        = useState<'card' | 'list'>('card');
   const [showAdd,        setShowAdd]     = useState(false);
   const [addForBuilding, setAddForBuilding] = useState<{ id: string; name: string } | null>(null);
+  const [editingFloor, setEditingFloor] = useState<Floor | null>(null);
 
   // Fetch sites for context labels
   const { data: sitesRaw } = useQuery({
@@ -52,6 +53,27 @@ export default function FloorsPage() {
     queryFn:  () => floorApi.getAll(buildingFilter || undefined).then(r => r.data),
   });
   const floors: Floor[] = Array.isArray(floorsRaw) ? floorsRaw : [];
+
+  const qc = useQueryClient();
+
+  // Delete mutation
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => floorApi.remove(id),
+    onSuccess: () => {
+      message.success('Floor deleted successfully');
+      qc.invalidateQueries({ queryKey: ['floors-page'] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to delete floor';
+      message.error(msg);
+    },
+  });
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      deleteMut.mutate(id);
+    }
+  };
 
   const filtered = floors.filter(f => {
     const matchQ      = !q || f.name.toLowerCase().includes(q.toLowerCase());
@@ -79,6 +101,14 @@ export default function FloorsPage() {
           buildingId={addForBuilding.id}
           buildingName={addForBuilding.name}
           onClose={() => { setAddForBuilding(null); refetch(); }}
+        />
+      )}
+
+      {editingFloor && (
+        <EditFloorModal
+          floor={editingFloor}
+          buildings={buildings}
+          onClose={() => { setEditingFloor(null); refetch(); }}
         />
       )}
 
@@ -204,13 +234,13 @@ export default function FloorsPage() {
 
       {!isLoading && !isError && filtered.length > 0 && view === 'card' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {filtered.map(f => <FloorCard key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} />)}
+          {filtered.map(f => <FloorCard key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
         </div>
       )}
 
       {!isLoading && !isError && filtered.length > 0 && view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(f => <FloorRow key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} />)}
+          {filtered.map(f => <FloorRow key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
         </div>
       )}
     </div>
@@ -218,7 +248,7 @@ export default function FloorsPage() {
 }
 
 // ─── Floor Card ───────────────────────────────────────────────────────────────
-function FloorCard({ floor: f, buildings, sites, onNavigate }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void }) {
+function FloorCard({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
   const ss       = STATUS_STYLE[f.status] ?? STATUS_STYLE.INACTIVE;
   const building = buildings.find(b => b.id === f.building_id);
   const site     = building ? sites.find(s => s.id === building.site_id) : undefined;
@@ -282,16 +312,34 @@ function FloorCard({ floor: f, buildings, sites, onNavigate }: { floor: Floor; b
         </a>
       )}
 
-      <button style={{ width: '100%', padding: '9px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-        onClick={e => { e.stopPropagation(); onNavigate(); }}>
-        View in Site →
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button
+          style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onNavigate(); }}
+        >
+          View in Site →
+        </button>
+        <button
+          style={{ padding: '9px', borderRadius: 8, background: '#f59e0b', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+          title="Edit floor"
+        >
+          <EditOutlined />
+        </button>
+        <button
+          style={{ padding: '9px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+          title="Delete floor"
+        >
+          <DeleteOutlined />
+        </button>
+      </div>
     </div>
   );
 }
 
 // ─── Floor Row ────────────────────────────────────────────────────────────────
-function FloorRow({ floor: f, buildings, sites, onNavigate }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void }) {
+function FloorRow({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
   const ss       = STATUS_STYLE[f.status] ?? STATUS_STYLE.INACTIVE;
   const building = buildings.find(b => b.id === f.building_id);
   const site     = building ? sites.find(s => s.id === building.site_id) : undefined;
@@ -321,9 +369,17 @@ function FloorRow({ floor: f, buildings, sites, onNavigate }: { floor: Floor; bu
         <span>📐 {parseFloat(f.area_sqm).toFixed(0)} m²</span>
         <span>🏠 {f.spaces?.length ?? 0} spaces</span>
       </div>
-      <button onClick={e => { e.stopPropagation(); onNavigate(); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-        View →
-      </button>
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#f59e0b', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }} title="Edit floor">
+          <EditOutlined />
+        </button>
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#ef4444', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }} title="Delete floor">
+          <DeleteOutlined />
+        </button>
+        <button onClick={e => { e.stopPropagation(); onNavigate(); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          View →
+        </button>
+      </div>
     </div>
   );
 }
@@ -353,6 +409,156 @@ function PickBuildingModal({ buildings, sites, onPick, onClose }: { buildings: B
           })}
         </div>
         <button onClick={onClose} style={{ width: '100%', marginTop: 14, padding: '9px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Floor Modal ────────────────────────────────────────────────────────────
+function EditFloorModal({ floor, buildings, onClose }: { floor: Floor; buildings: Building[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: floor.name,
+    floor_number: floor.floor_number.toString(),
+    area_sqm: floor.area_sqm.toString(),
+    status: floor.status,
+    building_id: floor.building_id,
+    floor_plan_url: floor.floor_plan_url || '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => floorApi.update(floor.id, data),
+    onSuccess: () => {
+      message.success('Floor updated successfully');
+      qc.invalidateQueries({ queryKey: ['floors-page'] });
+      onClose();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to update floor';
+      message.error(msg);
+    },
+  });
+
+  const handleSubmit = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Name is required';
+    if (!form.floor_number || Number(form.floor_number) < 1) e.floor_number = 'Valid floor number is required';
+    if (!form.area_sqm || Number(form.area_sqm) <= 0) e.area_sqm = 'Valid area is required';
+    
+    if (Object.keys(e).length) { setErrors(e); return; }
+
+    setLoading(true);
+    updateMut.mutate({
+      name: form.name.trim(),
+      floor_number: parseInt(form.floor_number),
+      area_sqm: parseFloat(form.area_sqm),
+      status: form.status,
+      building_id: form.building_id,
+      floor_plan_url: form.floor_plan_url.trim() || null,
+    });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Edit Floor</h2>
+        <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b' }}>Update floor information</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Floor Name *</label>
+            <input
+              style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.name ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }}
+              value={form.name}
+              onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(e => { const n = { ...e }; delete n.name; return n; }); }}
+              placeholder="e.g. First Floor"
+            />
+            {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Floor Number *</label>
+              <input
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.floor_number ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }}
+                type="number"
+                min="1"
+                value={form.floor_number}
+                onChange={e => { setForm(f => ({ ...f, floor_number: e.target.value })); setErrors(e => { const n = { ...e }; delete n.floor_number; return n; }); }}
+                placeholder="e.g. 1"
+              />
+              {errors.floor_number && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.floor_number}</div>}
+            </div>
+
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Area (m²) *</label>
+              <input
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.area_sqm ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }}
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.area_sqm}
+                onChange={e => { setForm(f => ({ ...f, area_sqm: e.target.value })); setErrors(e => { const n = { ...e }; delete n.area_sqm; return n; }); }}
+                placeholder="e.g. 500"
+              />
+              {errors.area_sqm && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.area_sqm}</div>}
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Building</label>
+            <select
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+              value={form.building_id}
+              onChange={e => setForm(f => ({ ...f, building_id: e.target.value }))}
+            >
+              {buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Status</label>
+            <select
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+              value={form.status}
+              onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+            >
+              <option value="ACTIVE">✅ Active</option>
+              <option value="INACTIVE">⏸ Inactive</option>
+              <option value="UNDER_RENOVATION">🔨 Under Renovation</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Floor Plan URL</label>
+            <input
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+              value={form.floor_plan_url}
+              onChange={e => setForm(f => ({ ...f, floor_plan_url: e.target.value }))}
+              placeholder="https://example.com/floor-plan.pdf"
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{ flex: 1, padding: '9px 20px', borderRadius: 8, background: loading ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   );

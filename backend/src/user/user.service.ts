@@ -1,5 +1,8 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +14,7 @@ export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   private exclude(user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = user;
     return rest;
   }
@@ -19,7 +23,8 @@ export class UserService {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existing) throw new ConflictException(`Email "${dto.email}" déjà utilisé`);
+    if (existing)
+      throw new ConflictException(`Email "${dto.email}" déjà utilisé`);
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
       data: { ...dto, password: hashed },
@@ -35,10 +40,10 @@ export class UserService {
     return users.map(this.exclude);
   }
 
-  async findOne(id: string) {  // ✅ string, pas number
-  const user = await this.prisma.user.findUnique({ where: { id } });
-  if (!user) throw new NotFoundException(`User #${id} introuvable`);
-  return this.exclude(user);
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException(`User #${id} introuvable`);
+    return user;
   }
 
   async findByEmail(email: string) {
@@ -64,5 +69,19 @@ export class UserService {
       where: { id },
       data: { last_login_at: new Date() },
     });
+  }
+
+  async changePassword(id: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException(`User #${id} introuvable`);
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+    const hashed = await bcrypt.hash(newPassword, 10);
+    return this.exclude(
+      await this.prisma.user.update({
+        where: { id },
+        data: { password: hashed },
+      }),
+    );
   }
 }

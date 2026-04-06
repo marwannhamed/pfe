@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input, Select, Modal, Form, Skeleton, Empty, message } from 'antd';
 import {
   SearchOutlined, PlusOutlined, ReloadOutlined,
-  ToolOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  EyeOutlined, UserOutlined, FilterOutlined,
+  ToolOutlined, EyeOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { maintenanceApi, spaceApi, userApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
@@ -76,8 +75,8 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
       qc.invalidateQueries({ queryKey: ['maintenance'] });
       onClose();
       form.resetFields();
-    } catch (e: any) {
-      const msg = e?.response?.data?.message ?? 'Failed to create ticket';
+    } catch (e: unknown) {
+      const msg = (e as any)?.response?.data?.message ?? 'Failed to create ticket';
       message.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
@@ -256,6 +255,7 @@ function TicketDetailModal({ ticket, onClose, isAdmin }: { ticket: MaintenanceTi
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function MaintenancePage() {
+  const qc            = useQueryClient();
   const { user }      = useAuthStore();
   const userId        = user?.id ?? '';
   const isAdmin       = user?.role && ['SUPER_ADMIN','SITE_MANAGER','TENANT_ADMIN'].includes(user.role);
@@ -283,6 +283,13 @@ export default function MaintenancePage() {
   const { data: stats } = useQuery({
     queryKey: ['maintenance-stats'],
     queryFn:  () => maintenanceApi.getStats().then(r => r.data),
+  });
+
+  // ── Delete mutation ──
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => maintenanceApi.remove(id),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['maintenance'] }); message.success('Ticket deleted'); },
+    onError: () => message.error('Failed to delete ticket'),
   });
 
   // ── Filter client-side ──
@@ -445,6 +452,11 @@ export default function MaintenancePage() {
                   <button onClick={() => setSelected(t)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <EyeOutlined style={{ fontSize: 12, color: '#64748b' }} />
                   </button>
+                  {isAdmin && (
+                    <button onClick={() => { if (window.confirm(`Delete ticket ${t.ticket_number}? This action cannot be undone.`)) deleteMut.mutate(t.id); }} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DeleteOutlined style={{ fontSize: 12, color: '#dc2626' }} />
+                    </button>
+                  )}
                 </div>
               </div>
             );

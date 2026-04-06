@@ -4,8 +4,7 @@ import { Input, Select, Modal, Form, message, Skeleton, Empty } from 'antd';
 import {
   SearchOutlined, PlusOutlined, EditOutlined,
   StopOutlined, CheckCircleOutlined, ReloadOutlined,
-  MailOutlined, UserOutlined, LockOutlined,
-  EyeOutlined, DownloadOutlined,
+  MailOutlined, UserOutlined, LockOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { userApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
@@ -72,7 +71,7 @@ function UserModal({
           first_name: values.first_name,
           last_name:  values.last_name,
           role:       values.role,
-        } as any);
+        } as unknown);
         message.success('User updated successfully');
       } else {
         await userApi.create({
@@ -88,8 +87,8 @@ function UserModal({
       qc.invalidateQueries({ queryKey: ['users'] });
       onClose();
       form.resetFields();
-    } catch (e: any) {
-      const msg = e?.response?.data?.message ?? e?.message ?? 'Something went wrong';
+    } catch (e: unknown) {
+      const msg = (e as any)?.response?.data?.message ?? (e as any)?.message ?? 'Something went wrong';
       message.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
@@ -196,7 +195,7 @@ export default function UsersPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => userApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: unknown }) => userApi.update(id, data),
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ['users'] }); message.success('User updated'); },
   });
 

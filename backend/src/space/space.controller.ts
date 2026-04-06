@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SpaceService } from './space.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
@@ -21,12 +33,12 @@ export class SpaceController {
   @Get()
   @ApiOperation({ summary: 'List all spaces — public' })
   @ApiQuery({ name: 'floorId', required: false })
-  @ApiQuery({ name: 'type',    required: false })
-  @ApiQuery({ name: 'status',  required: false })
+  @ApiQuery({ name: 'type', required: false })
+  @ApiQuery({ name: 'status', required: false })
   findAll(
     @Query('floorId') floorId?: string,
-    @Query('type')    type?: string,
-    @Query('status')  status?: string,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
   ) {
     return this.spaceService.findAll(floorId, type, status);
   }
@@ -42,11 +54,11 @@ export class SpaceController {
   @ApiOperation({ summary: 'Check availability — public' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'start', required: true })
-  @ApiQuery({ name: 'end',   required: true })
+  @ApiQuery({ name: 'end', required: true })
   isAvailable(
-    @Param('id')    id: string,
+    @Param('id') id: string,
     @Query('start') start: string,
-    @Query('end')   end: string,
+    @Query('end') end: string,
   ) {
     return this.spaceService.isAvailable(id, start, end);
   }

@@ -1,44 +1,124 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Skeleton, Empty } from 'antd';
+﻿import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Select, Skeleton, Empty, message } from 'antd';
 import {
   BellOutlined, CheckCircleOutlined, DeleteOutlined,
-  ReloadOutlined, MailOutlined,
+  ReloadOutlined, CheckOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import { notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Notification, NotificationType, NotificationPriority } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const TYPE_META: Record<NotificationType, { label: string; icon: string; color: string; bg: string }> = {
-  BOOKING_CONFIRMATION: { label: 'Booking Confirmed',   icon: '📅', color: '#059669', bg: '#f0fdf4' },
-  BOOKING_REMINDER:     { label: 'Booking Reminder',    icon: '⏰', color: '#2563eb', bg: '#eff6ff' },
-  INVOICE_ISSUED:       { label: 'Invoice Issued',      icon: '🧾', color: '#6d28d9', bg: '#f5f3ff' },
-  INVOICE_OVERDUE:      { label: 'Invoice Overdue',     icon: '⚠️', color: '#dc2626', bg: '#fef2f2' },
-  PAYMENT_RECEIVED:     { label: 'Payment Received',    icon: '💰', color: '#059669', bg: '#f0fdf4' },
-  TICKET_UPDATED:       { label: 'Ticket Updated',      icon: '🔧', color: '#d97706', bg: '#fffbeb' },
-  CONTRACT_EXPIRING:    { label: 'Contract Expiring',   icon: '📋', color: '#dc2626', bg: '#fef2f2' },
-};
-
-const PRIORITY_META: Record<NotificationPriority, { color: string; dot: string }> = {
-  LOW:    { color: '#94a3b8', dot: '#94a3b8' },
-  NORMAL: { color: '#2563eb', dot: '#3b82f6' },
-  HIGH:   { color: '#d97706', dot: '#f59e0b' },
-  URGENT: { color: '#dc2626', dot: '#ef4444' },
-};
-
-function timeAgo(dateStr: string): string {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-  if (diff < 60)    return 'Just now';
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+function toArray<T>(raw: any): T[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  return [];
 }
 
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+function timeAgo(d: string) {
+  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (diff < 60)   return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─── Notification type metadata ───────────────────────────────────────────────
+const TYPE_META: Record<string, { icon: string; color: string; bg: string; label: string }> = {
+  BOOKING_APPROVED:    { icon: '✅', color: '#059669', bg: '#f0fdf4', label: 'Booking Approved'    },
+  BOOKING_CANCELLED:   { icon: '❌', color: '#dc2626', bg: '#fef2f2', label: 'Booking Cancelled'   },
+  BOOKING_CREATED:     { icon: '📅', color: '#2563eb', bg: '#eff6ff', label: 'New Booking'         },
+  BOOKING_CHECKED_IN:  { icon: '🔑', color: '#1d4ed8', bg: '#dbeafe', label: 'Checked In'         },
+  BOOKING_CHECKED_OUT: { icon: '🚪', color: '#7c3aed', bg: '#f5f3ff', label: 'Checked Out'        },
+  CONTRACT_CREATED:    { icon: '📋', color: '#2563eb', bg: '#eff6ff', label: 'Contract Created'    },
+  CONTRACT_SIGNED:     { icon: '✍️', color: '#059669', bg: '#f0fdf4', label: 'Contract Signed'     },
+  CONTRACT_EXPIRING:   { icon: '⏰', color: '#d97706', bg: '#fffbeb', label: 'Contract Expiring'   },
+  CONTRACT_EXPIRED:    { icon: '🔒', color: '#dc2626', bg: '#fef2f2', label: 'Contract Expired'    },
+  CONTRACT_TERMINATED: { icon: '🛑', color: '#dc2626', bg: '#fef2f2', label: 'Contract Terminated' },
+  INVOICE_CREATED:     { icon: '🧾', color: '#2563eb', bg: '#eff6ff', label: 'Invoice Created'     },
+  INVOICE_DUE:         { icon: '💰', color: '#d97706', bg: '#fffbeb', label: 'Invoice Due'         },
+  INVOICE_OVERDUE:     { icon: '⚠️', color: '#dc2626', bg: '#fef2f2', label: 'Invoice Overdue'    },
+  INVOICE_PAID:        { icon: '💚', color: '#059669', bg: '#f0fdf4', label: 'Invoice Paid'        },
+  PAYMENT_RECEIVED:    { icon: '💳', color: '#059669', bg: '#f0fdf4', label: 'Payment Received'    },
+  MAINTENANCE_CREATED: { icon: '🔧', color: '#7c3aed', bg: '#f5f3ff', label: 'Maintenance Ticket'  },
+  MAINTENANCE_UPDATED: { icon: '🛠️', color: '#7c3aed', bg: '#f5f3ff', label: 'Maintenance Update'  },
+  MAINTENANCE_RESOLVED:{ icon: '✅', color: '#059669', bg: '#f0fdf4', label: 'Issue Resolved'      },
+  SYSTEM:              { icon: '🔔', color: '#64748b', bg: '#f8fafc', label: 'System'              },
+  GENERAL:             { icon: '📢', color: '#64748b', bg: '#f8fafc', label: 'General'             },
 };
+
+function getTypeMeta(type: string) {
+  return TYPE_META[type] ?? { icon: '🔔', color: '#64748b', bg: '#f8fafc', label: type?.replace(/_/g, ' ') ?? 'Notification' };
+}
+
+// ─── Notification Item ────────────────────────────────────────────────────────
+function NotifItem({ notif, onRead, onDelete }: {
+  notif: any;
+  onRead:   (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const meta = getTypeMeta(notif.type);
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 20px',
+        background: notif.is_read ? '#fff' : '#f8fbff',
+        borderLeft: `4px solid ${notif.is_read ? 'transparent' : meta.color}`,
+        borderBottom: '1px solid #f1f5f9',
+        transition: 'background 0.15s',
+        cursor: 'default',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = notif.is_read ? '#fafafa' : '#f0f7ff')}
+      onMouseLeave={e => (e.currentTarget.style.background = notif.is_read ? '#fff' : '#f8fbff')}
+    >
+      {/* Icon */}
+      <div style={{ width: 42, height: 42, borderRadius: 12, background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+        {meta.icon}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: meta.color, background: meta.bg, padding: '2px 8px', borderRadius: 20 }}>
+            {meta.label}
+          </span>
+          {!notif.is_read && (
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', display: 'inline-block', flexShrink: 0 }} />
+          )}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: notif.is_read ? 400 : 600, color: '#0f172a', marginBottom: 4, lineHeight: 1.4 }}>
+          {notif.title ?? notif.message ?? 'Notification'}
+        </div>
+        {notif.message && notif.title && (
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4, lineHeight: 1.4 }}>{notif.message}</div>
+        )}
+        <div style={{ fontSize: 11, color: '#94a3b8' }}>{timeAgo(notif.created_at)}</div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+        {!notif.is_read && (
+          <button
+            onClick={() => onRead(notif.id)}
+            style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #bbf7d0', background: '#f0fdf4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Mark as read"
+          >
+            <CheckOutlined style={{ fontSize: 11, color: '#15803d' }} />
+          </button>
+        )}
+        <button
+          onClick={() => onDelete(notif.id)}
+          style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title="Delete"
+        >
+          <DeleteOutlined style={{ fontSize: 11, color: '#dc2626' }} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
@@ -46,112 +126,158 @@ export default function NotificationsPage() {
   const { user } = useAuthStore();
   const userId   = user?.id ?? '';
 
-  // ── Fetch notifications for this user ──
-  const { data: notifications = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ['notifications', userId],
-    queryFn:  () => notificationApi.getAll({ userId }).then(r => r.data),
-    enabled:  !!userId,
-    refetchInterval: 30000, // refresh every 30s
+  const [typeFilt,   setTypeFilt]   = useState('');
+  const [readFilt,   setReadFilt]   = useState('');
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const { data: notifsRaw = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['notifications', userId, typeFilt, readFilt],
+    queryFn:  () => notificationApi.getAll({
+      userId,
+      ...(typeFilt  ? { type:   typeFilt  } : {}),
+      ...(readFilt  ? { isRead: readFilt  } : {}),
+    }).then(r => r.data),
+    refetchInterval: 30000, // auto-refresh every 30s
   });
 
-  // ── Unread count ──
-  const { data: unreadData } = useQuery({
-    queryKey: ['unread-count', userId],
-    queryFn:  () => notificationApi.getUnreadCount(userId).then(r => r.data),
-    enabled:  !!userId,
-    refetchInterval: 30000,
-  });
+  const notifs = toArray<any>(notifsRaw);
 
-  // ── Mutations ──
-  const markReadMut = useMutation({
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const readMut = useMutation({
     mutationFn: (id: string) => notificationApi.markRead(id),
     onSuccess:  () => {
-      qc.invalidateQueries({ queryKey: ['notifications', userId] });
-      qc.invalidateQueries({ queryKey: ['unread-count', userId] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notif-count'] });
     },
+    onError: () => message.error('Failed'),
   });
 
-  const markAllMut = useMutation({
+  const readAllMut = useMutation({
     mutationFn: () => notificationApi.markAllRead(userId),
     onSuccess:  () => {
-      qc.invalidateQueries({ queryKey: ['notifications', userId] });
-      qc.invalidateQueries({ queryKey: ['unread-count', userId] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notif-count'] });
+      message.success('All notifications marked as read');
     },
+    onError: () => message.error('Failed'),
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => notificationApi.remove(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['notifications', userId] }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notif-count'] });
+    },
+    onError: () => message.error('Failed to delete'),
   });
 
-  const all    = notifications as Notification[];
-  const unread = unreadData?.unread_count ?? all.filter(n => !n.is_read).length;
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const unread = notifs.filter(n => !n.is_read).length;
+  const total  = notifs.length;
 
-  // Group by date
-  const grouped = all.reduce((acc: Record<string, Notification[]>, n) => {
-    const date = new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(n);
+  // ── Group by date ──────────────────────────────────────────────────────────
+  const grouped = notifs.reduce((acc: Record<string, any[]>, n) => {
+    const d   = new Date(n.created_at);
+    const now = new Date();
+    let key: string;
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 0)       key = 'Today';
+    else if (diffDays === 1)  key = 'Yesterday';
+    else if (diffDays <= 7)   key = 'This Week';
+    else if (diffDays <= 30)  key = 'This Month';
+    else                      key = 'Older';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(n);
     return acc;
   }, {});
+
+  const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'This Month', 'Older'];
+
+  const CARD: React.CSSProperties = { background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' };
+
+  // All unique types for filter
+  const allTypes = Array.from(new Set(notifs.map(n => n.type))).filter(Boolean);
 
   return (
     <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
 
       {/* Header */}
-      <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: unread > 0 ? '#fef3c7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <BellOutlined style={{ fontSize: 22, color: unread > 0 ? '#d97706' : '#94a3b8' }} />
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '20px 24px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+          <div>
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <BellOutlined />
+              Notifications
               {unread > 0 && (
-                <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>
-                  {unread > 9 ? '9+' : unread}
-                </div>
+                <span style={{ background: '#ef4444', color: '#fff', fontSize: 12, fontWeight: 800, padding: '2px 10px', borderRadius: 20, lineHeight: 1.4 }}>{unread} new</span>
               )}
-            </div>
-            <div>
-              <h2 style={{ margin: '0 0 2px', fontSize: 22, fontWeight: 700, color: '#0f172a' }}>Notifications</h2>
-              <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>
-                {unread > 0 ? `${unread} unread notification${unread > 1 ? 's' : ''}` : 'All caught up!'}
-              </p>
-            </div>
+            </h2>
+            <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>Stay updated on bookings, contracts, invoices and more</p>
           </div>
-
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => refetch()} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
               <ReloadOutlined />
             </button>
             {unread > 0 && (
               <button
-                onClick={() => markAllMut.mutate()}
-                disabled={markAllMut.isPending}
-                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => readAllMut.mutate()}
+                disabled={readAllMut.isPending}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #bbf7d0', background: '#f0fdf4', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#15803d', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <CheckCircleOutlined style={{ color: '#059669' }} /> Mark all read
+                <CheckCircleOutlined /> Mark all as read
               </button>
             )}
           </div>
         </div>
 
-        {/* Stats pills */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+        {/* KPI */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
           {[
-            { label: 'Total',   value: all.length,                             color: '#2563eb', bg: '#eff6ff' },
-            { label: 'Unread',  value: unread,                                 color: '#d97706', bg: '#fffbeb' },
-            { label: 'High Priority', value: all.filter(n => n.priority === 'HIGH' || n.priority === 'URGENT').length, color: '#dc2626', bg: '#fef2f2' },
+            { label: 'Total',    value: total,               color: '#2563eb', bg: '#eff6ff', icon: '🔔' },
+            { label: 'Unread',   value: unread,              color: '#dc2626', bg: '#fef2f2', icon: '🔴' },
+            { label: 'Read',     value: total - unread,      color: '#059669', bg: '#f0fdf4', icon: '✅' },
+            { label: 'Today',    value: (grouped['Today'] ?? []).length, color: '#7c3aed', bg: '#f5f3ff', icon: '📅' },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</span>
-              <span style={{ fontSize: 12, color: s.color, fontWeight: 500 }}>{s.label}</span>
+            <div key={s.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>{s.icon}</div>
+              <div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{isLoading ? '—' : s.value}</div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Select
+          value={readFilt || 'all'}
+          onChange={v => setReadFilt(v === 'all' ? '' : v)}
+          style={{ width: 160 }}
+          options={[
+            { value: 'all',   label: '📬 All'    },
+            { value: 'false', label: '🔴 Unread' },
+            { value: 'true',  label: '✅ Read'   },
+          ]}
+        />
+        <Select
+          value={typeFilt || 'all'}
+          onChange={v => setTypeFilt(v === 'all' ? '' : v)}
+          style={{ width: 200 }}
+          options={[
+            { value: 'all', label: 'All Types' },
+            ...allTypes.map(t => ({ value: t, label: `${getTypeMeta(t).icon} ${getTypeMeta(t).label}` })),
+          ]}
+        />
+        <div style={{ marginLeft: 'auto', fontSize: 13, color: '#64748b' }}>
+          <strong style={{ color: '#0f172a' }}>{total}</strong> notifications · <strong style={{ color: '#dc2626' }}>{unread}</strong> unread
+        </div>
+      </div>
+
       {/* Error */}
       {isError && (
-        <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}>
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
           <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load notifications</div>
           <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
@@ -170,93 +296,36 @@ export default function NotificationsPage() {
       )}
 
       {/* Empty */}
-      {!isLoading && !isError && all.length === 0 && (
-        <div style={{ ...CARD, padding: '80px', textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircleOutlined style={{ fontSize: 32, color: '#22c55e' }} />
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>All caught up!</div>
-          <div style={{ fontSize: 14, color: '#64748b' }}>No notifications yet. We'll notify you about bookings, invoices and contracts.</div>
+      {!isLoading && !isError && total === 0 && (
+        <div style={{ ...CARD, padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🔔</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: '#0f172a', marginBottom: 8 }}>All caught up!</div>
+          <div style={{ color: '#64748b', fontSize: 14 }}>No notifications yet. We'll alert you when something important happens.</div>
         </div>
       )}
 
       {/* Grouped notifications */}
-      {!isLoading && !isError && all.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {Object.entries(grouped).map(([date, items]) => (
-            <div key={date}>
-              {/* Day header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{date}</div>
+      {!isLoading && !isError && total > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {GROUP_ORDER.filter(g => grouped[g]?.length > 0).map(group => (
+            <div key={group}>
+              {/* Group header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{group}</span>
                 <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>{items.length} notification{items.length > 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>{grouped[group].length}</span>
               </div>
 
-              <div style={{ ...CARD, overflow: 'hidden' }}>
-                {items.map((n: Notification, i: number) => {
-                  const tm = TYPE_META[n.type]         ?? { label: n.type, icon: '🔔', color: '#2563eb', bg: '#eff6ff' };
-                  const pm = PRIORITY_META[n.priority] ?? PRIORITY_META.NORMAL;
-
-                  return (
-                    <div
-                      key={n.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 14,
-                        padding: '16px 20px',
-                        borderBottom: i < items.length - 1 ? '1px solid #f8fafc' : 'none',
-                        background: n.is_read ? '#fff' : '#fafbff',
-                        transition: 'background 0.15s',
-                        cursor: n.is_read ? 'default' : 'pointer',
-                      }}
-                      onClick={() => !n.is_read && markReadMut.mutate(n.id)}
-                    >
-                      {/* Icon */}
-                      <div style={{ width: 42, height: 42, borderRadius: 11, background: tm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, position: 'relative' }}>
-                        {tm.icon}
-                        {/* Priority dot */}
-                        {(n.priority === 'HIGH' || n.priority === 'URGENT') && (
-                          <div style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: pm.dot, border: '2px solid #fff' }} />
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
-                          <div style={{ fontWeight: n.is_read ? 500 : 700, fontSize: 14, color: '#0f172a' }}>{n.title}</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>{timeAgo(n.created_at)}</div>
-                        </div>
-                        <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, marginBottom: 6 }}>{n.message}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ background: tm.bg, color: tm.color, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{tm.label}</span>
-                          <span style={{ background: n.priority === 'LOW' ? '#f1f5f9' : pm.color + '15', color: pm.color, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{n.priority}</span>
-                          {!n.is_read && <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>NEW</span>}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                        {!n.is_read && (
-                          <button
-                            onClick={e => { e.stopPropagation(); markReadMut.mutate(n.id); }}
-                            style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #bbf7d0', background: '#f0fdf4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title="Mark as read"
-                          >
-                            <CheckCircleOutlined style={{ fontSize: 12, color: '#15803d' }} />
-                          </button>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); deleteMut.mutate(n.id); }}
-                          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Delete"
-                        >
-                          <DeleteOutlined style={{ fontSize: 12, color: '#dc2626' }} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Items */}
+              <div style={CARD}>
+                {grouped[group].map((notif: any) => (
+                  <NotifItem
+                    key={notif.id}
+                    notif={notif}
+                    onRead={id => readMut.mutate(id)}
+                    onDelete={id => deleteMut.mutate(id)}
+                  />
+                ))}
               </div>
             </div>
           ))}

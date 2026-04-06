@@ -1,6 +1,8 @@
 import {
-  Injectable, NotFoundException,
-  ConflictException, BadRequestException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePromotionCodeDto } from './dto/create-promotion-code.dto';
@@ -14,7 +16,8 @@ export class PromotionCodeService {
     const existing = await this.prisma.promotionCode.findUnique({
       where: { code: dto.code },
     });
-    if (existing) throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
+    if (existing)
+      throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
     return this.prisma.promotionCode.create({ data: dto });
   }
 
@@ -35,7 +38,9 @@ export class PromotionCodeService {
   }
 
   async findByCode(code: string) {
-    const promo = await this.prisma.promotionCode.findUnique({ where: { code } });
+    const promo = await this.prisma.promotionCode.findUnique({
+      where: { code },
+    });
     if (!promo) throw new NotFoundException(`Code "${code}" introuvable`);
     return promo;
   }
@@ -55,8 +60,7 @@ export class PromotionCodeService {
     const promo = await this.findByCode(code);
     const now = new Date();
 
-    if (!promo.is_active)
-      throw new BadRequestException('Code promo inactif');
+    if (!promo.is_active) throw new BadRequestException('Code promo inactif');
 
     if (promo.valid_to && new Date(promo.valid_to) < now)
       throw new BadRequestException('Code promo expiré');
@@ -77,7 +81,7 @@ export class PromotionCodeService {
     let discounted = amount;
 
     if (promo.discount_type === 'PERCENTAGE') {
-      discounted = amount - (amount * Number(promo.discount_value) / 100);
+      discounted = amount - (amount * Number(promo.discount_value)) / 100;
     } else {
       discounted = amount - Number(promo.discount_value);
     }
@@ -89,11 +93,11 @@ export class PromotionCodeService {
     });
 
     return {
-      original_amount:   amount,
-      discount_type:     promo.discount_type,
-      discount_value:    Number(promo.discount_value),
+      original_amount: amount,
+      discount_type: promo.discount_type,
+      discount_value: Number(promo.discount_value),
       discounted_amount: Math.max(0, discounted),
-      saved:             amount - Math.max(0, discounted),
+      saved: amount - Math.max(0, discounted),
     };
   }
 }

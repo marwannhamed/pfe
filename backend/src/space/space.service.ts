@@ -1,5 +1,7 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
@@ -14,7 +16,8 @@ export class SpaceService {
     const existing = await this.prisma.space.findUnique({
       where: { code: dto.code },
     });
-    if (existing) throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
+    if (existing)
+      throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
     return this.prisma.space.create({ data: dto });
   }
 
@@ -56,7 +59,7 @@ export class SpaceService {
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         AND: [
           { start_datetime: { lte: new Date(end) } },
-          { end_datetime:   { gte: new Date(start) } },
+          { end_datetime: { gte: new Date(start) } },
         ],
       },
     });
@@ -67,4 +70,4 @@ export class SpaceService {
     await this.findOne(id);
     return this.prisma.space.update({ where: { id }, data: { status } });
   }
-}   
+}

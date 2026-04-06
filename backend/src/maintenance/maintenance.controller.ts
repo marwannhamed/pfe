@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { MaintenanceService } from './maintenance.service';
 import { CreateMaintenanceTicketDto } from './dto/create-maintenance-ticket.dto';
@@ -28,20 +40,24 @@ export class MaintenanceController {
 
   @Get()
   @ApiOperation({ summary: 'Lister tous les tickets' })
-  @ApiQuery({ name: 'spaceId',    required: false })
-  @ApiQuery({ name: 'status',     required: false })
-  @ApiQuery({ name: 'priority',   required: false })
-  @ApiQuery({ name: 'category',   required: false })
+  @ApiQuery({ name: 'spaceId', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'priority', required: false })
+  @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'assignedTo', required: false })
   findAll(
-    @Query('spaceId')    spaceId?:    string,
-    @Query('status')     status?:     string,
-    @Query('priority')   priority?:   string,
-    @Query('category')   category?:   string,
+    @Query('spaceId') spaceId?: string,
+    @Query('status') status?: string,
+    @Query('priority') priority?: string,
+    @Query('category') category?: string,
     @Query('assignedTo') assignedTo?: string,
   ) {
     return this.maintenanceService.findAll(
-      spaceId, status, priority, category, assignedTo,
+      spaceId,
+      status,
+      priority,
+      category,
+      assignedTo,
     );
   }
 
@@ -80,10 +96,7 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'Assigner un ticket à un technicien' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'userId', required: true })
-  assign(
-    @Param('id') id: string,
-    @Query('userId') userId: string,
-  ) {
+  assign(@Param('id') id: string, @Query('userId') userId: string) {
     return this.maintenanceService.assign(id, userId);
   }
 
@@ -98,10 +111,7 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'Résoudre un ticket (→ RESOLVED)' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'cost', required: false })
-  resolve(
-    @Param('id') id: string,
-    @Query('cost') cost?: string,
-  ) {
+  resolve(@Param('id') id: string, @Query('cost') cost?: string) {
     return this.maintenanceService.resolve(id, cost ? Number(cost) : undefined);
   }
 

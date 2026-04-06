@@ -1,10 +1,21 @@
 import {
-  Controller, Get, Post, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -27,30 +38,27 @@ export class ReportController {
   @Get()
   @ApiOperation({ summary: 'Lister tous les rapports' })
   @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'type',   required: false, enum: ReportType })
-  findAll(
-    @Query('userId') userId?: string,
-    @Query('type')   type?:   string,
-  ) {
+  @ApiQuery({ name: 'type', required: false, enum: ReportType })
+  findAll(@Query('userId') userId?: string, @Query('type') type?: string) {
     return this.reportService.findAll(userId, type);
   }
 
   @Get('generate/:type')
-  @ApiOperation({ summary: 'Générer les données d\'un rapport en temps réel' })
+  @ApiOperation({ summary: "Générer les données d'un rapport en temps réel" })
   @ApiParam({ name: 'type', enum: ReportType })
   @ApiQuery({ name: 'tenantId', required: false })
-  @ApiQuery({ name: 'siteId',   required: false })
-  @ApiQuery({ name: 'spaceId',  required: false })
+  @ApiQuery({ name: 'siteId', required: false })
+  @ApiQuery({ name: 'spaceId', required: false })
   generateData(
     @Param('type') type: ReportType,
     @Query('tenantId') tenantId?: string,
-    @Query('siteId')   siteId?:   string,
-    @Query('spaceId')  spaceId?:  string,
+    @Query('siteId') siteId?: string,
+    @Query('spaceId') spaceId?: string,
   ) {
     return this.reportService.generateReportData(type, {
       tenant_id: tenantId,
-      site_id:   siteId,
-      space_id:  spaceId,
+      site_id: siteId,
+      space_id: spaceId,
     });
   }
 

@@ -16,7 +16,6 @@ import { AuthUserJWT } from '../utils/auth-user-jwt.decorator';
 import { AuthResponseDto } from './dto/auth-resp.dto';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 
-
 @Controller('auth')
 @ApiTags('auth')
 export class AuthController {
@@ -45,8 +44,8 @@ export class AuthController {
   @Post('register-tenant')
   @ApiOkResponse({ type: AuthResponseDto })
   registerTenant(@Body() dto: RegisterTenantDto) {
-  return this.authService.registerTenant(dto);
-}
+    return this.authService.registerTenant(dto);
+  }
 
   @Post('refresh-token')
   @ApiBearerAuth()

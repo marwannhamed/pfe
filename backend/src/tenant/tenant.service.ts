@@ -1,5 +1,7 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -14,7 +16,8 @@ export class TenantService {
     const existing = await this.prisma.tenant.findUnique({
       where: { slug: dto.slug },
     });
-    if (existing) throw new ConflictException(`Slug "${dto.slug}" déjà utilisé`);
+    if (existing)
+      throw new ConflictException(`Slug "${dto.slug}" déjà utilisé`);
     return this.prisma.tenant.create({ data: dto });
   }
 

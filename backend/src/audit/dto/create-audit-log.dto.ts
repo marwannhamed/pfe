@@ -1,8 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AuditAction, AuditSeverity } from '@prisma/client';
-import {
-  IsEnum, IsOptional, IsString, IsUUID,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateAuditLogDto {
   @ApiProperty({ example: 'uuid-du-tenant' })

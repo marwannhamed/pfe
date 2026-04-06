@@ -1,8 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { InvoiceStatus, InvoiceType } from '@prisma/client';
 import {
-  IsDateString, IsEnum, IsNumber,
-  IsOptional, IsString, IsUUID, Min,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateInvoiceDto {
@@ -32,17 +37,17 @@ export class CreateInvoiceDto {
   @IsDateString()
   due_date: string;
 
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   @IsNumber()
   @Min(0)
   subtotal: number;
 
-  @ApiPropertyOptional({ example: 475.00 })
+  @ApiPropertyOptional({ example: 475.0 })
   @IsNumber()
   @IsOptional()
   tax_amount?: number;
 
-  @ApiProperty({ example: 2975.00 })
+  @ApiProperty({ example: 2975.0 })
   @IsNumber()
   @Min(0)
   total_amount: number;

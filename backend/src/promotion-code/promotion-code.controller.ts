@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { PromotionCodeService } from './promotion-code.service';
 import { CreatePromotionCodeDto } from './dto/create-promotion-code.dto';
@@ -42,10 +54,7 @@ export class PromotionCodeController {
   @ApiOperation({ summary: 'Appliquer un code promo sur un montant' })
   @ApiParam({ name: 'code', example: 'PROMO2026' })
   @ApiQuery({ name: 'amount', required: true, example: 500 })
-  apply(
-    @Param('code') code: string,
-    @Query('amount') amount: string,
-  ) {
+  apply(@Param('code') code: string, @Query('amount') amount: string) {
     return this.promotionCodeService.apply(code, Number(amount));
   }
 

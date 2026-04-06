@@ -35,7 +35,7 @@ export interface Tenant {
   subscription_plan: string;
   max_users:         number;
   max_spaces:        number;
-  settings?:         Record<string, any>;
+  settings?:         Record<string, unknown>;
   created_at:        string;
   // relations
   users?:            User[];
@@ -51,7 +51,7 @@ export interface User {
   last_name:     string;
   status:        UserStatus;
   last_login_at?: string;
-  preferences?:  Record<string, any>;
+  preferences?:  Record<string, unknown>;
   created_at:    string;
   // relations
   tenant?:       Tenant;
@@ -68,7 +68,7 @@ export interface Site {
   currency:        string;
   status:          SiteStatus;
   manager_user_id?: string;
-  opening_hours?:  Record<string, any>;
+  opening_hours?:  Record<string, unknown>;
   created_at:      string;
   // relations
   buildings?:      Building[];
@@ -253,8 +253,8 @@ export interface AuditLog {
   action:        AuditAction;
   resource_type: string;
   resource_id:   string;
-  old_values?:   Record<string, any>;
-  new_values?:   Record<string, any>;
+  old_values?:   Record<string, unknown>;
+  new_values?:   Record<string, unknown>;
   ip_address?:   string;
   severity:      AuditSeverity;
   created_at:    string;

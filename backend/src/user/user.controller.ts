@@ -1,6 +1,14 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { UserService } from './user.service';
@@ -45,5 +53,16 @@ export class UserController {
   @ApiParam({ name: 'id' })
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
+  }
+
+  // PATCH /users/:id/change-password
+  @Patch(':id/change-password')
+  @ApiOperation({ summary: 'Changer le mot de passe' })
+  @ApiParam({ name: 'id' })
+  changePassword(
+    @Param('id') id: string,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.userService.changePassword(id, body.currentPassword, body.newPassword);
   }
 }

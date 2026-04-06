@@ -4,9 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input, Select, Modal, Form, Skeleton, Empty, message } from 'antd';
 import {
   SearchOutlined, PlusOutlined, EyeOutlined,
-  EditOutlined, StopOutlined, CheckCircleOutlined,
+  StopOutlined, CheckCircleOutlined,
   ReloadOutlined, TeamOutlined, FileTextOutlined,
-  CreditCardOutlined, DownloadOutlined,
+  CreditCardOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import { tenantApi } from '../../api/services';
 import type { Tenant, TenantStatus } from '../../types';
@@ -65,8 +65,9 @@ function AddTenantModal({ open, onClose }: { open: boolean; onClose: () => void 
       qc.invalidateQueries({ queryKey: ['tenants'] });
       onClose();
       form.resetFields();
-    } catch (e: any) {
-      if (e?.response?.data?.message) message.error(e.response.data.message);
+    } catch (e: unknown) {
+      const msg = (e as unknown as any)?.response?.data?.message ?? 'Failed to create tenant';
+      message.error(msg);
     } finally {
       setLoading(false);
     }
@@ -122,6 +123,7 @@ export default function TenantsPage() {
   const [plan,     setPlan]    = useState('');
   const [view,     setView]    = useState<'card' | 'table'>('table');
   const [addOpen,  setAdd]     = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
 
   // ── Fetch all tenants ──
   const { data: tenants = [], isLoading, isError, refetch } = useQuery({
@@ -138,6 +140,12 @@ export default function TenantsPage() {
   const activateMut = useMutation({
     mutationFn: (id: string) => tenantApi.activate(id),
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ['tenants'] }); message.success('Tenant activated'); },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => tenantApi.remove(id),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['tenants'] }); message.success('Tenant deleted'); },
+    onError:    () => message.error('Failed to delete tenant'),
   });
 
   // ── Filter ──
@@ -318,6 +326,20 @@ export default function TenantsPage() {
                   >
                     <EyeOutlined style={{ fontSize: 12, color: '#64748b' }} />
                   </button>
+                  <button
+                    onClick={() => setEditingTenant(t)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fbbf24', background: '#fffbeb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Edit tenant"
+                  >
+                    <EditOutlined style={{ fontSize: 12, color: '#f59e0b' }} />
+                  </button>
+                  <button
+                    onClick={() => { if (window.confirm(`Delete ${t.name}?`)) deleteMut.mutate(t.id); }}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Delete tenant"
+                  >
+                    <DeleteOutlined style={{ fontSize: 12, color: '#dc2626' }} />
+                  </button>
                   {t.status === 'SUSPENDED' ? (
                     <button
                       onClick={() => activateMut.mutate(t.id)}
@@ -398,12 +420,24 @@ export default function TenantsPage() {
                     {pm.label} Plan
                   </span>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginTop: 12 }}>
                     <button
                       onClick={() => navigate(`/admin/tenants/${t.id}`)}
                       style={{ padding: '9px', borderRadius: 8, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                     >
                       View Details
+                    </button>
+                    <button
+                      onClick={() => setEditingTenant(t)}
+                      style={{ padding: '9px', borderRadius: 8, background: '#fef3c7', border: '1px solid #fbbf24', color: '#92400e', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => { if (window.confirm(`Delete ${t.name}?`)) deleteMut.mutate(t.id); }}
+                      style={{ padding: '9px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Delete
                     </button>
                     {t.status === 'SUSPENDED' ? (
                       <button onClick={() => activateMut.mutate(t.id)} style={{ padding: '9px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -423,6 +457,102 @@ export default function TenantsPage() {
       )}
 
       <AddTenantModal open={addOpen} onClose={() => setAdd(false)} />
+      {editingTenant && <EditTenantModal tenant={editingTenant} onClose={() => setEditingTenant(null)} />}
+    </div>
+  );
+}
+
+// ─── Edit Tenant Modal ───────────────────────────────────────────────────────────
+function EditTenantModal({ tenant, onClose }: { tenant: Tenant; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    name: tenant.name,
+    contact_email: tenant.contact_email,
+    subscription_plan: tenant.subscription_plan,
+    status: tenant.status,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
+
+  const mutation = useMutation({
+    mutationFn: (d: any) => tenantApi.update(tenant.id, d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tenants'] }); onClose(); },
+    onError:   (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+  });
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Required';
+    if (!form.contact_email.trim()) e.contact_email = 'Required';
+    if (!form.subscription_plan) e.subscription_plan = 'Required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (form.contact_email && !emailRegex.test(form.contact_email)) e.contact_email = 'Invalid email';
+    return e;
+  };
+
+  const submit = () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    mutation.mutate(form);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Edit Tenant</h2>
+            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>Update tenant information</p>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+            <CloseOutlined />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Tenant Name *</label>
+            <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.name ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.name} onChange={e => setF('name', e.target.value)} />
+            {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Contact Email *</label>
+            <input type="email" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.contact_email ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.contact_email} onChange={e => setF('contact_email', e.target.value)} />
+            {errors.contact_email && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.contact_email}</div>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Subscription Plan *</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.subscription_plan ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.subscription_plan} onChange={e => setF('subscription_plan', e.target.value)}>
+                <option value="BASIC">Basic</option>
+                <option value="PROFESSIONAL">Professional</option>
+                <option value="ENTERPRISE">Enterprise</option>
+                <option value="CUSTOM">Custom</option>
+              </select>
+              {errors.subscription_plan && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.subscription_plan}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Status</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} value={form.status} onChange={e => setF('status', e.target.value)}>
+                <option value="ACTIVE">Active</option>
+                <option value="TRIAL">Trial</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={onClose} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}>Cancel</button>
+          <button onClick={submit} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            {mutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

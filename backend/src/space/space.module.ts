@@ -8,6 +8,5 @@ import { PrismaModule } from '../prisma/prisma.module';
   providers: [SpaceService],
   exports: [SpaceService],
   imports: [PrismaModule],
-  
 })
 export class SpaceModule {}

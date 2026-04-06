@@ -1,8 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt, IsNumber, IsOptional,
-  IsString, IsUUID,
-} from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateFloorDto {
   @ApiProperty({ example: 'uuid-du-building' })
@@ -17,7 +14,7 @@ export class CreateFloorDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 450.00 })
+  @ApiProperty({ example: 450.0 })
   @IsNumber()
   area_sqm: number;
 

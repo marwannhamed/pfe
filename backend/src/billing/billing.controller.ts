@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -33,12 +45,12 @@ export class BillingController {
   @Get('invoices')
   @ApiOperation({ summary: 'Lister toutes les factures' })
   @ApiQuery({ name: 'tenantId', required: false })
-  @ApiQuery({ name: 'status',   required: false })
-  @ApiQuery({ name: 'type',     required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'type', required: false })
   findAllInvoices(
     @Query('tenantId') tenantId?: string,
-    @Query('status')   status?: string,
-    @Query('type')     type?: string,
+    @Query('status') status?: string,
+    @Query('type') type?: string,
   ) {
     return this.billingService.findAllInvoices(tenantId, status, type);
   }
@@ -98,10 +110,7 @@ export class BillingController {
   @Post('invoices/:id/lines')
   @ApiOperation({ summary: 'Ajouter une ligne à la facture' })
   @ApiParam({ name: 'id' })
-  addInvoiceLine(
-    @Param('id') id: string,
-    @Body() dto: CreateInvoiceLineDto,
-  ) {
+  addInvoiceLine(@Param('id') id: string, @Body() dto: CreateInvoiceLineDto) {
     return this.billingService.addInvoiceLine(id, dto);
   }
 
@@ -110,10 +119,7 @@ export class BillingController {
   @ApiOperation({ summary: 'Supprimer une ligne de facture' })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'lineId' })
-  removeInvoiceLine(
-    @Param('id') id: string,
-    @Param('lineId') lineId: string,
-  ) {
+  removeInvoiceLine(@Param('id') id: string, @Param('lineId') lineId: string) {
     return this.billingService.removeInvoiceLine(id, lineId);
   }
 
@@ -129,10 +135,10 @@ export class BillingController {
 
   @Get('payments')
   @ApiOperation({ summary: 'Lister tous les paiements' })
-  @ApiQuery({ name: 'tenantId',  required: false })
+  @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'invoiceId', required: false })
   findAllPayments(
-    @Query('tenantId')  tenantId?: string,
+    @Query('tenantId') tenantId?: string,
     @Query('invoiceId') invoiceId?: string,
   ) {
     return this.billingService.findAllPayments(tenantId, invoiceId);

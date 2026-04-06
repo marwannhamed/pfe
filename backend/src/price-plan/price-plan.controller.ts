@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { PricePlanService } from './price-plan.service';
 import { CreatePricePlanDto } from './dto/create-price-plan.dto';
@@ -61,10 +73,7 @@ export class PricePlanController {
   @ApiOperation({ summary: 'Calculer le total avec taxes' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'quantity', required: true, example: 2 })
-  calculateTotal(
-    @Param('id') id: string,
-    @Query('quantity') quantity: string,
-  ) {
+  calculateTotal(@Param('id') id: string, @Query('quantity') quantity: string) {
     return this.pricePlanService.calculateTotal(id, Number(quantity));
   }
 }

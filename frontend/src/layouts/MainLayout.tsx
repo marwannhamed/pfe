@@ -6,10 +6,12 @@ import {
   BellOutlined, UserOutlined, LogoutOutlined,
   BankOutlined, TeamOutlined, BarChartOutlined,
   SafetyOutlined, TagOutlined, MenuFoldOutlined,
-  MenuUnfoldOutlined, SettingOutlined,
-   ApartmentOutlined, BuildOutlined ,
+  MenuUnfoldOutlined, ApartmentOutlined, BuildOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
+import NotificationBell from '../components/NotificationBell';
+import GlobalSearch from '../components/GlobalSearch';
 
 // ─── Sidebar menu per role ─────────────────────────────────────────────────────
 function getSidebarItems(role: string) {
@@ -19,8 +21,8 @@ function getSidebarItems(role: string) {
     { icon: <AppstoreOutlined />,    label: 'Spaces',       path: '/admin/spaces'       },
     { icon: <TeamOutlined />,        label: 'Tenants',      path: '/admin/tenants'      },
     { icon: <UserOutlined />,        label: 'Users',        path: '/admin/users'        },
-    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'     }, // ✅ FIXED
-    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    }, // ✅ FIXED
+    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'     },
+    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
     { icon: <CreditCardOutlined />,  label: 'Billing',      path: '/admin/billing'      },
     { icon: <CreditCardOutlined />,  label: 'Payments',     path: '/admin/payments'     },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'  },
@@ -28,8 +30,8 @@ function getSidebarItems(role: string) {
     { icon: <BarChartOutlined />,    label: 'Reports',      path: '/admin/reports'      },
     { icon: <SafetyOutlined />,      label: 'Audit Logs',   path: '/admin/audit'        },
     { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'},
-    { icon: <ApartmentOutlined />,   label: 'Buildings', path: '/admin/buildings'       },
-    { icon: <BuildOutlined />,       label: 'Floors',    path: '/admin/floors'          },
+    { icon: <ApartmentOutlined />,   label: 'Buildings',    path: '/admin/buildings'    },
+    { icon: <BuildOutlined />,       label: 'Floors',       path: '/admin/floors'       },
   ];
 
   if (role === 'SITE_MANAGER') return [
@@ -66,6 +68,7 @@ function getSidebarItems(role: string) {
     { icon: <CreditCardOutlined />,  label: 'Billing',      path: '/portal/billing'      },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/portal/maintenance'  },
     { icon: <UserOutlined />,        label: 'My Team',      path: '/portal/users'        },
+    { icon: <BarChartOutlined />,    label: 'Reports',      path: '/portal/reports'      }, // ✅ NEW
     { icon: <BellOutlined />,        label: 'Notifications',path: '/portal/notifications'},
   ];
 
@@ -93,9 +96,10 @@ function getRoleLabel(role: string): { label: string; bg: string; color: string 
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 export default function MainLayout() {
-  const navigate   = useNavigate();
-  const { pathname } = useLocation();
+  const navigate      = useNavigate();
+  const { pathname }  = useLocation();
   const { user, logout } = useAuthStore() as any;
+  const { isDark, t, toggle } = useThemeStore();
   const [collapsed, setCollapsed] = useState(false);
 
   const role      = user?.role ?? 'EMPLOYEE';
@@ -103,15 +107,18 @@ export default function MainLayout() {
   const roleMeta  = getRoleLabel(role);
   const sideWidth = collapsed ? 64 : 220;
 
+  const isBackOffice = ['SUPER_ADMIN', 'SITE_MANAGER', 'FINANCE', 'MAINTENANCE'].includes(role);
+  const basePath     = isBackOffice ? '/admin' : '/portal';
+
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: t.pageBg }}>
 
-      {/* ── Sidebar ── */}
+      {/* ── Sidebar ── (always dark, unchanged) */}
       <aside style={{
         width: sideWidth, minWidth: sideWidth, flexShrink: 0,
         background: '#0f172a',
@@ -151,8 +158,6 @@ export default function MainLayout() {
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
           {items.map(item => {
-            // ✅ FIXED: exact match for dashboard routes, startsWith for others
-            // but we must ensure /admin/sites does NOT match /admin/sites-something
             const isDashboard = [
               '/admin/dashboard', '/portal/dashboard',
               '/admin/site-dashboard', '/admin/finance-dashboard',
@@ -215,34 +220,58 @@ export default function MainLayout() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
         {/* Topbar */}
-        <header style={{ height: 56, background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0, zIndex: 5 }}>
-          <div style={{ fontSize: 13, color: '#64748b' }}>
+        <header style={{ height: 56, background: t.topbar, borderBottom: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0, zIndex: 5 }}>
+          {/* Breadcrumb */}
+          <div style={{ fontSize: 13, color: t.textSub }}>
             {pathname.split('/').filter(Boolean).map((seg, i, arr) => (
               <span key={seg}>
-                <span style={{ color: i === arr.length - 1 ? '#0f172a' : '#94a3b8', fontWeight: i === arr.length - 1 ? 600 : 400, textTransform: 'capitalize' }}>
+                <span style={{ color: i === arr.length - 1 ? t.text : t.textMuted, fontWeight: i === arr.length - 1 ? 600 : 400, textTransform: 'capitalize' }}>
                   {seg.replace(/-/g, ' ')}
                 </span>
-                {i < arr.length - 1 && <span style={{ margin: '0 6px', color: '#e5e7eb' }}>›</span>}
+                {i < arr.length - 1 && <span style={{ margin: '0 6px', color: t.cardBorder }}>›</span>}
               </span>
             ))}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Global Search */}
+            <GlobalSearch />
+
+            {/* ✅ Dark mode toggle — only addition to original */}
             <button
-              onClick={() => navigate(role === 'SUPER_ADMIN' || role === 'SITE_MANAGER' || role === 'FINANCE' || role === 'MAINTENANCE' ? '/admin/notifications' : '/portal/notifications')}
-              style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}
+              onClick={toggle}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{
+                width: 36, height: 36, borderRadius: 9,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.cardBg,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 17, transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+              onMouseLeave={e => (e.currentTarget.style.background = t.cardBg)}
             >
-              <BellOutlined style={{ fontSize: 16 }} />
+              {isDark ? '☀️' : '🌙'}
             </button>
 
+            {/* NotificationBell */}
+            <NotificationBell basePath={basePath} />
+
             {user && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                onClick={() => navigate(`${basePath}/profile`)}
+                title="My Profile"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 9, transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#fff' }}>
                   {user.first_name?.[0]}{user.last_name?.[0]}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{user.first_name} {user.last_name}</span>
-                  <span style={{ fontSize: 10, color: '#94a3b8' }}>{roleMeta.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{user.first_name} {user.last_name}</span>
+                  <span style={{ fontSize: 10, color: t.textMuted }}>{roleMeta.label}</span>
                 </div>
               </div>
             )}
@@ -250,7 +279,7 @@ export default function MainLayout() {
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: t.pageBg }}>
           <Outlet />
         </main>
       </div>

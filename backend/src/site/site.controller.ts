@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SiteService } from './site.service';
 import { CreateSiteDto } from './dto/create-site.dto';
@@ -61,7 +73,7 @@ export class SiteController {
   }
 
   @Get(':id/occupancy-rate')
-  @ApiOperation({ summary: 'Taux d\'occupation du site' })
+  @ApiOperation({ summary: "Taux d'occupation du site" })
   @ApiParam({ name: 'id' })
   getOccupancyRate(@Param('id') id: string) {
     return this.siteService.getOccupancyRate(id);

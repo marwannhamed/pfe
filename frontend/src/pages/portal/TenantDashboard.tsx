@@ -1,421 +1,569 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton, Empty } from 'antd';
+import { Skeleton } from 'antd';
 import {
-  AppstoreOutlined, FileTextOutlined, CreditCardOutlined,
-  ToolOutlined, CalendarOutlined, UserOutlined,
-  BarChartOutlined, BellOutlined, PlusOutlined,
-  EyeOutlined, EditOutlined, CheckCircleOutlined,
-  WarningOutlined, ClockCircleOutlined,
+  CalendarOutlined, ToolOutlined, TeamOutlined,
+  FileTextOutlined, CreditCardOutlined, AppstoreOutlined,
+  BellOutlined, ArrowRightOutlined, CheckCircleOutlined,
+  ClockCircleOutlined, WarningOutlined, PlusOutlined,
 } from '@ant-design/icons';
+import {
+  bookingApi, maintenanceApi, userApi,
+  contractApi, billingApi, notificationApi,
+} from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import { userApi, bookingApi, maintenanceApi, notificationApi, contractApi } from '../../api/services';
-import type { User, Booking, MaintenanceTicket, Notification, LeaseContract } from '../../types';
+import { useThemeStore } from '../../store/themeStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  ACTIVE:   { bg: '#dcfce7', color: '#15803d' },
-  PENDING:  { bg: '#fef3c7', color: '#92400e' },
-  INACTIVE: { bg: '#f1f5f9', color: '#475569' },
-  SUSPENDED:{ bg: '#fee2e2', color: '#b91c1c' },
-  CONFIRMED:{ bg: '#dcfce7', color: '#15803d' },
-  DRAFT:    { bg: '#f1f5f9', color: '#475569' },
-  CANCELLED:{ bg: '#fee2e2', color: '#b91c1c' },
-  OPEN:     { bg: '#fef3c7', color: '#92400e' },
-  IN_PROGRESS: { bg: '#dbeafe', color: '#1d4ed8' },
-  RESOLVED: { bg: '#dcfce7', color: '#15803d' },
-};
+function toArray<T>(raw: any): T[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  return [];
+}
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatDateTime(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function daysUntil(d: string) {
+  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+}
 
-const TICKET_PRIO_STYLE: Record<string, { bg: string; color: string }> = {
-  EMERGENCY: { bg: '#fee2e2', color: '#b91c1c' },
+// ─── Status configs ───────────────────────────────────────────────────────────
+const BOOKING_STATUS: Record<string, { bg: string; color: string; label: string }> = {
+  CONFIRMED:        { bg: '#dcfce7', color: '#15803d', label: 'Confirmed'   },
+  PENDING_APPROVAL: { bg: '#fef3c7', color: '#92400e', label: 'Pending'     },
+  CHECKED_IN:       { bg: '#dbeafe', color: '#1d4ed8', label: 'Checked In'  },
+  COMPLETED:        { bg: '#ede9fe', color: '#6d28d9', label: 'Completed'   },
+  CANCELLED:        { bg: '#fee2e2', color: '#b91c1c', label: 'Cancelled'   },
+  DRAFT:            { bg: '#f1f5f9', color: '#475569', label: 'Draft'       },
+};
+const TICKET_STATUS: Record<string, { bg: string; color: string }> = {
+  OPEN:        { bg: '#fef3c7', color: '#92400e' },
+  ASSIGNED:    { bg: '#dbeafe', color: '#1d4ed8' },
+  IN_PROGRESS: { bg: '#ede9fe', color: '#6d28d9' },
+  RESOLVED:    { bg: '#dcfce7', color: '#15803d' },
+  CLOSED:      { bg: '#f1f5f9', color: '#475569' },
+};
+const TICKET_PRIORITY: Record<string, { bg: string; color: string }> = {
+  EMERGENCY: { bg: '#fef2f2', color: '#b91c1c' },
   URGENT:    { bg: '#fee2e2', color: '#dc2626' },
   HIGH:      { bg: '#fef3c7', color: '#d97706' },
   NORMAL:    { bg: '#dbeafe', color: '#2563eb' },
   LOW:       { bg: '#f1f5f9', color: '#475569' },
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, color, bg, icon, path, loading, t }: any) {
+  const navigate = useNavigate();
+  return (
+    <div
+      onClick={() => path && navigate(path)}
+      style={{
+        background: t.cardBg, borderRadius: 14,
+        border: `1px solid ${t.cardBorder}`, boxShadow: t.cardShadow,
+        padding: '18px 20px', cursor: path ? 'pointer' : 'default',
+        transition: 'all 0.15s',
+      }}
+      onMouseEnter={e => path && (e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)')}
+      onMouseLeave={e => path && (e.currentTarget.style.boxShadow = t.cardShadow)}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 11, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, color }}>{icon}</div>
+        {path && <ArrowRightOutlined style={{ color: t.textMuted, fontSize: 13 }} />}
+      </div>
+      {loading ? <Skeleton active paragraph={{ rows: 1 }} /> : (
+        <>
+          <div style={{ fontSize: 32, fontWeight: 900, color: t.text, lineHeight: 1, marginBottom: 4 }}>{value}</div>
+          <div style={{ fontSize: 12, color: t.textSub, marginBottom: 3 }}>{label}</div>
+          <div style={{ fontSize: 11, color }}>{sub}</div>
+        </>
+      )}
+      <div style={{ marginTop: 10, height: 3, background: t.divider, borderRadius: 2 }}>
+        <div style={{ height: 3, borderRadius: 2, background: color, width: '55%' }} />
+      </div>
+    </div>
+  );
 }
-
-function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-};
-
-const NAV_LINKS = [
-  { icon: <AppstoreOutlined />, label: 'Dashboard',   path: '/portal/dashboard'    },
-  { icon: <UserOutlined />,     label: 'My Team',      path: '/portal/users'        },
-  { icon: <FileTextOutlined />, label: 'Contracts',    path: '/portal/contracts'    },
-  { icon: <CreditCardOutlined />,label:'Billing',      path: '/portal/billing'      },
-  { icon: <ToolOutlined />,     label: 'Maintenance',  path: '/portal/maintenance'  },
-  { icon: <CalendarOutlined />, label: 'Bookings',     path: '/portal/bookings'     },
-  { icon: <BellOutlined />,     label: 'Notifications',path: '/portal/notifications'},
-];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TenantDashboard() {
-  const navigate         = useNavigate();
-  const { user }         = useAuthStore();
-  const tenantId         = user?.tenant_id ?? '';
-  const userId           = user?.id ?? '';
+  const navigate = useNavigate();
+  const { user } = useAuthStore() as any;
+  const { t }    = useThemeStore();
+  const tenantId = user?.tenant_id;
+  const isAdmin  = user?.role === 'TENANT_ADMIN';
+  const [refreshKey, setRefreshKey] = useState(0);
+  const opts = (k: string) => ({ queryKey: [k, tenantId, refreshKey], enabled: !!tenantId });
 
-  // ── Real API queries ──
-  const { data: teamMembers = [], isLoading: loadingTeam } = useQuery({
-    queryKey: ['users', tenantId],
-    queryFn:  () => userApi.getAll(tenantId).then(r => r.data),
-    enabled:  !!tenantId,
-  });
+  // Queries
+  const { data: bookingsRaw,  isLoading: l1 } = useQuery({ ...opts('td-bookings'),  queryFn: () => bookingApi.getAll({ tenantId }).then(r => r.data) });
+  const { data: ticketsRaw,   isLoading: l2 } = useQuery({ ...opts('td-tickets'),   queryFn: () => maintenanceApi.getAll().then(r => r.data) });
+  const { data: usersRaw,     isLoading: l3 } = useQuery({ ...opts('td-users'),     queryFn: () => userApi.getAll(tenantId).then(r => r.data), enabled: !!tenantId && isAdmin });
+  const { data: contractsRaw, isLoading: l4 } = useQuery({ ...opts('td-contracts'), queryFn: () => contractApi.getAll({ tenantId }).then(r => r.data), enabled: !!tenantId && isAdmin });
+  const { data: invoicesRaw,  isLoading: l5 } = useQuery({ ...opts('td-invoices'),  queryFn: () => billingApi.getInvoices({ tenantId }).then(r => r.data), enabled: !!tenantId && isAdmin });
+  const { data: notifsRaw,    isLoading: l6 } = useQuery({ ...opts('td-notifs'),    queryFn: () => notificationApi.getAll({ userId: user?.id }).then(r => r.data), enabled: !!user?.id });
 
-  const { data: bookings = [], isLoading: loadingBookings } = useQuery({
-    queryKey: ['bookings', tenantId],
-    queryFn:  () => bookingApi.getAll({ tenantId }).then(r => r.data),
-    enabled:  !!tenantId,
-  });
+  const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
 
-  const { data: tickets = [], isLoading: loadingTickets } = useQuery({
-    queryKey: ['maintenance', tenantId],
-    queryFn: () => maintenanceApi.getAll({}).then(r => r.data),
-    enabled:  !!userId,
-  });
+  const bookings  = toArray<any>(bookingsRaw);
+  const tickets   = toArray<any>(ticketsRaw);
+  const members   = toArray<any>(usersRaw);
+  const contracts = toArray<any>(contractsRaw);
+  const invoices  = toArray<any>(invoicesRaw);
+  const notifs    = toArray<any>(notifsRaw);
 
-  const { data: notifications = [], isLoading: loadingNotifs } = useQuery({
-    queryKey: ['notifications', userId],
-    queryFn:  () => notificationApi.getAll().then(r => r.data),
-    enabled:  !!userId,
-  });
+  // Derived
+  const myBookings       = user?.role === 'EMPLOYEE' ? bookings.filter((b: any) => b.created_by_user_id === user?.id) : bookings;
+  const myTickets        = user?.role === 'EMPLOYEE' ? tickets.filter((t: any) => t.created_by_user_id === user?.id) : tickets;
+  const confirmedBooks   = myBookings.filter((b: any) => b.status === 'CONFIRMED').length;
+  const pendingBooks     = myBookings.filter((b: any) => b.status === 'PENDING_APPROVAL').length;
+  const openTickets      = myTickets.filter((t: any) => !['CLOSED','CANCELLED'].includes(t.status)).length;
+  const urgentTickets    = myTickets.filter((t: any) => ['URGENT','EMERGENCY'].includes(t.priority) && !['CLOSED','CANCELLED','RESOLVED'].includes(t.status));
+  const activeContracts  = contracts.filter((c: any) => c.status === 'ACTIVE');
+  const overdueInvoices  = invoices.filter((i: any) => i.status === 'OVERDUE');
+  const unreadNotifs     = notifs.filter((n: any) => !n.is_read).length;
+  const onboardingDone   = localStorage.getItem('onboarding_done') === 'true';
 
-  const { data: contracts = [], isLoading: loadingContracts } = useQuery({
-    queryKey: ['contracts', tenantId],
-    queryFn:  () => contractApi.getAll({ tenantId }).then(r => r.data),
-    enabled:  !!tenantId,
-  });
+  const expiringContracts = activeContracts
+    .map((c: any) => ({ ...c, days: daysUntil(c.end_date) }))
+    .filter((c: any) => c.days <= 90 && c.days >= 0)
+    .sort((a: any, b: any) => a.days - b.days);
 
-  // Computed stats from real data
-  const activeLeases    = contracts.filter((c: LeaseContract) => c.status === 'ACTIVE').length;
-  const pendingBookings = bookings.filter((b: Booking) => b.status === 'PENDING_APPROVAL').length;
-  const openTickets     = tickets.filter((t: MaintenanceTicket) => ['OPEN','ASSIGNED','IN_PROGRESS'].includes(t.status)).length;
-  const unreadNotifs    = notifications.filter((n: Notification) => !n.is_read).length;
+  const recentBookings = [...myBookings]
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 6);
 
-  const recentBookings  = [...bookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
-  const recentTickets   = [...tickets].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4);
-  const unreadNotifList = notifications.filter((n: Notification) => !n.is_read).slice(0, 4);
+  const recentTickets = [...myTickets]
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
-  const isLoading = loadingTeam || loadingBookings || loadingTickets;
+  const recentNotifs = [...notifs]
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 6);
+
+  const CARD: React.CSSProperties = {
+    background: t.cardBg, borderRadius: 14,
+    border: `1px solid ${t.cardBorder}`, boxShadow: t.cardShadow,
+  };
+
+  const NOTIF_TYPE_ICON: Record<string, { icon: string; color: string; bg: string }> = {
+    BOOKING:      { icon: '📅', color: '#2563eb', bg: '#eff6ff' },
+    INVOICE:      { icon: '🧾', color: '#d97706', bg: '#fffbeb' },
+    MAINTENANCE:  { icon: '🔧', color: '#7c3aed', bg: '#f5f3ff' },
+    CONTRACT:     { icon: '📋', color: '#059669', bg: '#f0fdf4' },
+    PAYMENT:      { icon: '💳', color: '#0891b2', bg: '#f0f9ff' },
+    ANNOUNCEMENT: { icon: '📢', color: '#dc2626', bg: '#fef2f2' },
+    SYSTEM:       { icon: '⚙️',  color: '#475569', bg: t.tableHead },
+  };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
-
-      {/* ── Secondary Sidebar ── */}
-      <aside style={{ width: 232, background: '#fff', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
-        {/* User card */}
-        <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff', flexShrink: 0 }}>
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.first_name} {user?.last_name}</div>
-              <div style={{ fontSize: 11, color: '#94a3b8' }}>Tenant Admin</div>
-            </div>
-          </div>
-          {unreadNotifs > 0 && (
-            <div style={{ marginTop: 8, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <BellOutlined /> {unreadNotifs} unread notification{unreadNotifs > 1 ? 's' : ''}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav style={{ padding: '10px 8px', flex: 1 }}>
-          {NAV_LINKS.map(link => {
-            const active = window.location.pathname === link.path;
-            return (
-              <button
-                key={link.path}
-                onClick={() => navigate(link.path)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', marginBottom: 2, textAlign: 'left', fontSize: 13, fontWeight: 500, background: active ? '#eff6ff' : 'transparent', color: active ? '#2563eb' : '#374151', transition: 'all 0.15s' }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ fontSize: 15, color: active ? '#2563eb' : '#64748b' }}>{link.icon}</span>
-                {link.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Browse Spaces CTA */}
-        <div style={{ margin: '0 8px 12px', background: 'linear-gradient(135deg,#1e293b,#2563eb)', borderRadius: 10, padding: '14px' }}>
-          <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 6 }}>Ready to expand?</div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', marginBottom: 10 }}>Browse available spaces</div>
-          <button onClick={() => navigate('/portal/spaces')} style={{ width: '100%', padding: '7px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-            Browse Spaces →
-          </button>
-        </div>
-      </aside>
+    <div style={{ display: 'flex', minHeight: '100%', background: t.pageBg }}>
 
       {/* ── Main Content ── */}
-      <div style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
+      <div style={{ flex: 1, padding: 24, minWidth: 0 }}>
 
-        {/* Page header */}
-        <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
           <div>
-            <h2 style={{ margin: '0 0 2px', fontSize: 19, fontWeight: 700, color: '#0f172a' }}>Dashboard</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
-              Welcome back, <strong>{user?.first_name}</strong> — here's what's happening today
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>
+              Welcome back, {user?.first_name}! 👋
+            </h2>
+            <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
+              {isAdmin ? 'Tenant Admin' : 'Employee'} Portal
+              {user?.tenant?.name && <> · <strong style={{ color: t.text }}>{user.tenant.name}</strong></>}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => navigate('/portal/bookings')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', color: '#374151' }}>
-              <CalendarOutlined /> Book a Space
-            </button>
-            <button onClick={() => navigate('/portal/maintenance')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#2563eb', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#fff' }}>
-              <PlusOutlined /> Submit Ticket
+            <button
+              onClick={() => navigate('/portal/bookings/calendar')}
+              style={{ padding: '9px 16px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <PlusOutlined /> New Booking
             </button>
           </div>
         </div>
 
-        <div style={{ padding: '20px 24px' }}>
-
-          {/* ── KPI Cards ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-            {[
-              { label: 'Team Members',    value: teamMembers.length,  sub: `${teamMembers.filter((u: User) => u.status === 'ACTIVE').length} active`,    color: '#2563eb', bg: '#eff6ff', icon: <UserOutlined />,      loading: loadingTeam     },
-              { label: 'Active Leases',   value: activeLeases,         sub: `${contracts.length} total contracts`,                                         color: '#059669', bg: '#f0fdf4', icon: <FileTextOutlined />,  loading: loadingContracts},
-              { label: 'Bookings',        value: bookings.length,      sub: `${pendingBookings} pending approval`,                                          color: '#d97706', bg: '#fffbeb', icon: <CalendarOutlined />, loading: loadingBookings },
-              { label: 'Open Tickets',    value: openTickets,          sub: `${tickets.length} total submitted`,                                            color: '#dc2626', bg: '#fef2f2', icon: <ToolOutlined />,      loading: loadingTickets  },
-            ].map(k => (
-              <div key={k.label} style={{ ...CARD, padding: '18px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: k.color }}>
-                    {k.icon}
-                  </div>
-                  {k.loading ? <Skeleton.Button active size="small" /> : (
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{k.sub}</span>
-                  )}
-                </div>
-                {k.loading ? (
-                  <Skeleton active paragraph={{ rows: 1 }} />
-                ) : (
-                  <>
-                    <div style={{ fontSize: 30, fontWeight: 800, color: '#0f172a', lineHeight: 1, marginBottom: 3 }}>{k.value}</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{k.label}</div>
-                  </>
-                )}
-              </div>
-            ))}
+        {/* Onboarding banner */}
+        {isAdmin && contracts.length === 0 && !onboardingDone && (
+          <div style={{ background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', borderRadius: 14, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: '#fff', marginBottom: 4 }}>🚀 Complete your setup!</div>
+              <div style={{ fontSize: 13, color: '#bfdbfe' }}>Set up your workspace, add spaces and invite your team to get started.</div>
+            </div>
+            <button
+              onClick={() => navigate('/portal/onboarding')}
+              style={{ padding: '10px 20px', borderRadius: 10, background: '#fff', border: 'none', color: '#1d4ed8', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              Start Setup →
+            </button>
           </div>
+        )}
 
-          {/* ── Main grid ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 18 }}>
+        {/* Alert banners */}
+        {overdueInvoices.length > 0 && isAdmin && (
+          <div onClick={() => navigate('/portal/billing')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 18px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <WarningOutlined style={{ color: '#dc2626', fontSize: 18 }} />
+            <span style={{ fontWeight: 600, color: '#b91c1c', fontSize: 14 }}>
+              {overdueInvoices.length} overdue invoice{overdueInvoices.length > 1 ? 's' : ''} — action required
+            </span>
+            <ArrowRightOutlined style={{ color: '#dc2626', marginLeft: 'auto' }} />
+          </div>
+        )}
+        {urgentTickets.length > 0 && (
+          <div onClick={() => navigate('/portal/maintenance')} style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 10, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <WarningOutlined style={{ color: '#ea580c', fontSize: 18 }} />
+            <span style={{ fontWeight: 600, color: '#c2410c', fontSize: 14 }}>
+              {urgentTickets.length} urgent maintenance ticket{urgentTickets.length > 1 ? 's' : ''} pending
+            </span>
+            <ArrowRightOutlined style={{ color: '#ea580c', marginLeft: 'auto' }} />
+          </div>
+        )}
+        {expiringContracts.length > 0 && isAdmin && (
+          <div onClick={() => navigate('/portal/contracts')} style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: 10, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <FileTextOutlined style={{ color: '#ca8a04', fontSize: 18 }} />
+            <span style={{ fontWeight: 600, color: '#854d0e', fontSize: 14 }}>
+              {expiringContracts[0].days === 0
+                ? 'A contract expires today!'
+                : `${expiringContracts.length} contract${expiringContracts.length > 1 ? 's' : ''} expiring within ${expiringContracts[0].days} days`}
+            </span>
+            <ArrowRightOutlined style={{ color: '#ca8a04', marginLeft: 'auto' }} />
+          </div>
+        )}
 
-            {/* ── Left: Recent Bookings ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* KPI Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
+          {isAdmin && (
+            <KpiCard t={t} label="Team Members"   value={members.length}       sub={`${members.filter((m: any) => m.status === 'ACTIVE').length} active`} color="#2563eb" bg="#eff6ff" icon={<TeamOutlined />}       path="/portal/users"       loading={isLoading} />
+          )}
+          {isAdmin && (
+            <KpiCard t={t} label="Active Leases"  value={activeContracts.length} sub={`${contracts.length} total`}                                         color="#059669" bg="#f0fdf4" icon={<FileTextOutlined />}  path="/portal/contracts"   loading={isLoading} />
+          )}
+          <KpiCard t={t} label="My Bookings"      value={myBookings.length}    sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />}  path="/portal/bookings"    loading={isLoading} />
+          <KpiCard t={t} label="Open Tickets"     value={openTickets}          sub={`${urgentTickets.length} urgent`}                                       color={urgentTickets.length > 0 ? '#dc2626' : '#059669'} bg={urgentTickets.length > 0 ? '#fef2f2' : '#f0fdf4'} icon={<ToolOutlined />} path="/portal/maintenance" loading={isLoading} />
+          {isAdmin && (
+            <KpiCard t={t} label="Pending Invoices" value={overdueInvoices.length + invoices.filter((i: any) => i.status === 'ISSUED' || i.status === 'SENT').length} sub={`${overdueInvoices.length} overdue`} color={overdueInvoices.length > 0 ? '#dc2626' : '#d97706'} bg={overdueInvoices.length > 0 ? '#fef2f2' : '#fffbeb'} icon={<CreditCardOutlined />} path="/portal/billing" loading={isLoading} />
+          )}
+        </div>
 
-              <div style={CARD}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CalendarOutlined style={{ color: '#2563eb' }} /> Recent Bookings
-                  </div>
-                  <button onClick={() => navigate('/portal/bookings')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
-                </div>
+        {/* Main grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
-                {loadingBookings ? (
-                  <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
-                ) : recentBookings.length === 0 ? (
-                  <div style={{ padding: '32px', textAlign: 'center' }}>
-                    <Empty description="No bookings yet" />
-                    <button onClick={() => navigate('/portal/bookings')} style={{ marginTop: 12, padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
-                      Make a Booking
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {/* Header row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 0.8fr 0.6fr', padding: '8px 20px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <span>Booking #</span><span>Space</span><span>Date</span><span>Status</span><span></span>
-                    </div>
-                    {recentBookings.map((b: Booking, i: number) => {
-                      const ss = STATUS_STYLE[b.status] ?? { bg: '#f1f5f9', color: '#475569' };
-                      return (
-                        <div
-                          key={b.id}
-                          style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 0.8fr 0.6fr', padding: '12px 20px', borderBottom: i < recentBookings.length - 1 ? '1px solid #f8fafc' : 'none', alignItems: 'center', cursor: 'pointer', transition: 'background 0.1s' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '')}
-                        >
-                          <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#2563eb', fontWeight: 600 }}>{b.booking_number}</span>
-                          <span style={{ fontSize: 12, color: '#374151' }}>{b.space?.name ?? b.space_id.substring(0, 8)}</span>
-                          <span style={{ fontSize: 11, color: '#64748b' }}>{formatDate(b.start_datetime)}</span>
-                          <span style={{ background: ss.bg, color: ss.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, display: 'inline-block' }}>{b.status.replace('_', ' ')}</span>
-                          <button style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <EyeOutlined style={{ fontSize: 11, color: '#64748b' }} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
-
-              {/* Recent Maintenance Tickets */}
-              <div style={CARD}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ToolOutlined style={{ color: '#d97706' }} /> Maintenance Tickets
-                  </div>
-                  <button onClick={() => navigate('/portal/maintenance')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
-                </div>
-
-                {loadingTickets ? (
-                  <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 3 }} /></div>
-                ) : recentTickets.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center' }}>
-                    <Empty description="No maintenance tickets" />
-                  </div>
-                ) : (
-                  <div style={{ padding: '10px 20px' }}>
-                    {recentTickets.map((t: MaintenanceTicket, i: number) => {
-                      const ps  = TICKET_PRIO_STYLE[t.priority] ?? TICKET_PRIO_STYLE.NORMAL;
-                      const ts  = STATUS_STYLE[t.status]  ?? { bg: '#f1f5f9', color: '#475569' };
-                      return (
-                        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: i < recentTickets.length - 1 ? 10 : 0, borderBottom: i < recentTickets.length - 1 ? '1px solid #f8fafc' : 'none', marginBottom: i < recentTickets.length - 1 ? 10 : 0 }}>
-                          <div style={{ width: 34, height: 34, borderRadius: 8, background: ps.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <ToolOutlined style={{ color: ps.color, fontSize: 14 }} />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{t.ticket_number} · {t.category.replace('_', ' ')}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                            <span style={{ background: ps.bg, color: ps.color, fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20 }}>{t.priority}</span>
-                            <span style={{ background: ts.bg, color: ts.color, fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20 }}>{t.status.replace('_', ' ')}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+          {/* Recent Bookings */}
+          <div style={CARD}>
+            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>📅 My Bookings</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => navigate('/portal/bookings/calendar')}
+                  style={{ padding: '5px 10px', borderRadius: 7, background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  Calendar
+                </button>
+                <button onClick={() => navigate('/portal/bookings')}
+                  style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                  View all →
+                </button>
               </div>
             </div>
-
-            {/* ── Right sidebar ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-              {/* Notifications */}
-              <div style={CARD}>
-                <div style={{ padding: '13px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <BellOutlined style={{ color: unreadNotifs > 0 ? '#d97706' : '#64748b' }} />
-                    Notifications
-                    {unreadNotifs > 0 && <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20 }}>{unreadNotifs}</span>}
+            {isLoading
+              ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+              : recentBookings.length === 0
+                ? (
+                  <div style={{ padding: '32px', textAlign: 'center' }}>
+                    <CalendarOutlined style={{ fontSize: 32, color: t.textMuted, display: 'block', margin: '0 auto 10px' }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>No bookings yet</div>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, marginBottom: 16 }}>Browse available spaces to get started</div>
+                    <button onClick={() => navigate('/portal/spaces')}
+                      style={{ padding: '8px 18px', borderRadius: 9, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      Browse Spaces →
+                    </button>
                   </div>
-                  <button onClick={() => navigate('/portal/notifications')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>View all</button>
-                </div>
-                <div style={{ padding: '10px 16px' }}>
-                  {loadingNotifs ? (
-                    <Skeleton active paragraph={{ rows: 3 }} />
-                  ) : unreadNotifList.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8', fontSize: 13 }}>
-                      <CheckCircleOutlined style={{ fontSize: 24, display: 'block', margin: '0 auto 8px', color: '#22c55e' }} />
-                      All caught up!
-                    </div>
-                  ) : (
-                    unreadNotifList.map((n: Notification, i: number) => (
-                      <div key={n.id} style={{ display: 'flex', gap: 10, paddingBottom: i < unreadNotifList.length - 1 ? 10 : 0, borderBottom: i < unreadNotifList.length - 1 ? '1px solid #f8fafc' : 'none', marginBottom: i < unreadNotifList.length - 1 ? 10 : 0 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 7, background: n.priority === 'HIGH' || n.priority === 'URGENT' ? '#fee2e2' : '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12 }}>
-                          {n.priority === 'HIGH' || n.priority === 'URGENT' ? '⚠️' : '📬'}
+                )
+                : recentBookings.map((b: any, i: number) => {
+                  const bs = BOOKING_STATUS[b.status] ?? { bg: '#f1f5f9', color: '#475569', label: b.status };
+                  return (
+                    <div key={b.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentBookings.length - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: bs.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <CalendarOutlined style={{ color: bs.color, fontSize: 14 }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {b.space?.name ?? 'Space'}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', lineHeight: 1.3 }}>{n.title}</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</div>
+                        <div style={{ fontSize: 11, color: t.textMuted }}>
+                          {formatDateTime(b.start_datetime)}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Team Members */}
-              <div style={CARD}>
-                <div style={{ padding: '13px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Team Members</div>
-                  <button onClick={() => navigate('/portal/users')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Manage →</button>
-                </div>
-                <div style={{ padding: '10px 16px' }}>
-                  {loadingTeam ? (
-                    <Skeleton active paragraph={{ rows: 3 }} />
-                  ) : teamMembers.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '16px 0', color: '#94a3b8', fontSize: 13 }}>
-                      No team members yet
-                      <br />
-                      <button onClick={() => navigate('/portal/users')} style={{ marginTop: 8, padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                        Invite Members
-                      </button>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <span style={{ background: bs.bg, color: bs.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, display: 'inline-block', marginBottom: 3 }}>
+                          {bs.label}
+                        </span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
+                          ${parseFloat(b.total_price || 0).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      {teamMembers.slice(0, 5).map((member: User) => {
-                        const ss = STATUS_STYLE[member.status] ?? { bg: '#f1f5f9', color: '#475569' };
-                        return (
-                          <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottom: '1px solid #f8fafc', marginBottom: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                              {member.first_name[0]}{member.last_name[0]}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.first_name} {member.last_name}</div>
-                              <div style={{ fontSize: 11, color: '#94a3b8' }}>{member.role.replace('_', ' ').toLowerCase()}</div>
-                            </div>
-                            <span style={{ background: ss.bg, color: ss.color, fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20 }}>{member.status}</span>
-                          </div>
-                        );
-                      })}
-                      {teamMembers.length > 5 && (
-                        <button onClick={() => navigate('/portal/users')} style={{ width: '100%', padding: '7px', border: '1px dashed #e5e7eb', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#64748b' }}>
-                          +{teamMembers.length - 5} more members
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+                  );
+                })
+            }
+          </div>
 
-              {/* Quick Actions */}
-              <div style={CARD}>
-                <div style={{ padding: '13px 18px', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Quick Actions</div>
-                </div>
-                <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {[
-                    { label: 'Browse Spaces',  icon: <AppstoreOutlined />,  path: '/portal/spaces',      bg: '#eff6ff', color: '#1d4ed8' },
-                    { label: 'Book a Space',   icon: <CalendarOutlined />,  path: '/portal/bookings',    bg: '#f0fdf4', color: '#15803d' },
-                    { label: 'My Contracts',   icon: <FileTextOutlined />,  path: '/portal/contracts',   bg: '#fefce8', color: '#92400e' },
-                    { label: 'Billing',        icon: <CreditCardOutlined />,path: '/portal/billing',     bg: '#f5f3ff', color: '#6d28d9' },
-                    { label: 'Submit Ticket',  icon: <ToolOutlined />,      path: '/portal/maintenance', bg: '#fef2f2', color: '#b91c1c' },
-                    { label: 'Invite Member',  icon: <UserOutlined />,      path: '/portal/users',       bg: '#f0fdf4', color: '#15803d' },
-                  ].map(a => (
-                    <button
-                      key={a.label}
-                      onClick={() => navigate(a.path)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 10px', background: a.bg, border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: a.color, transition: 'opacity 0.15s', textAlign: 'left' }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                    >
-                      <span style={{ fontSize: 14 }}>{a.icon}</span> {a.label}
-                    </button>
-                  ))}
-                </div>
+          {/* Maintenance Tickets */}
+          <div style={CARD}>
+            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>🔧 Maintenance</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => navigate('/portal/maintenance')}
+                  style={{ padding: '5px 10px', borderRadius: 7, background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#7c3aed', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                  + New Ticket
+                </button>
+                <button onClick={() => navigate('/portal/maintenance')}
+                  style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                  View all →
+                </button>
               </div>
             </div>
+            {isLoading
+              ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+              : recentTickets.length === 0
+                ? (
+                  <div style={{ padding: '32px', textAlign: 'center' }}>
+                    <CheckCircleOutlined style={{ fontSize: 32, color: '#22c55e', display: 'block', margin: '0 auto 10px' }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>All clear!</div>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>No open maintenance tickets</div>
+                  </div>
+                )
+                : recentTickets.map((tk: any, i: number) => {
+                  const ts = TICKET_STATUS[tk.status]     ?? { bg: '#f1f5f9', color: '#475569' };
+                  const tp = TICKET_PRIORITY[tk.priority] ?? { bg: '#f1f5f9', color: '#475569' };
+                  return (
+                    <div key={tk.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentTickets.length - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: tp.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <ToolOutlined style={{ color: tp.color, fontSize: 14 }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {tk.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: t.textMuted }}>
+                          {tk.ticket_number} · {tk.category?.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <span style={{ background: tp.bg, color: tp.color, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 20 }}>
+                          {tk.priority}
+                        </span>
+                        <span style={{ background: ts.bg, color: ts.color, fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 20 }}>
+                          {tk.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+            }
           </div>
         </div>
+
+        {/* Bottom row */}
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: 16 }}>
+
+          {/* Notifications */}
+          <div style={CARD}>
+            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>🔔 Notifications</div>
+                {unreadNotifs > 0 && (
+                  <span style={{ background: '#2563eb', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20 }}>
+                    {unreadNotifs} new
+                  </span>
+                )}
+              </div>
+              <button onClick={() => navigate('/portal/notifications')}
+                style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                View all →
+              </button>
+            </div>
+            {isLoading
+              ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+              : recentNotifs.length === 0
+                ? (
+                  <div style={{ padding: '28px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>
+                    <BellOutlined style={{ fontSize: 28, display: 'block', margin: '0 auto 8px', color: t.textMuted }} />
+                    No notifications
+                  </div>
+                )
+                : recentNotifs.map((n: any, i: number) => {
+                  const nm = NOTIF_TYPE_ICON[n.type] ?? { icon: '📣', color: '#475569', bg: t.tableHead };
+                  return (
+                    <div key={n.id}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 20px', borderBottom: i < recentNotifs.length - 1 ? `1px solid ${t.divider}` : 'none', background: n.is_read ? '' : (t.cardBg === '#fff' ? '#fafbff' : '#1a2744'), transition: 'background 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+                      onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? '' : (t.cardBg === '#fff' ? '#fafbff' : '#1a2744'))}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: nm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
+                        {nm.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: n.is_read ? 500 : 700, fontSize: 12, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {n.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: t.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {n.message}
+                        </div>
+                      </div>
+                      {!n.is_read && (
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', flexShrink: 0, marginTop: 4 }} />
+                      )}
+                    </div>
+                  );
+                })
+            }
+          </div>
+
+          {/* Team Members (admin only) */}
+          {isAdmin && (
+            <div style={CARD}>
+              <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>👥 Team Members</div>
+                <button onClick={() => navigate('/portal/users')}
+                  style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                  Manage →
+                </button>
+              </div>
+              {isLoading
+                ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+                : members.length === 0
+                  ? (
+                    <div style={{ padding: '28px', textAlign: 'center' }}>
+                      <TeamOutlined style={{ fontSize: 32, color: t.textMuted, display: 'block', margin: '0 auto 10px' }} />
+                      <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>No team members yet</div>
+                      <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>Invite your team to collaborate</div>
+                    </div>
+                  )
+                  : members.slice(0, 6).map((m: any, i: number) => {
+                    const ROLE_META: Record<string, { bg: string; color: string }> = {
+                      TENANT_ADMIN: { bg: '#ede9fe', color: '#6d28d9' },
+                      EMPLOYEE:     { bg: '#f1f5f9', color: '#475569' },
+                    };
+                    const rm = ROLE_META[m.role] ?? { bg: '#f1f5f9', color: '#475569' };
+                    const initials = `${m.first_name?.[0] ?? ''}${m.last_name?.[0] ?? ''}`;
+                    const colors   = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444'];
+                    const color    = colors[i % colors.length];
+                    return (
+                      <div key={m.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < Math.min(members.length, 6) - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
+                        onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#fff', flexShrink: 0 }}>
+                          {initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {m.first_name} {m.last_name}
+                          </div>
+                          <div style={{ fontSize: 11, color: t.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {m.email}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <span style={{ background: rm.bg, color: rm.color, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+                            {m.role === 'TENANT_ADMIN' ? 'Admin' : 'Employee'}
+                          </span>
+                          <div style={{ width: 7, height: 7, borderRadius: '50%', background: m.status === 'ACTIVE' ? '#22c55e' : '#94a3b8' }} title={m.status} />
+                        </div>
+                      </div>
+                    );
+                  })
+              }
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ── Secondary Sidebar ── */}
+      <aside style={{ width: 220, flexShrink: 0, borderLeft: `1px solid ${t.cardBorder}`, background: t.cardBg, display: 'flex', flexDirection: 'column', padding: '20px 0' }}>
+
+        {/* Quick Actions */}
+        <div style={{ padding: '0 16px', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Quick Actions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              { icon: <CalendarOutlined />, label: 'Book a Space',      path: '/portal/bookings/calendar', color: '#2563eb', bg: '#eff6ff' },
+              { icon: <ToolOutlined />,     label: 'Report Issue',       path: '/portal/maintenance',       color: '#7c3aed', bg: '#f5f3ff' },
+              { icon: <BellOutlined />,     label: 'Notifications',      path: '/portal/notifications',     color: '#0891b2', bg: '#f0f9ff', badge: unreadNotifs },
+              ...(isAdmin ? [
+                { icon: <FileTextOutlined />, label: 'My Contracts', path: '/portal/contracts', color: '#059669', bg: '#f0fdf4' },
+                { icon: <CreditCardOutlined />, label: 'Billing',    path: '/portal/billing',   color: '#d97706', bg: '#fffbeb' },
+                { icon: <TeamOutlined />,       label: 'My Team',    path: '/portal/users',     color: '#dc2626', bg: '#fef2f2' },
+              ] : []),
+            ].map(action => (
+              <button key={action.label} onClick={() => navigate(action.path)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: t.textSub, transition: 'all 0.15s', textAlign: 'left' }}
+                onMouseEnter={e => { e.currentTarget.style.background = (action as any).bg; e.currentTarget.style.color = (action as any).color; e.currentTarget.style.borderColor = (action as any).color + '40'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.cardBg; e.currentTarget.style.color = t.textSub; e.currentTarget.style.borderColor = t.cardBorder; }}>
+                <span style={{ fontSize: 14, color: (action as any).color }}>{action.icon}</span>
+                <span style={{ flex: 1 }}>{action.label}</span>
+                {(action as any).badge > 0 && (
+                  <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 10 }}>{(action as any).badge}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: t.divider, margin: '0 16px 20px' }} />
+
+        {/* Contract Status (admin) */}
+        {isAdmin && (
+          <div style={{ padding: '0 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Contracts</div>
+            {isLoading
+              ? <Skeleton active paragraph={{ rows: 2 }} />
+              : contracts.length === 0
+                ? <div style={{ fontSize: 12, color: t.textMuted, textAlign: 'center', padding: '12px 0' }}>No contracts</div>
+                : contracts.slice(0, 3).map((c: any) => {
+                  const days = daysUntil(c.end_date);
+                  const color = c.status !== 'ACTIVE' ? '#94a3b8' : days <= 30 ? '#dc2626' : days <= 90 ? '#d97706' : '#059669';
+                  return (
+                    <div key={c.id} style={{ background: t.tableHead, borderRadius: 9, padding: '10px 12px', marginBottom: 8, border: `1px solid ${t.cardBorder}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                        {c.contract_number}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 10, color: t.textMuted }}>Ends {formatDate(c.end_date)}</span>
+                        <span style={{ fontSize: 10, fontWeight: 800, color, background: color + '15', padding: '1px 6px', borderRadius: 8 }}>
+                          {c.status !== 'ACTIVE' ? c.status : days <= 0 ? 'Expired' : `${days}d`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+        )}
+
+        {/* Browse Spaces CTA */}
+        <div style={{ padding: '0 16px', marginTop: 'auto' }}>
+          <div style={{ background: 'linear-gradient(135deg,#1e293b,#0f172a)', borderRadius: 12, padding: '16px', textAlign: 'center' }}>
+            <AppstoreOutlined style={{ fontSize: 26, color: '#60a5fa', display: 'block', marginBottom: 8 }} />
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Browse Spaces</div>
+            <div style={{ fontSize: 10, color: '#64748b', marginBottom: 12 }}>Find and book the perfect workspace</div>
+            <button onClick={() => navigate('/portal/spaces')}
+              style={{ width: '100%', padding: '8px', borderRadius: 8, background: '#2563eb', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+              Explore →
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

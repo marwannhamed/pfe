@@ -1,8 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SiteStatus } from '@prisma/client';
 import {
-  IsEnum, IsNotEmpty, IsOptional,
-  IsString, IsUUID,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateSiteDto {

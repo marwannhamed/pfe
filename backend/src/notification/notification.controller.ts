@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -27,11 +39,11 @@ export class NotificationController {
   @ApiOperation({ summary: 'Lister les notifications' })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'isRead', required: false })
-  @ApiQuery({ name: 'type',   required: false })
+  @ApiQuery({ name: 'type', required: false })
   findAll(
     @Query('userId') userId?: string,
     @Query('isRead') isRead?: string,
-    @Query('type')   type?:   string,
+    @Query('type') type?: string,
   ) {
     return this.notificationService.findAll(userId, isRead, type);
   }

@@ -2,8 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import {
-  ReportType, InvoiceStatus,
-  PaymentStatus, TicketStatus,
+  ReportType,
+  InvoiceStatus,
+  PaymentStatus,
+  TicketStatus,
 } from '@prisma/client';
 
 @Injectable()
@@ -12,12 +14,6 @@ export class ReportService {
 
   // ─── CREATE ──────────────────────────────────────────────────
   async create(dto: CreateReportDto) {
-    // Générer les données du rapport
-    const reportData = await this.generateReportData(
-      dto.report_type,
-      dto.parameters,
-    );
-
     return this.prisma.report.create({
       data: {
         ...dto,
@@ -32,7 +28,7 @@ export class ReportService {
     return this.prisma.report.findMany({
       where: {
         ...(userId && { generated_by_user_id: userId }),
-        ...(type   && { report_type: type as ReportType }),
+        ...(type && { report_type: type as ReportType }),
       },
       include: { generatedBy: true },
       orderBy: { generated_at: 'desc' },
@@ -83,18 +79,20 @@ export class ReportService {
         : {},
     });
 
-    const total    = spaces.length;
-    const occupied = spaces.filter(s => s.status === 'OCCUPIED').length;
-    const available = spaces.filter(s => s.status === 'AVAILABLE').length;
-    const maintenance = spaces.filter(s => s.status === 'MAINTENANCE').length;
+    const total = spaces.length;
+    const occupied = spaces.filter((s) => s.status === 'OCCUPIED').length;
+    const available = spaces.filter((s) => s.status === 'AVAILABLE').length;
+    const maintenance = spaces.filter((s) => s.status === 'MAINTENANCE').length;
 
     return {
-      total_spaces:      total,
+      total_spaces: total,
       occupied,
       available,
       maintenance,
-      occupancy_rate:    total > 0 ? `${((occupied / total) * 100).toFixed(2)}%` : '0%',
-      availability_rate: total > 0 ? `${((available / total) * 100).toFixed(2)}%` : '0%',
+      occupancy_rate:
+        total > 0 ? `${((occupied / total) * 100).toFixed(2)}%` : '0%',
+      availability_rate:
+        total > 0 ? `${((available / total) * 100).toFixed(2)}%` : '0%',
     };
   }
 
@@ -109,15 +107,14 @@ export class ReportService {
     });
 
     const totalRevenue = invoices.reduce(
-      (s, i) => s + Number(i.total_amount), 0,
+      (s, i) => s + Number(i.total_amount),
+      0,
     );
 
     return {
-      total_revenue:  totalRevenue,
-      invoice_count:  invoices.length,
-      average_invoice: invoices.length > 0
-        ? totalRevenue / invoices.length
-        : 0,
+      total_revenue: totalRevenue,
+      invoice_count: invoices.length,
+      average_invoice: invoices.length > 0 ? totalRevenue / invoices.length : 0,
     };
   }
 
@@ -138,9 +135,11 @@ export class ReportService {
       confirmed,
       cancelled,
       completed,
-      no_show:          noShow,
-      completion_rate:  total > 0 ? `${((completed / total) * 100).toFixed(2)}%` : '0%',
-      cancellation_rate: total > 0 ? `${((cancelled / total) * 100).toFixed(2)}%` : '0%',
+      no_show: noShow,
+      completion_rate:
+        total > 0 ? `${((completed / total) * 100).toFixed(2)}%` : '0%',
+      cancellation_rate:
+        total > 0 ? `${((cancelled / total) * 100).toFixed(2)}%` : '0%',
     };
   }
 
@@ -150,15 +149,23 @@ export class ReportService {
 
     const [total, completed, pending, failed, refunded] = await Promise.all([
       this.prisma.payment.count({ where }),
-      this.prisma.payment.count({ where: { ...where, status: PaymentStatus.COMPLETED } }),
-      this.prisma.payment.count({ where: { ...where, status: PaymentStatus.PENDING } }),
-      this.prisma.payment.count({ where: { ...where, status: PaymentStatus.FAILED } }),
-      this.prisma.payment.count({ where: { ...where, status: PaymentStatus.REFUNDED } }),
+      this.prisma.payment.count({
+        where: { ...where, status: PaymentStatus.COMPLETED },
+      }),
+      this.prisma.payment.count({
+        where: { ...where, status: PaymentStatus.PENDING },
+      }),
+      this.prisma.payment.count({
+        where: { ...where, status: PaymentStatus.FAILED },
+      }),
+      this.prisma.payment.count({
+        where: { ...where, status: PaymentStatus.REFUNDED },
+      }),
     ]);
 
     const totalAmount = await this.prisma.payment.aggregate({
       where: { ...where, status: PaymentStatus.COMPLETED },
-      _sum:  { amount: true },
+      _sum: { amount: true },
     });
 
     return {
@@ -177,20 +184,31 @@ export class ReportService {
 
     const [total, open, inProgress, resolved, closed] = await Promise.all([
       this.prisma.maintenanceTicket.count({ where }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.OPEN } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.IN_PROGRESS } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.RESOLVED } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.CLOSED } }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.OPEN },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.IN_PROGRESS },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.RESOLVED },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.CLOSED },
+      }),
     ]);
 
     const totalCost = await this.prisma.maintenanceTicket.aggregate({
       where: { ...where, status: TicketStatus.CLOSED },
-      _sum:  { cost: true },
+      _sum: { cost: true },
     });
 
     return {
-      total, open, in_progress: inProgress,
-      resolved, closed,
+      total,
+      open,
+      in_progress: inProgress,
+      resolved,
+      closed,
       total_cost: Number(totalCost._sum.cost ?? 0),
     };
   }
@@ -204,24 +222,31 @@ export class ReportService {
       include: { payments: true },
     });
 
-    const totalInvoiced = invoices.reduce((s, i) => s + Number(i.total_amount), 0);
-    const totalPaid     = invoices.reduce((s, i) =>
-      s + i.payments
-        .filter(p => p.status === PaymentStatus.COMPLETED)
-        .reduce((ps, p) => ps + Number(p.amount), 0), 0,
+    const totalInvoiced = invoices.reduce(
+      (s, i) => s + Number(i.total_amount),
+      0,
+    );
+    const totalPaid = invoices.reduce(
+      (s, i) =>
+        s +
+        i.payments
+          .filter((p) => p.status === PaymentStatus.COMPLETED)
+          .reduce((ps, p) => ps + Number(p.amount), 0),
+      0,
     );
     const totalOverdue = invoices
-      .filter(i => i.status === InvoiceStatus.OVERDUE)
+      .filter((i) => i.status === InvoiceStatus.OVERDUE)
       .reduce((s, i) => s + Number(i.total_amount), 0);
 
     return {
-      total_invoiced:  totalInvoiced,
-      total_paid:      totalPaid,
-      total_pending:   totalInvoiced - totalPaid,
-      total_overdue:   totalOverdue,
-      collection_rate: totalInvoiced > 0
-        ? `${((totalPaid / totalInvoiced) * 100).toFixed(2)}%`
-        : '0%',
+      total_invoiced: totalInvoiced,
+      total_paid: totalPaid,
+      total_pending: totalInvoiced - totalPaid,
+      total_overdue: totalOverdue,
+      collection_rate:
+        totalInvoiced > 0
+          ? `${((totalPaid / totalInvoiced) * 100).toFixed(2)}%`
+          : '0%',
     };
   }
 }

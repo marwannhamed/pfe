@@ -1,8 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentMethod } from '@prisma/client';
 import {
-  IsDateString, IsEnum, IsNumber,
-  IsOptional, IsString, IsUUID, Min,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreatePaymentDto {
@@ -22,7 +27,7 @@ export class CreatePaymentDto {
   @IsEnum(PaymentMethod)
   payment_method: PaymentMethod;
 
-  @ApiProperty({ example: 2975.00 })
+  @ApiProperty({ example: 2975.0 })
   @IsNumber()
   @Min(0)
   amount: number;

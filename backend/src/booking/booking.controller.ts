@@ -1,10 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, HttpCode, HttpStatus, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -30,12 +42,12 @@ export class BookingController {
   @Get()
   @ApiOperation({ summary: 'Lister toutes les réservations' })
   @ApiQuery({ name: 'tenantId', required: false })
-  @ApiQuery({ name: 'spaceId',  required: false })
-  @ApiQuery({ name: 'status',   required: false })
+  @ApiQuery({ name: 'spaceId', required: false })
+  @ApiQuery({ name: 'status', required: false })
   findAll(
     @Query('tenantId') tenantId?: string,
-    @Query('spaceId')  spaceId?: string,
-    @Query('status')   status?: string,
+    @Query('spaceId') spaceId?: string,
+    @Query('status') status?: string,
   ) {
     return this.bookingService.findAll(tenantId, spaceId, status);
   }
@@ -83,14 +95,14 @@ export class BookingController {
   }
 
   @Patch(':id/check-in')
-  @ApiOperation({ summary: 'Check-in d\'une réservation' })
+  @ApiOperation({ summary: "Check-in d'une réservation" })
   @ApiParam({ name: 'id' })
   checkIn(@Param('id') id: string) {
     return this.bookingService.checkIn(id);
   }
 
   @Patch(':id/check-out')
-  @ApiOperation({ summary: 'Check-out d\'une réservation' })
+  @ApiOperation({ summary: "Check-out d'une réservation" })
   @ApiParam({ name: 'id' })
   checkOut(@Param('id') id: string) {
     return this.bookingService.checkOut(id);
@@ -101,22 +113,18 @@ export class BookingController {
   @Post(':id/addons')
   @ApiOperation({ summary: 'Ajouter un service additionnel à la réservation' })
   @ApiParam({ name: 'id' })
-  addAddon(
-    @Param('id') id: string,
-    @Body() dto: CreateBookingAddonDto,
-  ) {
+  addAddon(@Param('id') id: string, @Body() dto: CreateBookingAddonDto) {
     return this.bookingService.addAddon(id, dto);
   }
 
   @Delete(':id/addons/:addonId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Supprimer un service additionnel de la réservation' })
+  @ApiOperation({
+    summary: 'Supprimer un service additionnel de la réservation',
+  })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'addonId' })
-  removeAddon(
-    @Param('id') id: string,
-    @Param('addonId') addonId: string,
-  ) {
+  removeAddon(@Param('id') id: string, @Param('addonId') addonId: string) {
     return this.bookingService.removeAddon(id, addonId);
   }
 }

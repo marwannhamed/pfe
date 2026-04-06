@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Input, Select, Skeleton, Empty } from 'antd';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Input, Select, Skeleton, Empty, message } from 'antd';
 import {
   SearchOutlined, PlusOutlined, ReloadOutlined,
   AppstoreOutlined, UnorderedListOutlined,
+  EditOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { buildingApi, siteApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
@@ -34,6 +35,7 @@ export default function BuildingsPage() {
   const [view,         setView]      = useState<'card' | 'list'>('card');
   const [showAdd,      setShowAdd]   = useState(false);
   const [addForSite,   setAddForSite]= useState<{ id: string; name: string } | null>(null);
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
 
   const { data: sitesRaw } = useQuery({
     queryKey: ['sites-for-buildings'],
@@ -46,6 +48,27 @@ export default function BuildingsPage() {
     queryFn:  () => buildingApi.getAll(siteFilter || undefined).then(r => r.data),
   });
   const buildings: Building[] = Array.isArray(buildingsRaw) ? buildingsRaw : [];
+
+  const qc = useQueryClient();
+
+  // Delete mutation
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => buildingApi.remove(id),
+    onSuccess: () => {
+      message.success('Building deleted successfully');
+      qc.invalidateQueries({ queryKey: ['buildings'] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to delete building';
+      message.error(msg);
+    },
+  });
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      deleteMut.mutate(id);
+    }
+  };
 
   const filtered = buildings.filter(b => {
     const matchQ      = !q || b.name.toLowerCase().includes(q.toLowerCase()) || b.code.toLowerCase().includes(q.toLowerCase());
@@ -73,6 +96,14 @@ export default function BuildingsPage() {
           siteId={addForSite.id}
           siteName={addForSite.name}
           onClose={() => { setAddForSite(null); refetch(); }}
+        />
+      )}
+
+      {editingBuilding && (
+        <EditBuildingModal
+          building={editingBuilding}
+          sites={sites}
+          onClose={() => { setEditingBuilding(null); refetch(); }}
         />
       )}
 
@@ -200,14 +231,14 @@ export default function BuildingsPage() {
       {/* Card view */}
       {!isLoading && !isError && filtered.length > 0 && view === 'card' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {filtered.map(b => <BuildingCard key={b.id} building={b} sites={sites} onNavigate={() => navigate(`/admin/sites/${b.site_id}`)} />)}
+          {filtered.map(b => <BuildingCard key={b.id} building={b} sites={sites} onNavigate={() => navigate(`/admin/sites/${b.site_id}`)} onEdit={() => setEditingBuilding(b)} onDelete={() => handleDelete(b.id, b.name)} />)}
         </div>
       )}
 
       {/* List view */}
       {!isLoading && !isError && filtered.length > 0 && view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(b => <BuildingRow key={b.id} building={b} sites={sites} onNavigate={() => navigate(`/admin/sites/${b.site_id}`)} />)}
+          {filtered.map(b => <BuildingRow key={b.id} building={b} sites={sites} onNavigate={() => navigate(`/admin/sites/${b.site_id}`)} onEdit={() => setEditingBuilding(b)} onDelete={() => handleDelete(b.id, b.name)} />)}
         </div>
       )}
     </div>
@@ -215,7 +246,7 @@ export default function BuildingsPage() {
 }
 
 // ─── Building Card ────────────────────────────────────────────────────────────
-function BuildingCard({ building: b, sites, onNavigate }: { building: Building; sites: Site[]; onNavigate: () => void }) {
+function BuildingCard({ building: b, sites, onNavigate, onEdit, onDelete }: { building: Building; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
   const ss  = STATUS_STYLE[b.status] ?? STATUS_STYLE.INACTIVE;
   const site = sites.find(s => s.id === b.site_id);
   return (
@@ -245,18 +276,34 @@ function BuildingCard({ building: b, sites, onNavigate }: { building: Building; 
           </div>
         ))}
       </div>
-      <button
-        style={{ width: '100%', marginTop: 14, padding: '9px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-        onClick={e => { e.stopPropagation(); onNavigate(); }}
-      >
-        View in Site →
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button
+          style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onNavigate(); }}
+        >
+          View in Site →
+        </button>
+        <button
+          style={{ padding: '9px', borderRadius: 8, background: '#f59e0b', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+          title="Edit building"
+        >
+          <EditOutlined />
+        </button>
+        <button
+          style={{ padding: '9px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+          title="Delete building"
+        >
+          <DeleteOutlined />
+        </button>
+      </div>
     </div>
   );
 }
 
 // ─── Building Row ─────────────────────────────────────────────────────────────
-function BuildingRow({ building: b, sites, onNavigate }: { building: Building; sites: Site[]; onNavigate: () => void }) {
+function BuildingRow({ building: b, sites, onNavigate, onEdit, onDelete }: { building: Building; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
   const ss   = STATUS_STYLE[b.status] ?? STATUS_STYLE.INACTIVE;
   const site = sites.find(s => s.id === b.site_id);
   return (
@@ -280,9 +327,17 @@ function BuildingRow({ building: b, sites, onNavigate }: { building: Building; s
         <span>📐 {parseFloat(b.total_area_sqm).toLocaleString()} m²</span>
         {b.year_built && <span>📅 {b.year_built}</span>}
       </div>
-      <button onClick={e => { e.stopPropagation(); onNavigate(); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-        View →
-      </button>
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#f59e0b', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }} title="Edit building">
+          <EditOutlined />
+        </button>
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#ef4444', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }} title="Delete building">
+          <DeleteOutlined />
+        </button>
+        <button onClick={e => { e.stopPropagation(); onNavigate(); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          View →
+        </button>
+      </div>
     </div>
   );
 }
@@ -309,6 +364,157 @@ function PickSiteModal({ sites, onPick, onClose }: { sites: Site[]; onPick: (s: 
           ))}
         </div>
         <button onClick={onClose} style={{ width: '100%', marginTop: 14, padding: '9px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Building Modal ────────────────────────────────────────────────────────
+function EditBuildingModal({ building, sites, onClose }: { building: Building; sites: Site[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: building.name,
+    code: building.code,
+    total_area_sqm: building.total_area_sqm.toString(),
+    year_built: building.year_built?.toString() || '',
+    status: building.status,
+    site_id: building.site_id,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => buildingApi.update(building.id, data),
+    onSuccess: () => {
+      message.success('Building updated successfully');
+      qc.invalidateQueries({ queryKey: ['buildings'] });
+      onClose();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as any)?.response?.data?.message ?? 'Failed to update building';
+      message.error(msg);
+    },
+  });
+
+  const handleSubmit = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Name is required';
+    if (!form.code.trim()) e.code = 'Code is required';
+    if (!form.total_area_sqm || Number(form.total_area_sqm) <= 0) e.total_area_sqm = 'Valid area is required';
+    
+    if (Object.keys(e).length) { setErrors(e); return; }
+
+    setLoading(true);
+    updateMut.mutate({
+      name: form.name.trim(),
+      code: form.code.trim().toUpperCase(),
+      total_area_sqm: parseFloat(form.total_area_sqm),
+      year_built: form.year_built ? parseInt(form.year_built) : null,
+      status: form.status,
+      site_id: form.site_id,
+    });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Edit Building</h2>
+        <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b' }}>Update building information</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Building Name *</label>
+            <input
+              style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.name ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }}
+              value={form.name}
+              onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(e => { const n = { ...e }; delete n.name; return n; }); }}
+              placeholder="e.g. Tower A"
+            />
+            {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Building Code *</label>
+            <input
+              style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.code ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13, fontFamily: 'monospace', textTransform: 'uppercase' }}
+              value={form.code}
+              onChange={e => { setForm(f => ({ ...f, code: e.target.value })); setErrors(e => { const n = { ...e }; delete n.code; return n; }); }}
+              placeholder="e.g. TWR-A"
+            />
+            {errors.code && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.code}</div>}
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Site</label>
+            <select
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+              value={form.site_id}
+              onChange={e => setForm(f => ({ ...f, site_id: e.target.value }))}
+            >
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name} ({s.city})</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Total Area (m²) *</label>
+              <input
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.total_area_sqm ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }}
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.total_area_sqm}
+                onChange={e => { setForm(f => ({ ...f, total_area_sqm: e.target.value })); setErrors(e => { const n = { ...e }; delete n.total_area_sqm; return n; }); }}
+                placeholder="e.g. 1500"
+              />
+              {errors.total_area_sqm && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.total_area_sqm}</div>}
+            </div>
+
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Year Built</label>
+              <input
+                style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+                type="number"
+                min="1900"
+                max={new Date().getFullYear()}
+                value={form.year_built}
+                onChange={e => setForm(f => ({ ...f, year_built: e.target.value }))}
+                placeholder="e.g. 2020"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Status</label>
+            <select
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}
+              value={form.status}
+              onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+            >
+              <option value="ACTIVE">✅ Active</option>
+              <option value="INACTIVE">⏸ Inactive</option>
+              <option value="UNDER_CONSTRUCTION">🔨 Under Construction</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{ flex: 1, padding: '9px 20px', borderRadius: 8, background: loading ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   );

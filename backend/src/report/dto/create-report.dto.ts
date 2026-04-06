@@ -1,8 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReportFormat, ReportType } from '@prisma/client';
-import {
-  IsEnum, IsOptional, IsString, IsUUID,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateReportDto {
   @ApiProperty({ example: 'uuid-du-user' })

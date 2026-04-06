@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import {
@@ -25,8 +23,11 @@ export class NotificationService {
   }
 
   // ─── Créer plusieurs notifications d'un coup ─────────────────
-  async createBulk(userIds: string[], dto: Omit<CreateNotificationDto, 'user_id'>) {
-    const data = userIds.map(user_id => ({
+  async createBulk(
+    userIds: string[],
+    dto: Omit<CreateNotificationDto, 'user_id'>,
+  ) {
+    const data = userIds.map((user_id) => ({
       user_id,
       ...dto,
       priority: dto.priority ?? NotificationPriority.NORMAL,
@@ -39,9 +40,9 @@ export class NotificationService {
   async findAll(userId?: string, isRead?: string, type?: string) {
     return this.prisma.notification.findMany({
       where: {
-        ...(userId  && { user_id: userId }),
-        ...(isRead  !== undefined && { is_read: isRead === 'true' }),
-        ...(type    && { type: type as NotificationType }),
+        ...(userId && { user_id: userId }),
+        ...(isRead !== undefined && { is_read: isRead === 'true' }),
+        ...(type && { type: type as NotificationType }),
       },
       include: { user: true },
       orderBy: { created_at: 'desc' },
@@ -98,33 +99,37 @@ export class NotificationService {
   // ─── SEND SYSTEM NOTIFICATION ─────────────────────────────────
   async sendBookingConfirmation(userId: string, bookingNumber: string) {
     return this.create({
-      user_id:  userId,
-      type:     NotificationType.BOOKING_CONFIRMATION,
-      channel:  NotificationChannel.IN_APP,
-      title:    'Réservation confirmée ✅',
-      message:  `Votre réservation ${bookingNumber} a été confirmée.`,
+      user_id: userId,
+      type: NotificationType.BOOKING_CONFIRMATION,
+      channel: NotificationChannel.IN_APP,
+      title: 'Réservation confirmée ✅',
+      message: `Votre réservation ${bookingNumber} a été confirmée.`,
       priority: NotificationPriority.NORMAL,
     });
   }
 
   async sendInvoiceOverdue(userId: string, invoiceNumber: string) {
     return this.create({
-      user_id:  userId,
-      type:     NotificationType.INVOICE_OVERDUE,
-      channel:  NotificationChannel.IN_APP,
-      title:    'Facture en retard ⚠️',
-      message:  `La facture ${invoiceNumber} est en retard de paiement.`,
+      user_id: userId,
+      type: NotificationType.INVOICE_OVERDUE,
+      channel: NotificationChannel.IN_APP,
+      title: 'Facture en retard ⚠️',
+      message: `La facture ${invoiceNumber} est en retard de paiement.`,
       priority: NotificationPriority.HIGH,
     });
   }
 
-  async sendContractExpiring(userId: string, contractNumber: string, daysLeft: number) {
+  async sendContractExpiring(
+    userId: string,
+    contractNumber: string,
+    daysLeft: number,
+  ) {
     return this.create({
-      user_id:  userId,
-      type:     NotificationType.CONTRACT_EXPIRING,
-      channel:  NotificationChannel.IN_APP,
-      title:    'Contrat expirant bientôt 📋',
-      message:  `Le contrat ${contractNumber} expire dans ${daysLeft} jours.`,
+      user_id: userId,
+      type: NotificationType.CONTRACT_EXPIRING,
+      channel: NotificationChannel.IN_APP,
+      title: 'Contrat expirant bientôt 📋',
+      message: `Le contrat ${contractNumber} expire dans ${daysLeft} jours.`,
       priority: NotificationPriority.HIGH,
     });
   }

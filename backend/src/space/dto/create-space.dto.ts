@@ -1,8 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SpaceStatus, SpaceType } from '@prisma/client';
 import {
-  IsBoolean, IsEnum, IsInt, IsNumber,
-  IsNotEmpty, IsOptional, IsString, IsUUID,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateSpaceDto {
@@ -37,17 +43,17 @@ export class CreateSpaceDto {
   @IsOptional()
   status?: SpaceStatus;
 
-  @ApiPropertyOptional({ example: 25.00 })
+  @ApiPropertyOptional({ example: 25.0 })
   @IsNumber()
   @IsOptional()
   price_per_hour?: number;
 
-  @ApiPropertyOptional({ example: 150.00 })
+  @ApiPropertyOptional({ example: 150.0 })
   @IsNumber()
   @IsOptional()
   price_per_day?: number;
 
-  @ApiPropertyOptional({ example: 2000.00 })
+  @ApiPropertyOptional({ example: 2000.0 })
   @IsNumber()
   @IsOptional()
   price_per_month?: number;

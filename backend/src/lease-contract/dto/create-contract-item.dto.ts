@@ -1,8 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ContractItemType } from '@prisma/client';
 import {
-  IsEnum, IsInt, IsNumber,
-  IsOptional, IsString, IsUUID, Min,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateContractItemDto {
@@ -31,7 +36,7 @@ export class CreateContractItemDto {
   @IsOptional()
   quantity?: number;
 
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   @IsNumber()
   @Min(0)
   unit_price: number;

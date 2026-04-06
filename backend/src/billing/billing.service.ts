@@ -1,5 +1,7 @@
 import {
-  Injectable, NotFoundException, BadRequestException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -40,14 +42,14 @@ export class BillingService {
         ...dto,
         invoice_number: this.generateInvoiceNumber(),
         issue_date: new Date(dto.issue_date),
-        due_date:   new Date(dto.due_date),
-        status:     dto.status ?? InvoiceStatus.DRAFT,
+        due_date: new Date(dto.due_date),
+        status: dto.status ?? InvoiceStatus.DRAFT,
         tax_amount: dto.tax_amount ?? 0,
       },
       include: {
-        lines:    true,
+        lines: true,
         payments: true,
-        tenant:   true,
+        tenant: true,
         contract: true,
       },
     });
@@ -57,13 +59,13 @@ export class BillingService {
     return this.prisma.invoice.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
-        ...(status   && { status: status as InvoiceStatus }),
-        ...(type     && { type: type as any }),
+        ...(status && { status: status as InvoiceStatus }),
+        ...(type && { type: type as any }),
       },
       include: {
-        lines:    true,
+        lines: true,
         payments: true,
-        tenant:   true,
+        tenant: true,
       },
       orderBy: { created_at: 'desc' },
     });
@@ -73,10 +75,10 @@ export class BillingService {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
       include: {
-        lines:         true,
-        payments:      true,
-        tenant:        true,
-        contract:      true,
+        lines: true,
+        payments: true,
+        tenant: true,
+        contract: true,
         promotionCode: true,
       },
     });
@@ -91,7 +93,7 @@ export class BillingService {
       data: {
         ...dto,
         ...(dto.issue_date && { issue_date: new Date(dto.issue_date) }),
-        ...(dto.due_date   && { due_date:   new Date(dto.due_date) }),
+        ...(dto.due_date && { due_date: new Date(dto.due_date) }),
       },
     });
   }
@@ -104,8 +106,10 @@ export class BillingService {
   // ─── Envoyer une facture ──────────────────────────────────────
   async sendInvoice(id: string) {
     const invoice = await this.findOneInvoice(id);
-    if (invoice.status !== InvoiceStatus.ISSUED &&
-        invoice.status !== InvoiceStatus.DRAFT) {
+    if (
+      invoice.status !== InvoiceStatus.ISSUED &&
+      invoice.status !== InvoiceStatus.DRAFT
+    ) {
       throw new BadRequestException(
         `Impossible d'envoyer cette facture (statut: ${invoice.status})`,
       );
@@ -139,7 +143,7 @@ export class BillingService {
     });
 
     const totalPaid = invoice.payments
-      .filter(p => p.status === PaymentStatus.COMPLETED)
+      .filter((p) => p.status === PaymentStatus.COMPLETED)
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
     const total = Number(invoice.total_amount);
@@ -177,7 +181,7 @@ export class BillingService {
     // Marquer comme OVERDUE
     await this.prisma.invoice.updateMany({
       where: {
-        id: { in: overdue.map(i => i.id) },
+        id: { in: overdue.map((i) => i.id) },
         status: { notIn: [InvoiceStatus.OVERDUE] },
       },
       data: { status: InvoiceStatus.OVERDUE },
@@ -200,7 +204,7 @@ export class BillingService {
       data: {
         invoice_id: invoiceId,
         ...dto,
-        tax_rate:   dto.tax_rate ?? 0,
+        tax_rate: dto.tax_rate ?? 0,
         line_total: line_total + tax,
       },
     });
@@ -210,9 +214,11 @@ export class BillingService {
       where: { invoice_id: invoiceId },
     });
 
-    const subtotal   = allLines.reduce((s, l) => s + Number(l.line_total), 0);
-    const tax_amount = allLines.reduce((s, l) =>
-      s + (Number(l.line_total) * Number(l.tax_rate) / 100), 0);
+    const subtotal = allLines.reduce((s, l) => s + Number(l.line_total), 0);
+    const tax_amount = allLines.reduce(
+      (s, l) => s + (Number(l.line_total) * Number(l.tax_rate)) / 100,
+      0,
+    );
 
     await this.prisma.invoice.update({
       where: { id: invoiceId },
@@ -240,8 +246,7 @@ export class BillingService {
     const invoice = await this.findOneInvoice(dto.invoice_id);
 
     const status = invoice.status as InvoiceStatus;
-    if (status === InvoiceStatus.CANCELLED ||
-        status === InvoiceStatus.PAID) {
+    if (status === InvoiceStatus.CANCELLED || status === InvoiceStatus.PAID) {
       throw new BadRequestException(
         `Impossible d'enregistrer un paiement pour cette facture (statut: ${invoice.status})`,
       );
@@ -251,12 +256,12 @@ export class BillingService {
       data: {
         ...dto,
         payment_number: this.generatePaymentNumber(),
-        payment_date:   new Date(dto.payment_date),
-        status:         PaymentStatus.COMPLETED,
+        payment_date: new Date(dto.payment_date),
+        status: PaymentStatus.COMPLETED,
       },
       include: {
         invoice: true,
-        tenant:  true,
+        tenant: true,
       },
     });
 
@@ -269,12 +274,12 @@ export class BillingService {
   async findAllPayments(tenantId?: string, invoiceId?: string) {
     return this.prisma.payment.findMany({
       where: {
-        ...(tenantId  && { tenant_id: tenantId }),
+        ...(tenantId && { tenant_id: tenantId }),
         ...(invoiceId && { invoice_id: invoiceId }),
       },
       include: {
-        invoice:    true,
-        tenant:     true,
+        invoice: true,
+        tenant: true,
         recordedBy: true,
       },
       orderBy: { created_at: 'desc' },
@@ -285,8 +290,8 @@ export class BillingService {
     const payment = await this.prisma.payment.findUnique({
       where: { id },
       include: {
-        invoice:    true,
-        tenant:     true,
+        invoice: true,
+        tenant: true,
         recordedBy: true,
       },
     });
@@ -322,24 +327,27 @@ export class BillingService {
     });
 
     const totalInvoiced = invoices.reduce(
-      (s, i) => s + Number(i.total_amount), 0,
+      (s, i) => s + Number(i.total_amount),
+      0,
     );
-    const totalPaid = invoices.reduce((s, i) =>
-      s + i.payments
-        .filter(p => p.status === PaymentStatus.COMPLETED)
-        .reduce((ps, p) => ps + Number(p.amount), 0),
+    const totalPaid = invoices.reduce(
+      (s, i) =>
+        s +
+        i.payments
+          .filter((p) => p.status === PaymentStatus.COMPLETED)
+          .reduce((ps, p) => ps + Number(p.amount), 0),
       0,
     );
     const totalOverdue = invoices
-      .filter(i => i.status === InvoiceStatus.OVERDUE)
+      .filter((i) => i.status === InvoiceStatus.OVERDUE)
       .reduce((s, i) => s + Number(i.total_amount), 0);
 
     return {
-      total_invoiced:  totalInvoiced,
-      total_paid:      totalPaid,
-      total_pending:   totalInvoiced - totalPaid,
-      total_overdue:   totalOverdue,
-      invoice_count:   invoices.length,
+      total_invoiced: totalInvoiced,
+      total_paid: totalPaid,
+      total_pending: totalInvoiced - totalPaid,
+      total_overdue: totalOverdue,
+      invoice_count: invoices.length,
     };
   }
 }

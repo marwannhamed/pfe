@@ -9,9 +9,9 @@ async function bootstrap() {
   // ── CORS ────────────────────────────────────────────────────────────────────
   app.enableCors({
     origin: [
-      'http://localhost:5173',   // Vite dev server
-      'http://localhost:3000',   // in case you run frontend on 3000
-      'http://localhost:4173',   // Vite preview
+      'http://localhost:5173', // Vite dev server
+      'http://localhost:3000', // in case you run frontend on 3000
+      'http://localhost:4173', // Vite preview
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -21,9 +21,9 @@ async function bootstrap() {
   // ── Global validation pipe ───────────────────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,       // strip unknown fields
+      whitelist: true, // strip unknown fields
       forbidNonWhitelisted: false,
-      transform: true,       // auto-transform types
+      transform: true, // auto-transform types
     }),
   );
 

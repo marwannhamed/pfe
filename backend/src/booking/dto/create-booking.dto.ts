@@ -1,8 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingStatus } from '@prisma/client';
 import {
-  IsDateString, IsEnum, IsInt,
-  IsNumber, IsOptional, IsString, IsUUID, Min,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateBookingDto {
@@ -26,7 +32,7 @@ export class CreateBookingDto {
   @IsDateString()
   end_datetime: string;
 
-  @ApiProperty({ example: 500.00 })
+  @ApiProperty({ example: 500.0 })
   @IsNumber()
   @Min(0)
   total_price: number;

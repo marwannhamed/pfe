@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+﻿import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 export const api = axios.create({
@@ -6,7 +6,7 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Attach JWT to every request ───────────────────────────────────────────────
+// â”€â”€ Attach JWT to every request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 api.interceptors.request.use((config) => {
   // authStore uses access_token (not accessToken)
   const state = useAuthStore.getState() as any;
@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Handle errors + auto refresh ─────────────────────────────────────────────
+// â”€â”€ Handle errors + auto refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
@@ -41,7 +41,7 @@ api.interceptors.response.use(
           return api(req);
         }
       } catch {
-        // Refresh failed → logout
+        // Refresh failed â†’ logout
         const state = useAuthStore.getState() as any;
         if (state.logout) state.logout();
         window.location.href = '/login';
@@ -61,3 +61,4 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+

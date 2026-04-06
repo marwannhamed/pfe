@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DepositRefundStatus } from '@prisma/client';
 import {
-  IsDateString, IsEnum, IsNumber,
-  IsOptional, IsString, Min,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
 } from 'class-validator';
 
 export class CreateDepositDto {
-  @ApiProperty({ example: 5000.00 })
+  @ApiProperty({ example: 5000.0 })
   @IsNumber()
   @Min(0)
   amount: number;
@@ -28,7 +32,7 @@ export class CreateDepositDto {
 }
 
 export class RefundDepositDto {
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   @IsNumber()
   @Min(0)
   refunded_amount: number;

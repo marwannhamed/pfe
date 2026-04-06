@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, Skeleton, Badge, message } from 'antd';
 import {
   ArrowLeftOutlined, EditOutlined, StopOutlined,
-  CheckCircleOutlined, ReloadOutlined, TeamOutlined,
+  CheckCircleOutlined, ReloadOutlined,
   FileTextOutlined, CreditCardOutlined, WarningOutlined,
-  MailOutlined, UserOutlined, CalendarOutlined,
+  MailOutlined, CalendarOutlined,
 } from '@ant-design/icons';
 import { tenantApi, userApi, contractApi, billingApi, bookingApi } from '../../api/services';
-import type { Tenant, User, LeaseContract, Invoice, TenantStatus } from '../../types';
+import type { User, LeaseContract, Invoice, TenantStatus } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<TenantStatus, { label: string; bg: string; color: string }> = {
@@ -386,23 +386,26 @@ export default function TenantDetailPage() {
                     <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No bookings yet.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {bookings.map((b: any) => (
-                        <div key={b.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      {bookings.map((b: unknown) => {
+                        const booking = b as any;
+                        return (
+                        <div key={booking.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
                           <div style={{ width: 36, height: 36, borderRadius: 9, background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <CalendarOutlined style={{ color: '#7c3aed', fontSize: 16 }} />
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{b.booking_number}</div>
+                            <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{booking.booking_number}</div>
                             <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                              {b.space?.name ?? 'Unknown space'} · {new Date(b.start_datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              {booking.space?.name ?? 'Unknown space'} · {new Date(booking.start_datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>${parseFloat(b.total_price).toLocaleString()}</div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>${parseFloat(booking.total_price).toLocaleString()}</div>
                           </div>
-                          <span style={{ background: '#ede9fe', color: '#6d28d9', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{b.status.replace(/_/g, ' ')}</span>
+                          <span style={{ background: '#ede9fe', color: '#6d28d9', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{booking.status.replace(/_/g, ' ')}</span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

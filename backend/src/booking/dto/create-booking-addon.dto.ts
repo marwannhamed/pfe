@@ -1,7 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsInt, IsNumber, IsUUID, Min,
-} from 'class-validator';
+import { IsInt, IsNumber, IsUUID, Min } from 'class-validator';
 
 export class CreateBookingAddonDto {
   @ApiProperty({ example: 'uuid-du-addon-service' })
@@ -13,7 +11,7 @@ export class CreateBookingAddonDto {
   @Min(1)
   quantity: number;
 
-  @ApiProperty({ example: 50.00 })
+  @ApiProperty({ example: 50.0 })
   @IsNumber()
   @Min(0)
   unit_price: number;

@@ -20,48 +20,48 @@ export class AuditService {
 
   // ─── LOG Helper (usage interne dans les services) ─────────────
   async log(
-    tenantId:     string,
-    action:       AuditAction,
+    tenantId: string,
+    action: AuditAction,
     resourceType: string,
-    resourceId:   string,
+    resourceId: string,
     options?: {
-      userId?:     string;
-      oldValues?:  Record<string, any>;
-      newValues?:  Record<string, any>;
-      ipAddress?:  string;
-      severity?:   AuditSeverity;
+      userId?: string;
+      oldValues?: Record<string, any>;
+      newValues?: Record<string, any>;
+      ipAddress?: string;
+      severity?: AuditSeverity;
     },
   ) {
     return this.prisma.auditLog.create({
       data: {
-        tenant_id:     tenantId,
-        user_id:       options?.userId,
+        tenant_id: tenantId,
+        user_id: options?.userId,
         action,
         resource_type: resourceType,
-        resource_id:   resourceId,
-        old_values:    options?.oldValues,
-        new_values:    options?.newValues,
-        ip_address:    options?.ipAddress,
-        severity:      options?.severity ?? AuditSeverity.INFO,
+        resource_id: resourceId,
+        old_values: options?.oldValues,
+        new_values: options?.newValues,
+        ip_address: options?.ipAddress,
+        severity: options?.severity ?? AuditSeverity.INFO,
       },
     });
   }
 
   // ─── FIND ALL ─────────────────────────────────────────────────
   async findAll(
-    tenantId?:     string,
-    userId?:       string,
-    action?:       string,
+    tenantId?: string,
+    userId?: string,
+    action?: string,
     resourceType?: string,
-    severity?:     string,
+    severity?: string,
   ) {
     return this.prisma.auditLog.findMany({
       where: {
-        ...(tenantId     && { tenant_id:     tenantId }),
-        ...(userId       && { user_id:       userId }),
-        ...(action       && { action:        action as AuditAction }),
+        ...(tenantId && { tenant_id: tenantId }),
+        ...(userId && { user_id: userId }),
+        ...(action && { action: action as AuditAction }),
         ...(resourceType && { resource_type: resourceType }),
-        ...(severity     && { severity:      severity as AuditSeverity }),
+        ...(severity && { severity: severity as AuditSeverity }),
       },
       include: { user: true, tenant: true },
       orderBy: { created_at: 'desc' },
@@ -95,13 +95,13 @@ export class AuditService {
     }
 
     return {
-      id:            log.id,
-      action:        log.action,
+      id: log.id,
+      action: log.action,
       resource_type: log.resource_type,
-      resource_id:   log.resource_id,
-      changes:       changes.length > 0 ? changes : ['Aucun changement détecté'],
-      performed_by:  log.user,
-      created_at:    log.created_at,
+      resource_id: log.resource_id,
+      changes: changes.length > 0 ? changes : ['Aucun changement détecté'],
+      performed_by: log.user,
+      created_at: log.created_at,
     };
   }
 
@@ -111,10 +111,18 @@ export class AuditService {
 
     const [total, creates, updates, deletes, logins] = await Promise.all([
       this.prisma.auditLog.count({ where }),
-      this.prisma.auditLog.count({ where: { ...where, action: AuditAction.CREATE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AuditAction.UPDATE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AuditAction.DELETE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AuditAction.LOGIN } }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AuditAction.CREATE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AuditAction.UPDATE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AuditAction.DELETE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AuditAction.LOGIN },
+      }),
     ]);
 
     return { total, creates, updates, deletes, logins };

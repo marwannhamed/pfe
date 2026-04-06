@@ -1,9 +1,8 @@
 ﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal, Form, InputNumber, Select, DatePicker, Switch, Skeleton, Empty, message } from 'antd';
-import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { pricePlanApi, siteApi } from '../../api/services';
-import { useAuthStore } from '../../store/authStore';
 import type { PricePlan, SpaceType, BillingCycle } from '../../types';
 import dayjs from 'dayjs';
 
@@ -23,7 +22,6 @@ const CARD: React.CSSProperties = { background: '#fff', borderRadius: 12, border
 function PlanModal({ open, onClose, editPlan }: { open: boolean; onClose: () => void; editPlan?: PricePlan }) {
   const [form] = Form.useForm();
   const qc     = useQueryClient();
-  const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
   const { data: sites = [] } = useQuery({
@@ -47,8 +45,8 @@ function PlanModal({ open, onClose, editPlan }: { open: boolean; onClose: () => 
       }
       qc.invalidateQueries({ queryKey: ['price-plans'] });
       onClose(); form.resetFields();
-    } catch (e: any) {
-      message.error(e?.response?.data?.message ?? 'Error');
+    } catch (e: unknown) {
+      message.error((e as any)?.response?.data?.message ?? 'Error');
     } finally { setLoading(false); }
   };
 

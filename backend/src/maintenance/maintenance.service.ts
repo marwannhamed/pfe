@@ -1,5 +1,7 @@
 import {
-  Injectable, NotFoundException, BadRequestException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMaintenanceTicketDto } from './dto/create-maintenance-ticket.dto';
@@ -27,19 +29,20 @@ export class MaintenanceService {
     const space = await this.prisma.space.findUnique({
       where: { id: dto.space_id },
     });
-    if (!space) throw new NotFoundException(`Space #${dto.space_id} introuvable`);
+    if (!space)
+      throw new NotFoundException(`Space #${dto.space_id} introuvable`);
 
     const ticket = await this.prisma.maintenanceTicket.create({
       data: {
         ...dto,
         ticket_number: this.generateTicketNumber(),
-        reported_at:   new Date(),
-        status:        dto.status   ?? TicketStatus.OPEN,
-        priority:      dto.priority ?? TicketPriority.NORMAL,
+        reported_at: new Date(),
+        status: dto.status ?? TicketStatus.OPEN,
+        priority: dto.priority ?? TicketPriority.NORMAL,
       },
       include: {
-        space:      true,
-        createdBy:  true,
+        space: true,
+        createdBy: true,
         assignedTo: true,
       },
     });
@@ -51,7 +54,7 @@ export class MaintenanceService {
     ) {
       await this.prisma.space.update({
         where: { id: dto.space_id },
-        data:  { status: SpaceStatus.MAINTENANCE },
+        data: { status: SpaceStatus.MAINTENANCE },
       });
     }
 
@@ -60,29 +63,26 @@ export class MaintenanceService {
 
   // ─── FIND ALL ─────────────────────────────────────────────────
   async findAll(
-    spaceId?:   string,
-    status?:    string,
-    priority?:  string,
-    category?:  string,
+    spaceId?: string,
+    status?: string,
+    priority?: string,
+    category?: string,
     assignedTo?: string,
   ) {
     return this.prisma.maintenanceTicket.findMany({
       where: {
-        ...(spaceId    && { space_id: spaceId }),
-        ...(status     && { status:   status   as TicketStatus }),
-        ...(priority   && { priority: priority as TicketPriority }),
-        ...(category   && { category: category as any }),
+        ...(spaceId && { space_id: spaceId }),
+        ...(status && { status: status as TicketStatus }),
+        ...(priority && { priority: priority as TicketPriority }),
+        ...(category && { category: category as any }),
         ...(assignedTo && { assigned_to_user_id: assignedTo }),
       },
       include: {
-        space:      true,
-        createdBy:  true,
+        space: true,
+        createdBy: true,
         assignedTo: true,
       },
-      orderBy: [
-        { priority:    'desc' },
-        { reported_at: 'desc' },
-      ],
+      orderBy: [{ priority: 'desc' }, { reported_at: 'desc' }],
     });
   }
 
@@ -91,8 +91,8 @@ export class MaintenanceService {
     const ticket = await this.prisma.maintenanceTicket.findUnique({
       where: { id },
       include: {
-        space:      { include: { floor: { include: { building: true } } } },
-        createdBy:  true,
+        space: { include: { floor: { include: { building: true } } } },
+        createdBy: true,
         assignedTo: true,
       },
     });
@@ -105,10 +105,10 @@ export class MaintenanceService {
     await this.findOne(id);
     return this.prisma.maintenanceTicket.update({
       where: { id },
-      data:  dto,
+      data: dto,
       include: {
-        space:      true,
-        createdBy:  true,
+        space: true,
+        createdBy: true,
         assignedTo: true,
       },
     });
@@ -135,13 +135,14 @@ export class MaintenanceService {
     const user = await this.prisma.user.findUnique({
       where: { id: assignedToUserId },
     });
-    if (!user) throw new NotFoundException(`User #${assignedToUserId} introuvable`);
+    if (!user)
+      throw new NotFoundException(`User #${assignedToUserId} introuvable`);
 
     return this.prisma.maintenanceTicket.update({
       where: { id },
       data: {
         assigned_to_user_id: assignedToUserId,
-        status:              TicketStatus.ASSIGNED,
+        status: TicketStatus.ASSIGNED,
       },
       include: { assignedTo: true },
     });
@@ -160,7 +161,7 @@ export class MaintenanceService {
 
     return this.prisma.maintenanceTicket.update({
       where: { id },
-      data:  { status: TicketStatus.IN_PROGRESS },
+      data: { status: TicketStatus.IN_PROGRESS },
     });
   }
 
@@ -169,7 +170,10 @@ export class MaintenanceService {
     const ticket = await this.findOne(id);
     const status = ticket.status as TicketStatus;
 
-    if (status !== TicketStatus.IN_PROGRESS && status !== TicketStatus.ASSIGNED) {
+    if (
+      status !== TicketStatus.IN_PROGRESS &&
+      status !== TicketStatus.ASSIGNED
+    ) {
       throw new BadRequestException(
         `Le ticket doit être IN_PROGRESS ou ASSIGNED pour être résolu`,
       );
@@ -178,7 +182,7 @@ export class MaintenanceService {
     const updatedTicket = await this.prisma.maintenanceTicket.update({
       where: { id },
       data: {
-        status:      TicketStatus.RESOLVED,
+        status: TicketStatus.RESOLVED,
         resolved_at: new Date(),
         ...(cost !== undefined && { cost }),
       },
@@ -202,7 +206,7 @@ export class MaintenanceService {
     if (activeTickets === 0) {
       await this.prisma.space.update({
         where: { id: ticket.space_id },
-        data:  { status: SpaceStatus.AVAILABLE },
+        data: { status: SpaceStatus.AVAILABLE },
       });
     }
 
@@ -222,7 +226,7 @@ export class MaintenanceService {
 
     return this.prisma.maintenanceTicket.update({
       where: { id },
-      data:  { status: TicketStatus.CLOSED },
+      data: { status: TicketStatus.CLOSED },
     });
   }
 
@@ -239,7 +243,7 @@ export class MaintenanceService {
 
     return this.prisma.maintenanceTicket.update({
       where: { id },
-      data:  { status: TicketStatus.CANCELLED },
+      data: { status: TicketStatus.CANCELLED },
     });
   }
 
@@ -249,15 +253,23 @@ export class MaintenanceService {
 
     const [total, open, inProgress, resolved, closed] = await Promise.all([
       this.prisma.maintenanceTicket.count({ where }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.OPEN } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.IN_PROGRESS } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.RESOLVED } }),
-      this.prisma.maintenanceTicket.count({ where: { ...where, status: TicketStatus.CLOSED } }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.OPEN },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.IN_PROGRESS },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.RESOLVED },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { ...where, status: TicketStatus.CLOSED },
+      }),
     ]);
 
     const totalCost = await this.prisma.maintenanceTicket.aggregate({
       where: { ...where, status: TicketStatus.CLOSED },
-      _sum:  { cost: true },
+      _sum: { cost: true },
     });
 
     return {
@@ -266,7 +278,7 @@ export class MaintenanceService {
       in_progress: inProgress,
       resolved,
       closed,
-      total_cost:  Number(totalCost._sum.cost ?? 0),
+      total_cost: Number(totalCost._sum.cost ?? 0),
     };
   }
 }

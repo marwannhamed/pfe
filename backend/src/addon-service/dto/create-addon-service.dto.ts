@@ -1,8 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BillingCycle } from '@prisma/client';
 import {
-  IsBoolean, IsEnum, IsNumber,
-  IsOptional, IsString, IsUUID, Min,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateAddonServiceDto {
@@ -18,7 +23,7 @@ export class CreateAddonServiceDto {
   @IsString()
   category: string;
 
-  @ApiProperty({ example: 50.00 })
+  @ApiProperty({ example: 50.0 })
   @IsNumber()
   @Min(0)
   price: number;

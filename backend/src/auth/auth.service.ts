@@ -11,7 +11,6 @@ import { ResetPasswordDto } from './dto/login.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -29,25 +28,26 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
- async login(email: string, password: string): Promise<any> {
-  const user = await this.prisma.user.findUnique({ where: { email } });
+  async login(email: string, password: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
-  if (!user) {
-    throw new NotFoundException(`No user found for email: ${email}`);
+    if (!user) {
+      throw new NotFoundException(`No user found for email: ${email}`);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password!');
+    }
+
+    const { accessToken, refreshToken } = await this.generateTokens({
+      userId: user.id,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: userPassword, ...userWithoutPassword } = user;
+    return { accessToken, refreshToken, user: userWithoutPassword };
   }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    throw new UnauthorizedException('Invalid password!');
-  }
-
-  const { accessToken, refreshToken } = await this.generateTokens({
-    userId: user.id,
-  });
-
-  const { password: _, ...userWithoutPassword } = user;
-  return { accessToken, refreshToken, user: userWithoutPassword };
-}
   async register(userData: any): Promise<any> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: userData?.email },
@@ -55,7 +55,8 @@ export class AuthService {
 
     if (existingUser) {
       throw new HttpException(
-        `User with email ${userData?.email} already exists!`, 400,
+        `User with email ${userData?.email} already exists!`,
+        400,
       );
     }
 
@@ -63,13 +64,13 @@ export class AuthService {
 
     const newUser = await this.prisma.user.create({
       data: {
-        tenant_id:  userData.tenant_id,
-        email:      userData.email,
-        password:   hashedPassword,
+        tenant_id: userData.tenant_id,
+        email: userData.email,
+        password: hashedPassword,
         first_name: userData.first_name,
-        last_name:  userData.last_name,
-        role:       userData.role ?? 'EMPLOYEE',
-        status:     'PENDING',
+        last_name: userData.last_name,
+        role: userData.role ?? 'EMPLOYEE',
+        status: 'PENDING',
       },
     });
 
@@ -77,46 +78,53 @@ export class AuthService {
       userId: newUser.id,
     });
 
-    const { password: _, ...userWithoutPassword } = newUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = newUser;
     return { accessToken, refreshToken, user: userWithoutPassword };
   }
 
   async registerTenant(dto: RegisterTenantDto): Promise<any> {
-  const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-  if (existing) throw new HttpException(`Email ${dto.email} already in use`, 400);
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing)
+      throw new HttpException(`Email ${dto.email} already in use`, 400);
 
-  const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-  // Both created atomically — if one fails, both roll back
-  const result = await this.prisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({
-      data: {
-        name:          dto.company_name,
-        slug:          dto.slug,
-        contact_email: dto.contact_email,
-        status:        'TRIAL',
-      },
+    // Both created atomically — if one fails, both roll back
+    const result = await this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.company_name,
+          slug: dto.slug,
+          contact_email: dto.contact_email,
+          status: 'TRIAL',
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          tenant_id: tenant.id,
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+          email: dto.email,
+          password: hashedPassword,
+          role: 'TENANT_ADMIN',
+          status: 'PENDING',
+        },
+      });
+
+      return { tenant, user };
     });
 
-    const user = await tx.user.create({
-      data: {
-        tenant_id:  tenant.id,
-        first_name: dto.first_name,
-        last_name:  dto.last_name,
-        email:      dto.email,
-        password:   hashedPassword,
-        role:       'TENANT_ADMIN',
-        status:     'PENDING',
-      },
+    const { accessToken, refreshToken } = await this.generateTokens({
+      userId: result.user.id,
     });
-
-    return { tenant, user };
-  });
-
-  const { accessToken, refreshToken } = await this.generateTokens({ userId: result.user.id });
-  const { password: _, ...userWithoutPassword } = result.user;
-  return { accessToken, refreshToken, user: userWithoutPassword };
-}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = result.user;
+    return { accessToken, refreshToken, user: userWithoutPassword };
+  }
 
   async refreshToken(refreshTok: string): Promise<any> {
     try {
@@ -137,7 +145,8 @@ export class AuthService {
         userId: user.id,
       });
 
-      const { password: _, ...userWithoutPassword } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = user;
       return { accessToken, refreshToken, user: userWithoutPassword };
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token!');
@@ -248,7 +257,8 @@ export class AuthService {
         throw new NotFoundException('User not found or invalid token!');
       }
 
-      const { password: _, ...userWithoutPassword } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = user;
       return { accessToken: token, user: userWithoutPassword };
     } catch (error) {
       throw new NotFoundException('Invalid token!');

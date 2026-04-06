@@ -1,6 +1,8 @@
 import {
-  Injectable, NotFoundException,
-  BadRequestException, ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeaseContractDto } from './dto/create-lease-contract.dto';
@@ -30,13 +32,13 @@ export class LeaseContractService {
         ...dto,
         contract_number: this.generateContractNumber(),
         start_date: new Date(dto.start_date),
-        end_date:   new Date(dto.end_date),
-        status:     dto.status ?? ContractStatus.DRAFT,
+        end_date: new Date(dto.end_date),
+        status: dto.status ?? ContractStatus.DRAFT,
       },
       include: {
-        items:    true,
-        deposit:  true,
-        tenant:   true,
+        items: true,
+        deposit: true,
+        tenant: true,
         createdBy: true,
       },
     });
@@ -47,12 +49,12 @@ export class LeaseContractService {
     return this.prisma.leaseContract.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
-        ...(status   && { status: status as ContractStatus }),
+        ...(status && { status: status as ContractStatus }),
       },
       include: {
-        items:    true,
-        deposit:  true,
-        tenant:   true,
+        items: true,
+        deposit: true,
+        tenant: true,
         createdBy: true,
       },
       orderBy: { created_at: 'desc' },
@@ -64,19 +66,20 @@ export class LeaseContractService {
     const contract = await this.prisma.leaseContract.findUnique({
       where: { id },
       include: {
-        items:    {
+        items: {
           include: {
-            space:       true,
+            space: true,
             addonService: true,
           },
         },
-        deposit:   true,
-        tenant:    true,
+        deposit: true,
+        tenant: true,
         createdBy: true,
-        invoices:  true,
+        invoices: true,
       },
     });
-    if (!contract) throw new NotFoundException(`LeaseContract #${id} introuvable`);
+    if (!contract)
+      throw new NotFoundException(`LeaseContract #${id} introuvable`);
     return contract;
   }
 
@@ -88,7 +91,7 @@ export class LeaseContractService {
       data: {
         ...dto,
         ...(dto.start_date && { start_date: new Date(dto.start_date) }),
-        ...(dto.end_date   && { end_date:   new Date(dto.end_date) }),
+        ...(dto.end_date && { end_date: new Date(dto.end_date) }),
       },
     });
   }
@@ -110,7 +113,7 @@ export class LeaseContractService {
     return this.prisma.leaseContract.update({
       where: { id },
       data: {
-        status:    ContractStatus.ACTIVE,
+        status: ContractStatus.ACTIVE,
         signed_at: new Date(),
       },
     });
@@ -141,7 +144,7 @@ export class LeaseContractService {
     return this.prisma.leaseContract.update({
       where: { id },
       data: {
-        status:   ContractStatus.RENEWED,
+        status: ContractStatus.RENEWED,
         end_date: new Date(newEndDate),
       },
     });
@@ -156,7 +159,7 @@ export class LeaseContractService {
         ...dto,
       },
       include: {
-        space:        true,
+        space: true,
         addonService: true,
       },
     });
@@ -193,17 +196,18 @@ export class LeaseContractService {
       throw new NotFoundException(`Aucun dépôt trouvé pour ce contrat`);
     }
 
-    const refundStatus = dto.refunded_amount >= Number(contract.deposit.amount)
-      ? DepositRefundStatus.FULLY_REFUNDED
-      : DepositRefundStatus.PARTIALLY_REFUNDED;
+    const refundStatus =
+      dto.refunded_amount >= Number(contract.deposit.amount)
+        ? DepositRefundStatus.FULLY_REFUNDED
+        : DepositRefundStatus.PARTIALLY_REFUNDED;
 
     return this.prisma.deposit.update({
       where: { contract_id: contractId },
       data: {
         refunded_amount: dto.refunded_amount,
-        refund_status:   dto.refund_status ?? refundStatus,
-        refunded_at:     new Date(),
-        notes:           dto.notes,
+        refund_status: dto.refund_status ?? refundStatus,
+        refunded_at: new Date(),
+        notes: dto.notes,
       },
     });
   }
@@ -215,11 +219,11 @@ export class LeaseContractService {
 
     return this.prisma.leaseContract.findMany({
       where: {
-        status:   ContractStatus.ACTIVE,
+        status: ContractStatus.ACTIVE,
         end_date: { lte: futureDate },
       },
       include: {
-        tenant:    true,
+        tenant: true,
         createdBy: true,
       },
       orderBy: { end_date: 'asc' },

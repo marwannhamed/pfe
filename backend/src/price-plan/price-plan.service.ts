@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePricePlanDto } from './dto/create-price-plan.dto';
 import { UpdatePricePlanDto } from './dto/update-price-plan.dto';
@@ -51,7 +49,7 @@ export class PricePlanService {
     const tax = subtotal * (Number(plan.tax_rate) / 100);
     const total = subtotal + tax;
     return {
-      price:    Number(plan.price),
+      price: Number(plan.price),
       quantity,
       subtotal,
       tax_rate: Number(plan.tax_rate),

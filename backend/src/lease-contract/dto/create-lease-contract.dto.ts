@@ -1,9 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ContractStatus } from '@prisma/client';
 import {
-  IsBoolean, IsDateString, IsEnum,
-  IsInt, IsNumber, IsOptional,
-  IsString, IsUUID, Min,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateLeaseContractDto {
@@ -23,12 +29,12 @@ export class CreateLeaseContractDto {
   @IsDateString()
   end_date: string;
 
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   @IsNumber()
   @Min(0)
   monthly_rent: number;
 
-  @ApiProperty({ example: 5000.00 })
+  @ApiProperty({ example: 5000.0 })
   @IsNumber()
   @Min(0)
   deposit_amount: number;

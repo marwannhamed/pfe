@@ -1,8 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TicketCategory, TicketPriority, TicketStatus } from '@prisma/client';
 import {
-  IsEnum, IsNumber, IsOptional,
-  IsString, IsUUID, Min,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateMaintenanceTicketDto {
@@ -14,7 +18,7 @@ export class CreateMaintenanceTicketDto {
   @IsUUID()
   created_by_user_id: string;
 
-  @ApiProperty({ example: 'Fuite d\'eau dans les sanitaires' })
+  @ApiProperty({ example: "Fuite d'eau dans les sanitaires" })
   @IsString()
   title: string;
 
@@ -43,7 +47,7 @@ export class CreateMaintenanceTicketDto {
   @IsOptional()
   estimated_hours?: number;
 
-  @ApiPropertyOptional({ example: 250.00 })
+  @ApiPropertyOptional({ example: 250.0 })
   @IsNumber()
   @Min(0)
   @IsOptional()

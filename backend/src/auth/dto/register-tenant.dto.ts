@@ -4,11 +4,13 @@ import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 export class RegisterTenantDto {
   // Company
   @ApiProperty({ example: 'Acme Corp' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   company_name: string;
 
   @ApiProperty({ example: 'acme-corp' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   slug: string;
 
   @ApiProperty({ example: 'contact@acme.com' })
@@ -17,11 +19,13 @@ export class RegisterTenantDto {
 
   // Admin user
   @ApiProperty({ example: 'John' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   first_name: string;
 
   @ApiProperty({ example: 'Smith' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   last_name: string;
 
   @ApiProperty({ example: 'john@acme.com' })
@@ -29,6 +33,7 @@ export class RegisterTenantDto {
   email: string;
 
   @ApiProperty()
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   password: string;
 }

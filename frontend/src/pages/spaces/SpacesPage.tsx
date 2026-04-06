@@ -1,11 +1,11 @@
 ﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Input, Select, Skeleton, Empty } from 'antd';
 import {
   SearchOutlined, FilterOutlined, HeartOutlined,
   AppstoreOutlined, UnorderedListOutlined, PlusOutlined,
-  TeamOutlined, ReloadOutlined,
+  TeamOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import { spaceApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
@@ -170,6 +170,7 @@ function SpaceCard({ space, onClick }: { space: Space; onClick: () => void }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SpacesPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { isAuthenticated, user } = useAuthStore();
   const isAdmin = !!(user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role));
 
@@ -177,7 +178,8 @@ export default function SpacesPage() {
   const [typeFilter,   setType]      = useState('');
   const [statusFilter, setStatus]    = useState('');
   const [q,            setQ]         = useState('');
-  const [showAddModal, setShowAdd]   = useState(false); // ✅ NEW
+  const [showAddModal, setShowAdd]   = useState(false);
+  const [editingSpace, setEditingSpace] = useState<Space | null>(null);
 
   const { data: spaces = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['spaces', typeFilter, statusFilter],
@@ -185,6 +187,12 @@ export default function SpacesPage() {
       ...(typeFilter   && { type:   typeFilter   }),
       ...(statusFilter && { status: statusFilter }),
     }).then(r => r.data),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => spaceApi.remove(id),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['spaces'] }); refetch(); },
+    onError:    () => alert('Failed to delete space'),
   });
 
   const filtered = (spaces as Space[]).filter(s =>
@@ -213,6 +221,9 @@ export default function SpacesPage() {
       {/* ✅ Add Space Modal */}
       {showAddModal && (
         <AddSpaceModal onClose={() => setShowAdd(false)} />
+      )}
+      {editingSpace && (
+        <EditSpaceModal space={editingSpace} onClose={() => setEditingSpace(null)} />
       )}
 
       {/* Header */}
@@ -376,9 +387,21 @@ export default function SpacesPage() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>{formatPrice(space)}</div>
-                        <button onClick={e => { e.stopPropagation(); handleSpaceClick(space.id); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          View Details
-                        </button>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button onClick={e => { e.stopPropagation(); handleSpaceClick(space.id); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                            View Details
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button onClick={e => { e.stopPropagation(); setEditingSpace(space); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#fef3c7', border: '1px solid #fbbf24', color: '#92400e', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                <EditOutlined />
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); if (window.confirm(`Delete ${space.name}?`)) deleteMut.mutate(space.id); }} style={{ padding: '7px 12px', borderRadius: 7, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                <DeleteOutlined />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -386,6 +409,143 @@ export default function SpacesPage() {
               })}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Space Modal ───────────────────────────────────────────────────────────
+function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    name: space.name,
+    code: space.code,
+    type: space.type,
+    area_sqm: space.area_sqm.toString(),
+    capacity: space.capacity.toString(),
+    price_per_month: space.price_per_month,
+    currency: space.currency,
+    status: space.status,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
+
+  const mutation = useMutation({
+    mutationFn: (d: any) => spaceApi.update(space.id, d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['spaces'] }); onClose(); },
+    onError:   (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; alert(Array.isArray(msg) ? msg.join(', ') : msg); },
+  });
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Required';
+    if (!form.code.trim()) e.code = 'Required';
+    if (!form.type) e.type = 'Required';
+    if (!form.area_sqm || parseFloat(form.area_sqm) <= 0) e.area_sqm = 'Valid area required';
+    if (!form.capacity || parseInt(form.capacity) <= 0) e.capacity = 'Valid capacity required';
+    if (!form.price_per_month || parseFloat(form.price_per_month) <= 0) e.price_per_month = 'Valid price required';
+    return e;
+  };
+
+  const submit = () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    mutation.mutate({
+      ...form,
+      area_sqm: parseFloat(form.area_sqm),
+      capacity: parseInt(form.capacity),
+      price_per_month: parseFloat(form.price_per_month || '0'),
+    });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Edit Space</h2>
+            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>Update space information</p>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+            <CloseOutlined />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Space Name *</label>
+              <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.name ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.name} onChange={e => setF('name', e.target.value)} />
+              {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Space Code *</label>
+              <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.code ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.code} onChange={e => setF('code', e.target.value)} />
+              {errors.code && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.code}</div>}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Type *</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.type ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.type} onChange={e => setF('type', e.target.value)}>
+                <option value="OFFICE">Office</option>
+                <option value="MEETING_ROOM">Meeting Room</option>
+                <option value="COWORKING">Coworking</option>
+                <option value="DESK">Desk</option>
+                <option value="STORAGE">Storage</option>
+              </select>
+              {errors.type && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.type}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Status</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} value={form.status} onChange={e => setF('status', e.target.value)}>
+                <option value="AVAILABLE">Available</option>
+                <option value="OCCUPIED">Occupied</option>
+                <option value="RESERVED">Reserved</option>
+                <option value="MAINTENANCE">Maintenance</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Area (m²) *</label>
+              <input type="number" step="0.01" min="0" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.area_sqm ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.area_sqm} onChange={e => setF('area_sqm', e.target.value)} />
+              {errors.area_sqm && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.area_sqm}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Capacity *</label>
+              <input type="number" min="1" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.capacity ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.capacity} onChange={e => setF('capacity', e.target.value)} />
+              {errors.capacity && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.capacity}</div>}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Price/Month *</label>
+              <input type="number" step="0.01" min="0" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.price_per_month ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.price_per_month} onChange={e => setF('price_per_month', e.target.value)} />
+              {errors.price_per_month && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.price_per_month}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Currency</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} value={form.currency} onChange={e => setF('currency', e.target.value)}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="AED">AED</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={onClose} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}>Cancel</button>
+          <button onClick={submit} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            {mutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import {
-  Injectable, NotFoundException,
-  BadRequestException, ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -37,7 +39,7 @@ export class BookingService {
         ...(excludeBookingId && { NOT: { id: excludeBookingId } }),
         AND: [
           { start_datetime: { lte: new Date(end) } },
-          { end_datetime:   { gte: new Date(start) } },
+          { end_datetime: { gte: new Date(start) } },
         ],
       },
     });
@@ -54,10 +56,15 @@ export class BookingService {
     const space = await this.prisma.space.findUnique({
       where: { id: dto.space_id },
     });
-    if (!space) throw new NotFoundException(`Space #${dto.space_id} introuvable`);
+    if (!space)
+      throw new NotFoundException(`Space #${dto.space_id} introuvable`);
 
     // Vérifier la disponibilité
-    await this.checkAvailability(dto.space_id, dto.start_datetime, dto.end_datetime);
+    await this.checkAvailability(
+      dto.space_id,
+      dto.start_datetime,
+      dto.end_datetime,
+    );
 
     // Déterminer le statut initial
     const status = space.requires_approval
@@ -70,13 +77,13 @@ export class BookingService {
         booking_number: this.generateBookingNumber(),
         status: dto.status ?? status,
         start_datetime: new Date(dto.start_datetime),
-        end_datetime:   new Date(dto.end_datetime),
+        end_datetime: new Date(dto.end_datetime),
       },
       include: {
-        space:     true,
+        space: true,
         createdBy: true,
         pricePlan: true,
-        addOns:    { include: { addonService: true } },
+        addOns: { include: { addonService: true } },
       },
     });
   }
@@ -86,14 +93,14 @@ export class BookingService {
     return this.prisma.booking.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
-        ...(spaceId  && { space_id: spaceId }),
-        ...(status   && { status: status as BookingStatus }),
+        ...(spaceId && { space_id: spaceId }),
+        ...(status && { status: status as BookingStatus }),
       },
       include: {
-        space:     true,
+        space: true,
         createdBy: true,
         approvedBy: true,
-        addOns:    { include: { addonService: true } },
+        addOns: { include: { addonService: true } },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -104,12 +111,12 @@ export class BookingService {
     const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
-        space:         { include: { floor: { include: { building: true } } } },
-        createdBy:     true,
-        approvedBy:    true,
-        pricePlan:     true,
+        space: { include: { floor: { include: { building: true } } } },
+        createdBy: true,
+        approvedBy: true,
+        pricePlan: true,
         promotionCode: true,
-        addOns:        { include: { addonService: true } },
+        addOns: { include: { addonService: true } },
         parentBooking: true,
         childBookings: true,
       },
@@ -127,7 +134,7 @@ export class BookingService {
       await this.checkAvailability(
         booking.space_id,
         dto.start_datetime ?? booking.start_datetime.toISOString(),
-        dto.end_datetime   ?? booking.end_datetime.toISOString(),
+        dto.end_datetime ?? booking.end_datetime.toISOString(),
         id,
       );
     }
@@ -136,11 +143,13 @@ export class BookingService {
       where: { id },
       data: {
         ...dto,
-        ...(dto.start_datetime && { start_datetime: new Date(dto.start_datetime) }),
-        ...(dto.end_datetime   && { end_datetime:   new Date(dto.end_datetime) }),
+        ...(dto.start_datetime && {
+          start_datetime: new Date(dto.start_datetime),
+        }),
+        ...(dto.end_datetime && { end_datetime: new Date(dto.end_datetime) }),
       },
       include: {
-        space:  true,
+        space: true,
         addOns: { include: { addonService: true } },
       },
     });
@@ -150,12 +159,14 @@ export class BookingService {
   async approve(id: string, approvedByUserId: string) {
     const booking = await this.findOne(id);
     if (booking.status !== BookingStatus.PENDING_APPROVAL) {
-      throw new BadRequestException(`Booking n'est pas en attente d'approbation`);
+      throw new BadRequestException(
+        `Booking n'est pas en attente d'approbation`,
+      );
     }
     return this.prisma.booking.update({
       where: { id },
       data: {
-        status:              BookingStatus.CONFIRMED,
+        status: BookingStatus.CONFIRMED,
         approved_by_user_id: approvedByUserId,
       },
     });
@@ -167,9 +178,12 @@ export class BookingService {
 
     const status = booking.status as BookingStatus;
 
-    if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-    throw new BadRequestException(
-      `Impossible d'annuler ce booking (statut: ${booking.status})`,
+    if (
+      status === BookingStatus.COMPLETED ||
+      status === BookingStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        `Impossible d'annuler ce booking (statut: ${booking.status})`,
       );
     }
 
@@ -183,12 +197,14 @@ export class BookingService {
   async checkIn(id: string) {
     const booking = await this.findOne(id);
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new BadRequestException(`Le booking doit être CONFIRMED pour faire le check-in`);
+      throw new BadRequestException(
+        `Le booking doit être CONFIRMED pour faire le check-in`,
+      );
     }
     return this.prisma.booking.update({
       where: { id },
       data: {
-        status:        BookingStatus.CHECKED_IN,
+        status: BookingStatus.CHECKED_IN,
         checked_in_at: new Date(),
       },
     });
@@ -198,12 +214,14 @@ export class BookingService {
   async checkOut(id: string) {
     const booking = await this.findOne(id);
     if (booking.status !== BookingStatus.CHECKED_IN) {
-      throw new BadRequestException(`Le booking doit être CHECKED_IN pour faire le check-out`);
+      throw new BadRequestException(
+        `Le booking doit être CHECKED_IN pour faire le check-out`,
+      );
     }
     return this.prisma.booking.update({
       where: { id },
       data: {
-        status:         BookingStatus.COMPLETED,
+        status: BookingStatus.COMPLETED,
         checked_out_at: new Date(),
       },
     });

@@ -1,14 +1,16 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Tabs, Skeleton, Badge } from 'antd';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Tabs, Skeleton, Badge, message } from 'antd';
 import {
   ArrowLeftOutlined, EditOutlined, CalendarOutlined,
   EnvironmentOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  ReloadOutlined, WarningOutlined,
+  ReloadOutlined, WarningOutlined, CloseOutlined,
+  LoadingOutlined, PlusOutlined,
 } from '@ant-design/icons';
-import { spaceApi } from '../../api/services';
+import { spaceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Space, SpaceStatus, SpaceType, SpaceFeature } from '../../types';
+import type { SpaceStatus, SpaceType, SpaceFeature } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<SpaceStatus, { label: string; bg: string; color: string }> = {
@@ -42,21 +44,284 @@ const CARD: React.CSSProperties = {
   boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
 };
 
+const INPUT: React.CSSProperties = {
+  width: '100%', padding: '9px 12px',
+  border: '1px solid #e5e7eb', borderRadius: 8,
+  fontSize: 13, color: '#0f172a', outline: 'none',
+  background: '#fff', boxSizing: 'border-box',
+};
+
+// ─── Price Calculator ─────────────────────────────────────────────────────────
+function calcPrice(space: any, startDate: string, startTime: string, endDate: string, endTime: string): number {
+  if (!space || !startDate || !endDate) return 0;
+  const start   = new Date(`${startDate}T${startTime}`);
+  const end     = new Date(`${endDate}T${endTime}`);
+  const diffMs  = end.getTime() - start.getTime();
+  if (diffMs <= 0) return 0;
+  const hours = diffMs / 3600000;
+  const days  = diffMs / 86400000;
+  if (space.price_per_month && days >= 28)  return parseFloat(space.price_per_month) * (days / 30);
+  if (space.price_per_day)                  return parseFloat(space.price_per_day) * Math.ceil(days);
+  if (space.price_per_hour)                 return parseFloat(space.price_per_hour) * hours;
+  return 0;
+}
+
+function getDuration(startDate: string, startTime: string, endDate: string, endTime: string): string {
+  const diff = new Date(`${endDate}T${endTime}`).getTime() - new Date(`${startDate}T${startTime}`).getTime();
+  if (diff <= 0) return '';
+  const mins = diff / 60000;
+  if (mins < 60)   return `${Math.round(mins)}min`;
+  if (mins < 1440) return `${Math.round(mins / 60)}h`;
+  return `${Math.round(mins / 1440)}d`;
+}
+
+// ─── Inline Booking Panel ─────────────────────────────────────────────────────
+function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
+  space: any;
+  tenantId: string;
+  userId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const qc = useQueryClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const [form, setForm] = useState({
+    start_date: '',
+    start_time: '09:00',
+    end_date:   '',
+    end_time:   '10:00',
+    attendee_count: '1',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const setF = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setErrors(e => { const n = { ...e }; delete n[k]; return n; });
+  };
+
+  const autoPrice = calcPrice(space, form.start_date, form.start_time, form.end_date, form.end_time);
+  const currency  = space.currency ?? 'USD';
+  const currSym   = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+  const duration  = getDuration(form.start_date, form.start_time, form.end_date, form.end_time);
+
+  const mutation = useMutation({
+    mutationFn: (d: any) => bookingApi.create(d),
+    onSuccess: () => {
+      message.success('Booking created successfully!');
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+      onSuccess();
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Failed to create booking';
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg);
+    },
+  });
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.start_date) e.start_date = 'Required';
+    if (!form.end_date)   e.end_date   = 'Required';
+    const s = new Date(`${form.start_date}T${form.start_time}`);
+    const en = new Date(`${form.end_date}T${form.end_time}`);
+    if (form.start_date && form.end_date && en <= s) e.end_date = 'Must be after start';
+    if (Number(form.attendee_count) < 1)  e.attendee_count = 'Min 1';
+    if (Number(form.attendee_count) > space.capacity) e.attendee_count = `Max ${space.capacity}`;
+    return e;
+  };
+
+  const handleSubmit = () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    mutation.mutate({
+      tenant_id:          tenantId,
+      space_id:           space.id,
+      created_by_user_id: userId,
+      start_datetime:     new Date(`${form.start_date}T${form.start_time}`).toISOString(),
+      end_datetime:       new Date(`${form.end_date}T${form.end_time}`).toISOString(),
+      total_price:        autoPrice,
+      attendee_count:     Number(form.attendee_count),
+      currency:           currency,
+    });
+  };
+
+  return (
+    <div style={{
+      border: '2px solid #2563eb', borderRadius: 14,
+      background: '#fff', overflow: 'hidden',
+      boxShadow: '0 8px 32px rgba(37,99,235,0.12)',
+      animation: 'slideDown 0.25s ease',
+    }}>
+      <style>{`@keyframes slideDown { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
+
+      {/* Panel header */}
+      <div style={{ background: 'linear-gradient(135deg,#1e293b,#2563eb)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 15, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CalendarOutlined /> Book This Space
+          </div>
+          <div style={{ fontSize: 12, color: '#93c5fd', marginTop: 2 }}>
+            {space.name} · Cap: {space.capacity} · {parseFloat(space.area_sqm).toFixed(0)} m²
+          </div>
+        </div>
+        <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+          <CloseOutlined style={{ fontSize: 12 }} />
+        </button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+
+        {/* Approval notice */}
+        {space.requires_approval && (
+          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#92400e' }}>
+            <WarningOutlined /> This space requires approval — your booking will be reviewed before confirmation.
+          </div>
+        )}
+
+        {/* Date & Time */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>📅 Date & Time</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                Start Date <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                style={{ ...INPUT, borderColor: errors.start_date ? '#ef4444' : '#e5e7eb' }}
+                type="date" min={today}
+                value={form.start_date}
+                onChange={e => setF('start_date', e.target.value)}
+              />
+              {errors.start_date && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>{errors.start_date}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Start Time</label>
+              <input style={INPUT} type="time" value={form.start_time} onChange={e => setF('start_time', e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                End Date <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                style={{ ...INPUT, borderColor: errors.end_date ? '#ef4444' : '#e5e7eb' }}
+                type="date" min={form.start_date || today}
+                value={form.end_date}
+                onChange={e => setF('end_date', e.target.value)}
+              />
+              {errors.end_date && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>{errors.end_date}</div>}
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>End Time</label>
+              <input style={INPUT} type="time" value={form.end_time} onChange={e => setF('end_time', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Duration badge */}
+          {duration && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#2563eb', fontWeight: 600 }}>
+              ⏱ Duration: {duration}
+            </div>
+          )}
+        </div>
+
+        {/* Attendees */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+            Attendees <span style={{ color: '#ef4444' }}>*</span>
+            <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 4 }}>(max {space.capacity})</span>
+          </label>
+          <input
+            style={{ ...INPUT, width: '50%', borderColor: errors.attendee_count ? '#ef4444' : '#e5e7eb' }}
+            type="number" min="1" max={space.capacity}
+            value={form.attendee_count}
+            onChange={e => setF('attendee_count', e.target.value)}
+          />
+          {errors.attendee_count && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>{errors.attendee_count}</div>}
+        </div>
+
+        {/* Price summary */}
+        <div style={{
+          background: autoPrice > 0 ? '#f0fdf4' : '#f8fafc',
+          border: `1px solid ${autoPrice > 0 ? '#bbf7d0' : '#e5e7eb'}`,
+          borderRadius: 10, padding: '12px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>💰 Price Summary</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              {space.price_per_hour  && <div>Rate: {currSym}{parseFloat(space.price_per_hour)}/hr</div>}
+              {space.price_per_day   && <div>Rate: {currSym}{parseFloat(space.price_per_day)}/day</div>}
+              {space.price_per_month && <div>Rate: {currSym}{parseFloat(space.price_per_month)}/mo</div>}
+              {!space.price_per_hour && !space.price_per_day && !space.price_per_month && (
+                <div style={{ color: '#94a3b8' }}>No pricing set</div>
+              )}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: autoPrice > 0 ? '#15803d' : '#94a3b8' }}>
+                {autoPrice > 0 ? `${currSym}${autoPrice.toFixed(2)}` : '—'}
+              </div>
+              <div style={{ fontSize: 10, color: '#94a3b8' }}>auto-calculated · {currency}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
+            style={{
+              flex: 2, padding: '10px', borderRadius: 8,
+              background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)',
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 700,
+              cursor: mutation.isPending ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            {mutation.isPending
+              ? <><LoadingOutlined /> Creating Booking...</>
+              : <><PlusOutlined /> Confirm Booking</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SpaceDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
 
-  const isAdmin  = !!(user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role));
+  // ── Role checks ──
+  const isAdmin      = !!(user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role));
+  const isTenant     = !!(user?.role && ['TENANT_ADMIN', 'EMPLOYEE'].includes(user.role));
+  const tenantId     = (user as any)?.tenant_id ?? '';
+  const userId       = user?.id ?? '';
+
   const backPath = isAdmin ? '/admin/spaces' : isAuthenticated ? '/portal/spaces' : '/spaces';
-  const bookPath = isAuthenticated ? '/portal/bookings' : '/register';
+
+  // ── Booking panel state ──
+  const [showBooking,  setShowBooking]  = useState(false);
+  const [bookingDone,  setBookingDone]  = useState(false);
 
   const { data: space, isLoading, isError, refetch } = useQuery({
     queryKey: ['space', id],
     queryFn:  () => spaceApi.getOne(id!).then(r => r.data),
     enabled:  !!id,
   });
+
+  const handleBookSuccess = () => {
+    setShowBooking(false);
+    setBookingDone(true);
+    setTimeout(() => setBookingDone(false), 5000);
+  };
 
   if (isLoading) return (
     <div style={{ padding: 24 }}>
@@ -72,22 +337,42 @@ export default function SpaceDetailPage() {
     <div style={{ padding: 24, textAlign: 'center' }}>
       <WarningOutlined style={{ fontSize: 40, color: '#d97706', display: 'block', margin: '0 auto 12px' }} />
       <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load space</div>
-      <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-        Retry
-      </button>
+      <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button>
     </div>
   );
 
-  const sm                 = STATUS_META[space.status as SpaceStatus] ?? STATUS_META.AVAILABLE;
-  const tm                 = TYPE_META[space.type as SpaceType]       ?? TYPE_META.DEDICATED_OFFICE;
-  const allFeatures        = (space.features ?? []) as SpaceFeature[];
-  const availableFeatures  = allFeatures.filter(f => f.is_available);
-  const currSym            = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const sm                = STATUS_META[space.status as SpaceStatus] ?? STATUS_META.AVAILABLE;
+  const tm                = TYPE_META[space.type as SpaceType]       ?? TYPE_META.DEDICATED_OFFICE;
+  const allFeatures       = (space.features ?? []) as SpaceFeature[];
+  const availableFeatures = allFeatures.filter(f => f.is_available);
+  const currSym           = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const canBook           = space.status === 'AVAILABLE' && isAuthenticated;
 
   return (
     <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
 
-      {/* Header */}
+      {/* ── Success banner ── */}
+      {bookingDone && (
+        <div style={{
+          background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10,
+          padding: '12px 18px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
+          animation: 'slideDown 0.3s ease',
+        }}>
+          <CheckCircleOutlined style={{ color: '#15803d', fontSize: 18 }} />
+          <div>
+            <strong style={{ color: '#15803d' }}>Booking submitted!</strong>
+            <span style={{ color: '#166534', marginLeft: 8 }}>
+              {space.requires_approval ? 'Your request is pending approval.' : 'Your booking is confirmed.'}
+            </span>
+          </div>
+          <button onClick={() => navigate('/portal/bookings')} style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 7, background: '#15803d', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            View My Bookings →
+          </button>
+        </div>
+      )}
+
+      {/* ── Header ── */}
       <div style={{ ...CARD, padding: '18px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -129,17 +414,39 @@ export default function SpaceDetailPage() {
             <button onClick={() => refetch()} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
               <ReloadOutlined />
             </button>
+
+            {/* Admin-only: Edit button */}
             {isAdmin && (
               <button style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <EditOutlined /> Edit
               </button>
             )}
-            {space.status === 'AVAILABLE' && (
+
+            {/* Tenant/authenticated: Book button — toggles inline form */}
+            {canBook && isTenant && (
               <button
-                onClick={() => navigate(bookPath)}
+                onClick={() => { setShowBooking(v => !v); setBookingDone(false); }}
+                style={{
+                  padding: '9px 20px', borderRadius: 8,
+                  background: showBooking ? '#f1f5f9' : 'linear-gradient(135deg,#1d4ed8,#2563eb)',
+                  border: showBooking ? '1px solid #e5e7eb' : 'none',
+                  color: showBooking ? '#374151' : '#fff',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  boxShadow: showBooking ? 'none' : '0 2px 8px rgba(37,99,235,0.3)',
+                }}
+              >
+                {showBooking ? <><CloseOutlined /> Cancel</> : <><CalendarOutlined /> Book This Space</>}
+              </button>
+            )}
+
+            {/* Not logged in */}
+            {canBook && !isAuthenticated && (
+              <button
+                onClick={() => navigate('/register')}
                 style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}
               >
-                <CalendarOutlined /> {isAuthenticated ? 'Book This Space' : 'Register to Book'}
+                <CalendarOutlined /> Register to Book
               </button>
             )}
           </div>
@@ -148,10 +455,10 @@ export default function SpaceDetailPage() {
         {/* KPI bar */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginTop: 20 }}>
           {[
-            { label: 'Monthly Rent', value: space.price_per_month ? `${currSym}${parseFloat(space.price_per_month).toLocaleString()}` : '—', sub: 'Per month',         color: '#2563eb', bg: '#eff6ff' },
-            { label: 'Area',         value: `${parseFloat(space.area_sqm).toFixed(0)} m²`,                                                    sub: 'Square meters',    color: '#059669', bg: '#f0fdf4' },
+            { label: 'Monthly Rent', value: space.price_per_month ? `${currSym}${parseFloat(space.price_per_month).toLocaleString()}` : '—', sub: 'Per month',          color: '#2563eb', bg: '#eff6ff' },
+            { label: 'Area',         value: `${parseFloat(space.area_sqm).toFixed(0)} m²`,                                                    sub: 'Square meters',     color: '#059669', bg: '#f0fdf4' },
             { label: 'Capacity',     value: space.capacity,                                                                                    sub: `${space.capacity === 1 ? 'person' : 'people'} max`, color: '#d97706', bg: '#fffbeb' },
-            { label: 'Features',     value: availableFeatures.length,                                                                          sub: 'Available features',color: '#7c3aed', bg: '#f5f3ff' },
+            { label: 'Features',     value: availableFeatures.length,                                                                          sub: 'Available features', color: '#7c3aed', bg: '#f5f3ff' },
           ].map(k => (
             <div key={k.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px' }}>
               <p style={{ margin: '0 0 4px', fontSize: 11, color: '#64748b' }}>{k.label}</p>
@@ -162,7 +469,20 @@ export default function SpaceDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── INLINE BOOKING PANEL (tenant only, slides in below header) ── */}
+      {showBooking && isTenant && (
+        <div style={{ marginBottom: 20 }}>
+          <InlineBookingPanel
+            space={space}
+            tenantId={tenantId}
+            userId={userId}
+            onClose={() => setShowBooking(false)}
+            onSuccess={handleBookSuccess}
+          />
+        </div>
+      )}
+
+      {/* ── Tabs ── */}
       <div style={CARD}>
         <Tabs
           defaultActiveKey="overview"
@@ -187,7 +507,6 @@ export default function SpaceDetailPage() {
                           onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x220/1e293b/white?text=Office'; }}
                         />
                       </div>
-
                       <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>
                           Features & Amenities ({availableFeatures.length})
@@ -230,6 +549,7 @@ export default function SpaceDetailPage() {
                         ))}
                       </div>
 
+                      {/* Pricing card */}
                       <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>Pricing</div>
                         {([
@@ -244,15 +564,39 @@ export default function SpaceDetailPage() {
                         ))}
 
                         <div style={{ marginTop: 14 }}>
-                          {space.status === 'AVAILABLE' ? (
+                          {/* ── Tenant: toggle inline booking form ── */}
+                          {canBook && isTenant && (
                             <button
-                              onClick={() => navigate(bookPath)}
-                              style={{ width: '100%', padding: '12px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                              onClick={() => { setShowBooking(v => !v); setBookingDone(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                              style={{
+                                width: '100%', padding: '12px', borderRadius: 9,
+                                background: showBooking ? '#f1f5f9' : 'linear-gradient(135deg,#1d4ed8,#2563eb)',
+                                border: showBooking ? '1px solid #e5e7eb' : 'none',
+                                color: showBooking ? '#374151' : '#fff',
+                                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                              }}
                             >
                               <CalendarOutlined style={{ marginRight: 6 }} />
-                              {isAuthenticated ? 'Book This Space' : 'Register to Book'}
+                              {showBooking ? 'Cancel Booking' : 'Book This Space'}
                             </button>
-                          ) : (
+                          )}
+
+                          {/* ── Admin: no booking button ── */}
+                          {isAdmin && (
+                            <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#64748b', textAlign: 'center' }}>
+                              Bookings are managed by tenants
+                            </div>
+                          )}
+
+                          {/* ── Not logged in ── */}
+                          {!isAuthenticated && canBook && (
+                            <button onClick={() => navigate('/register')} style={{ width: '100%', padding: '12px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                              <CalendarOutlined style={{ marginRight: 6 }} /> Register to Book
+                            </button>
+                          )}
+
+                          {/* ── Not available ── */}
+                          {space.status !== 'AVAILABLE' && (
                             <div style={{ padding: '10px 14px', background: sm.bg, borderRadius: 8, border: `1px solid ${sm.color}44`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                               <WarningOutlined style={{ color: sm.color }} />
                               <span style={{ fontWeight: 500, color: sm.color }}>Currently {sm.label} — not available</span>

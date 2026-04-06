@@ -1,9 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DiscountType } from '@prisma/client';
 import {
-  IsBoolean, IsDateString, IsEnum,
-  IsInt, IsNumber, IsOptional,
-  IsString, IsUUID, Min,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreatePromotionCodeDto {
@@ -20,7 +26,7 @@ export class CreatePromotionCodeDto {
   @IsEnum(DiscountType)
   discount_type: DiscountType;
 
-  @ApiProperty({ example: 20.00 })
+  @ApiProperty({ example: 20.0 })
   @IsNumber()
   @Min(0)
   discount_value: number;

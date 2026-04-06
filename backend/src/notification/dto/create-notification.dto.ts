@@ -4,9 +4,7 @@ import {
   NotificationPriority,
   NotificationType,
 } from '@prisma/client';
-import {
-  IsEnum, IsOptional, IsString, IsUUID,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateNotificationDto {
   @ApiProperty({ example: 'uuid-du-user' })
@@ -29,7 +27,10 @@ export class CreateNotificationDto {
   @IsString()
   message: string;
 
-  @ApiPropertyOptional({ enum: NotificationPriority, default: NotificationPriority.NORMAL })
+  @ApiPropertyOptional({
+    enum: NotificationPriority,
+    default: NotificationPriority.NORMAL,
+  })
   @IsEnum(NotificationPriority)
   @IsOptional()
   priority?: NotificationPriority;

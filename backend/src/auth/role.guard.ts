@@ -16,10 +16,10 @@ export class RoleGuard extends JwtAuthGuard {
   }
 
   async canActivate(context: ExecutionContext): Promise<any> {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>('roles', [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+      'roles',
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredRoles) return super.canActivate(context);
 

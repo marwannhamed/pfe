@@ -1,10 +1,18 @@
 import {
-  Controller, Get, Post,
-  Body, Param, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiParam,
-  ApiQuery, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
@@ -19,44 +27,50 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Créer un log d\'audit' })
+  @ApiOperation({ summary: "Créer un log d'audit" })
   create(@Body() dto: CreateAuditLogDto) {
     return this.auditService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lister tous les logs d\'audit' })
-  @ApiQuery({ name: 'tenantId',     required: false })
-  @ApiQuery({ name: 'userId',       required: false })
-  @ApiQuery({ name: 'action',       required: false, enum: AuditAction })
+  @ApiOperation({ summary: "Lister tous les logs d'audit" })
+  @ApiQuery({ name: 'tenantId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'action', required: false, enum: AuditAction })
   @ApiQuery({ name: 'resourceType', required: false })
-  @ApiQuery({ name: 'severity',     required: false, enum: AuditSeverity })
+  @ApiQuery({ name: 'severity', required: false, enum: AuditSeverity })
   findAll(
-    @Query('tenantId')     tenantId?:     string,
-    @Query('userId')       userId?:       string,
-    @Query('action')       action?:       string,
+    @Query('tenantId') tenantId?: string,
+    @Query('userId') userId?: string,
+    @Query('action') action?: string,
     @Query('resourceType') resourceType?: string,
-    @Query('severity')     severity?:     string,
+    @Query('severity') severity?: string,
   ) {
-    return this.auditService.findAll(tenantId, userId, action, resourceType, severity);
+    return this.auditService.findAll(
+      tenantId,
+      userId,
+      action,
+      resourceType,
+      severity,
+    );
   }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Statistiques des logs d\'audit' })
+  @ApiOperation({ summary: "Statistiques des logs d'audit" })
   @ApiQuery({ name: 'tenantId', required: false })
   getStats(@Query('tenantId') tenantId?: string) {
     return this.auditService.getStats(tenantId);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Récupérer un log d\'audit' })
+  @ApiOperation({ summary: "Récupérer un log d'audit" })
   @ApiParam({ name: 'id' })
   findOne(@Param('id') id: string) {
     return this.auditService.findOne(id);
   }
 
   @Get(':id/changes')
-  @ApiOperation({ summary: 'Résumé des changements d\'un log' })
+  @ApiOperation({ summary: "Résumé des changements d'un log" })
   @ApiParam({ name: 'id' })
   getChangesSummary(@Param('id') id: string) {
     return this.auditService.getChangesSummary(id);
