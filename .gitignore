@@ -1,1 +1,50 @@
 .vscode
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+coverage/
+**/dist/
+**/build/
+**/coverage/
+
+# Cache/temp
+.cache/
+.turbo/
+tmp/
+temp/
+*.tmp
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Runtime/local databases
+*.sqlite
+*.sqlite3
+*.db
+*.backup
+backend/prisma/dev.db
+
+# Prisma generated artifacts (keep migrations)
+backend/prisma/*.db

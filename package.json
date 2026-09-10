@@ -1,11 +1,21 @@
 {
+  "name": "lease-manager",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run start:dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:api": "npm run start:dev --prefix backend",
+    "dev:web": "npm run dev --prefix frontend",
+    "db:up": "npm run db:up --prefix backend"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "concurrently": "^9.1.2"
+  },
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cors": "^2.8.6",
     "uuid": "^13.0.0",
     "zustand": "^5.0.11"
-  },
-  "devDependencies": {
-    "@types/uuid": "^10.0.0"
   }
 }

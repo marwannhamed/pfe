@@ -101,50 +101,33 @@ nest-react-boilerplate/
      ./start_all_in_git_workspace.sh
      ```
 
-3. Or Manual Project Setup:
+3. Or manual local setup:
 
-   To start the project manually, follow these steps:
-
-   **a.** Navigate to the `backend` directory and set up the environment:
+   **a. Backend**
 
    ```bash
-   cd backend/
-
-   # Copy the example environment file and create a new .env file
-   cat .env.example >> .env
-   echo -e >> .env
-
-   # Install dependencies
+   cd backend
+   cp .env.example .env
    npm install
-
-   # Start the Docker containers
    docker-compose up --build -d
-
-   # Generate Swagger TypeScript definitions
-   npm run swagger:ts
+   npx prisma generate
+   npx prisma migrate deploy
+   npm run start:dev
    ```
 
-   2. Navigate to the `frontend` directory and configure the environment:
+   **b. Frontend**
 
    ```bash
    cd ../frontend
-
-   # Remove existing .env file and create a new one from the example
-   rm .env
-   cat .env.example >> .env
-   echo -e >> .env
-
-   # Set the backend API URL for the frontend
-   echo -e VITE_BACKEND_API_URL="http://localhost:6001" >> .env
-
-   # Copy the API TypeScript file from the backend
-   cp -f ../backend/src/api/myApi.ts ./src/api/myApi.ts
-
-   # Install dependencies
+   cp .env.example .env
    npm install
+   npm run dev
+   ```
 
-   # Start the Docker containers for development
-   docker-compose --profile dev up --build -d
+   Frontend API URL env key:
+
+   ```bash
+   VITE_API_URL=http://localhost:6001
    ```
 
 ## Frontend Routes
@@ -205,3 +188,11 @@ nest-react-boilerplate/
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Additional Documentation
+
+- Contribution guide: `CONTRIBUTING.md`
+- Changelog policy: `CHANGELOG.md`
+- Operations runbook: `docs/RUNBOOK.md`
