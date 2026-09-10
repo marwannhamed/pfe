@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { spaceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { SpaceStatus, SpaceType, SpaceFeature } from '../../types';
+import type { Space, SpaceStatus, SpaceType, SpaceFeature } from '../../types';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 
@@ -305,9 +305,9 @@ export default function SpaceDetailPage() {
 
   const { data: space, isLoading, isError, refetch } = useQuery({
     queryKey: ['space', id],
-    queryFn:  async () => {
+    queryFn:  async (): Promise<Space> => {
       const res = await spaceApi.getOne(id!);
-      return (res as { data?: unknown })?.data ?? res;
+      return ((res as { data?: unknown })?.data ?? res) as Space;
     },
     enabled:  !!id,
   });

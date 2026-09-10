@@ -243,7 +243,7 @@ export default function FloorMapPage() {
   const { data: floorsRaw }    = useQuery({ queryKey: ['floors-map'],    queryFn: () => floorApi.getAll() });
   const { data: spacesRaw, isLoading: spacesLoading, refetch } = useQuery({
     queryKey: ['spaces-map', selectedFloorId],
-    queryFn: () => spaceApi.getAll(selectedFloorId ? { floorId: selectedFloorId } : undefined).then(r => r.data),
+    queryFn: () => spaceApi.getAll(selectedFloorId ? { floorId: selectedFloorId } : undefined),
     enabled: true,
   });
 

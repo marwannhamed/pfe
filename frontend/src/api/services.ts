@@ -1,4 +1,5 @@
 ﻿import { api, listFromApi } from './client';
+import type { Building, Floor, Space } from '../types';
 
 // ─── IN-FLIGHT REQUEST DEDUPLICATION ─────────────────────────────────────────
 //
@@ -58,23 +59,23 @@ export const authApi = {
 };
 
 // ─── SITES (legacy alias → buildings; sites table removed) ─────────────
-function mapBuildingAsSite(b: Record<string, unknown>) {
+function mapBuildingAsSite(b: Building) {
   return {
     ...b,
     id: b.id,
     tenant_id: b.tenant_id,
     name: b.name,
     slug: b.slug,
-    code: (b.slug as string) ?? b.name,
+    code: b.slug ?? b.name,
     status: 'ACTIVE',
-    floors_count: (b as { floors?: unknown[] }).floors?.length ?? (b as { floors_count?: number }).floors_count ?? 0,
+    floors_count: b.floors?.length ?? b.floors_count ?? 0,
   };
 }
 
 export const siteApi = {
   getAll: async (tenantId?: string) => {
     const list = await buildingApi.getAll(tenantId);
-    return list.map((b) => mapBuildingAsSite(b as Record<string, unknown>));
+    return list.map(mapBuildingAsSite);
   },
   getOne: (id: string) => buildingApi.getOne(id),
   create: (data: any) => api.post('/sites', data),
@@ -142,7 +143,7 @@ export const bookingApplicationApi = {
 export const buildingApi = {
   getAll: async (tenantId?: string) => {
     const res = await dedupedGet('/buildings', tenantId ? { tenantId } : undefined);
-    return listFromApi(res);
+    return listFromApi<Building>(res);
   },
   getOne: (id: string) => api.get(`/buildings/${id}`),
   create: (data: any) => api.post('/buildings', data),
@@ -155,7 +156,7 @@ export const buildingApi = {
 export const floorApi = {
   getAll: async (buildingId?: string) => {
     const res = await dedupedGet('/floors', buildingId ? { buildingId } : undefined);
-    return listFromApi(res);
+    return listFromApi<Floor>(res);
   },
   getPublishDefault: () => api.get('/floors/publish-default'),
   ensureDefault: async (buildingId: string) => {
@@ -178,11 +179,11 @@ export const floorApi = {
 export const spaceApi = {
   getAll: async (params?: { floorId?: string; type?: string; status?: string }) => {
     const res = await dedupedGet('/spaces', params);
-    return listFromApi(res);
+    return listFromApi<Space>(res);
   },
   getPublishedMap: async () => {
     const res = await dedupedGet('/spaces/public/map');
-    return listFromApi(res);
+    return listFromApi<Space>(res);
   },
   getPublishedOne: (id: string) => dedupedGet(`/spaces/public/${id}`),
   getOne: (id: string) => api.get(`/spaces/${id}`),

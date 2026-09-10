@@ -160,6 +160,7 @@ export interface Space {
   id:                string;
   floor_id:          string;
   name:              string;
+  slug?:             string;         // unique key from the API; `code` is derived from it
   code:              string;
   type:              SpaceType;
   capacity:          number;
@@ -171,12 +172,24 @@ export interface Space {
   currency:          string;
   requires_approval: boolean;
   is_listed?: boolean;
+  is_published?:     boolean;
+  description?:      string | null;
+  virtual_tour_url?: string | null;
   created_at:        string;
   photos:            string[];        // Array of photo URLs
   map_x?:             number;         // Map position X
   map_y?:             number;         // Map position Y
   map_w?:             number;         // Map width
   map_h?:             number;         // Map height
+  // Street address / geo — returned by every /spaces read path
+  address?:              string | null;
+  city?:                 string | null;
+  state?:                string | null;
+  zip?:                  string | null;
+  country?:              string | null;
+  map_lat?:              number | null;
+  map_lng?:              number | null;
+  transportation_notes?: string | null;
   // relations
   features?:         SpaceFeature[];
   floor?:            Floor;
@@ -608,6 +621,7 @@ export interface MaintenanceStats {
 export interface TopSpace {
   spaceId: string;
   spaceName: string;
+  name?: string;      // occupancy endpoints return `name` instead of `spaceName`
   bookings: number;
   revenue: string;
 }

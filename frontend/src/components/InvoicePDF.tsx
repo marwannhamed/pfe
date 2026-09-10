@@ -21,7 +21,7 @@ interface InvoicePDFProps {
       method?: string;
       payment_method?: string;
     }[];
-    lines?:         { description?: string; quantity?: number; unit_price?: number | string; line_total?: number | string }[];
+    lines?:         { description?: string; quantity?: number | string; unit_price?: number | string; line_total?: number | string }[];
   };
 }
 

@@ -5,7 +5,7 @@ export function mapBooking(raw: Record<string, unknown>): Booking {
   const start = (raw.start_datetime ?? raw.start_time) as string;
   const end = (raw.end_datetime ?? raw.end_time) as string;
   return {
-    ...(raw as Booking),
+    ...(raw as unknown as Booking),
     start_datetime: start,
     end_datetime: end,
     created_by_user_id: (raw.created_by_user_id ?? raw.user_id) as string,

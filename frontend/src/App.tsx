@@ -66,10 +66,8 @@ const AdminDashboard          = lazy(() => import('./pages/admin/AdminDashboard'
 const SiteManagerDashboard    = lazy(() => import('./pages/admin/SiteManagerDashboard'));
 const FinanceDashboard        = lazy(() => import('./pages/admin/FinanceDashboard'));
 const MaintenanceDashboard    = lazy(() => import('./pages/admin/MaintenanceDashboard'));
-const SitesPage               = lazy(() => import('./pages/sites/SitesPage'));
 const BuildingsPage           = lazy(() => import('./pages/building/BuildingsPage'));
 const FloorsPage              = lazy(() => import('./pages/floor/FloorsPage'));
-const SiteDetailPage          = lazy(() => import('./pages/sites/SiteDetailPage'));
 const AdminSpacesPage         = lazy(() => import('./pages/spaces/SpacesPage'));
 const PublishSpacePage        = lazy(() => import('./pages/spaces/PublishSpacePage'));
 const SpaceDetailPage         = lazy(() => import('./pages/spaces/SpaceDetailPage'));

@@ -97,8 +97,7 @@ export default function GuestMapPage() {
       if (isClientPortfolioMap) {
         const list = await spaceApi.getAll();
         return list.filter(
-          (s: MapSpace & { is_published?: boolean }) =>
-            s.is_published && s.map_lat != null && s.map_lng != null,
+          (s) => s.is_published && s.map_lat != null && s.map_lng != null,
         );
       }
       return spaceApi.getPublishedMap();

@@ -110,7 +110,7 @@ export default function EmbeddedReportsPage() {
       });
       message.success('Saved');
       load(tid);
-    } catch (e: { userMessage?: string; message?: string }) {
+    } catch (e: any) {
       message.error(e?.userMessage || e?.message || 'Save failed');
     } finally {
       setLoading(false);

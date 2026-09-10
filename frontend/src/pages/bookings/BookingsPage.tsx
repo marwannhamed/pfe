@@ -108,7 +108,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
 
   const { data: buildingsRaw, isLoading: loadingB } = useQuery({ queryKey: ['buildings-bk'], queryFn: () => buildingApi.getAll(), staleTime: 0, gcTime: 0 });
   const { data: floorsRaw,    isLoading: loadingF } = useQuery({ queryKey: ['floors-bk', selectedBuildingId], queryFn: () => floorApi.getAll(selectedBuildingId),          enabled: !!selectedBuildingId, staleTime: 0, gcTime: 0 });
-  const { data: spacesRaw,    isLoading: loadingS } = useQuery({ queryKey: ['spaces-bk', selectedFloorId],    queryFn: () => spaceApi.getAll({ floorId: selectedFloorId }).then(r => r.data), enabled: !!selectedFloorId,    staleTime: 0, gcTime: 0 });
+  const { data: spacesRaw,    isLoading: loadingS } = useQuery({ queryKey: ['spaces-bk', selectedFloorId],    queryFn: () => spaceApi.getAll({ floorId: selectedFloorId }), enabled: !!selectedFloorId,    staleTime: 0, gcTime: 0 });
 
   const buildings = toArray<Building>(buildingsRaw);
   const floors    = toArray<Floor>(floorsRaw);

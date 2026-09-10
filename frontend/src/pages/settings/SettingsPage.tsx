@@ -62,6 +62,8 @@ function loginActivityLabel(action: LoginActivityEntry['action']) {
 }
 
 interface NotificationPrefs {
+  // index signature so the object satisfies the Record<string, unknown> the API takes
+  [key: string]: unknown;
   channels: { in_app: boolean; email: boolean; sms: boolean };
   categories: {
     booking: boolean;
