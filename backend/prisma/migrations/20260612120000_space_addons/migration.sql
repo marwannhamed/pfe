@@ -1,3 +1,10 @@
+-- The initial schema created this table as "addon_services", but the Prisma
+-- model maps AddOnService to "add_on_services" and the foreign keys below
+-- reference that name. No migration ever performed the rename, so replaying
+-- the chain on a clean database failed here with 42P01. IF EXISTS keeps this
+-- a no-op on databases that already carry the new name.
+ALTER TABLE IF EXISTS "addon_services" RENAME TO "add_on_services";
+
 CREATE TABLE IF NOT EXISTS "space_addon_services" (
   "id" TEXT NOT NULL,
   "space_id" TEXT NOT NULL,

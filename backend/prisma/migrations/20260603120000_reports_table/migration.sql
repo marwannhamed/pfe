@@ -1,3 +1,13 @@
+-- The initial schema created "reports" with a different shape
+-- (generated_by_user_id / report_type / file_url / generated_at). This
+-- migration replaces it with the model the application actually uses.
+-- Without the drop the chain cannot be replayed on a clean database:
+-- `prisma migrate deploy` fails here with 42P07 "relation already exists".
+--
+-- Reports are generated artefacts that can be re-run from their parameters,
+-- so replacing the table loses nothing that matters.
+DROP TABLE IF EXISTS "reports";
+
 -- CreateTable
 CREATE TABLE "reports" (
     "id" TEXT NOT NULL,
