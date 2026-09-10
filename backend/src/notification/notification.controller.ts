@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Put,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -21,6 +22,9 @@ import {
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user';
+import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -53,6 +57,45 @@ export class NotificationController {
   @ApiQuery({ name: 'userId', required: true })
   getUnreadCount(@Query('userId') userId: string) {
     return this.notificationService.getUnreadCount(userId);
+  }
+
+  @Get('preferences/me')
+  @ApiOperation({ summary: 'Get notification preferences for the current user' })
+  getMyPreferences(@CurrentUser() user: AuthUser) {
+    return this.notificationService.getPreferences(user.id);
+  }
+
+  @Put('preferences/me')
+  @ApiOperation({ summary: 'Update notification preferences for the current user' })
+  updateMyPreferences(
+    @CurrentUser() user: AuthUser,
+    @Body() preferences: Record<string, unknown>,
+  ) {
+    return this.notificationService.updatePreferences(user.id, preferences);
+  }
+
+  @Get('preferences/:userId')
+  @ApiOperation({ summary: 'Get notification preferences for a user' })
+  @ApiParam({ name: 'userId' })
+  getPreferences(@Param('userId') userId: string, @CurrentUser() user: AuthUser) {
+    if (userId !== user.id && user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException();
+    }
+    return this.notificationService.getPreferences(userId);
+  }
+
+  @Put('preferences/:userId')
+  @ApiOperation({ summary: 'Update notification preferences for a user' })
+  @ApiParam({ name: 'userId' })
+  updatePreferences(
+    @Param('userId') userId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() preferences: Record<string, unknown>,
+  ) {
+    if (userId !== user.id && user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException();
+    }
+    return this.notificationService.updatePreferences(userId, preferences);
   }
 
   @Get(':id')

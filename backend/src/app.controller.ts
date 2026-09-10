@@ -3,6 +3,7 @@ import {
   FileTypeValidator,
   Get,
   MaxFileSizeValidator,
+  NotFoundException,
   Param,
   ParseFilePipe,
   Post,
@@ -11,6 +12,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { join } from 'path';
+import { existsSync } from 'fs';
 import { AppService } from './app.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -67,7 +70,6 @@ export class AppController {
     )
     file: Express.Multer.File,
   ) {
-    console.log(file);
     return { filename: file?.filename, type: file?.mimetype };
   }
 
@@ -77,5 +79,18 @@ export class AppController {
   @ApiOperation({ summary: 'Visualize uploaded file' })
   seeUploadedFile(@Param('filepath') file: string, @Res() res) {
     return res.sendFile(file, { root: UPLOADED_FILES_PATH });
+  }
+
+  /** Public avatar images (no auth — used in img src). */
+  @Get('public/avatars/:filename')
+  @ApiOperation({ summary: 'Serve user avatar image' })
+  seePublicAvatar(@Param('filename') filename: string, @Res() res) {
+    const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const root = join(process.cwd(), 'uploadedFiles', 'avatars');
+    const filePath = join(root, safe);
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Avatar not found');
+    }
+    return res.sendFile(safe, { root });
   }
 }

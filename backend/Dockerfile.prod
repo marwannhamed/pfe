@@ -32,5 +32,8 @@ EXPOSE 6001
 
 COPY ./scripts/run_app_prod.sh ./scripts/run_app_prod.sh
 RUN chmod +x ./scripts/run_app_prod.sh
+RUN chown -R node:node /app
+
+USER node
 
 CMD ["./scripts/run_app_prod.sh"]

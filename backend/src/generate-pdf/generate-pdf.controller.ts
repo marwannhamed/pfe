@@ -35,7 +35,6 @@ export class GeneratePdfController {
       // Send the file as response
       return res.sendFile(filePath);
     } catch (error) {
-      console.error('Error generating PDF:', error);
       res.status(500).send('Error generating PDF');
     }
   }

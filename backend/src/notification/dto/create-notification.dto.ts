@@ -1,23 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  NotificationChannel,
-  NotificationPriority,
-  NotificationType,
-} from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_PRIORITY,
+  NOTIFICATION_TYPE,
+} from '../../constants/enums';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateNotificationDto {
+  @ApiProperty({ example: 'uuid-du-tenant' })
+  @IsUUID()
+  tenant_id: string;          // ← added
+
   @ApiProperty({ example: 'uuid-du-user' })
   @IsUUID()
-  user_id: string;
+  @IsOptional()
+  user_id?: string;           // ← made optional (notifications can be tenant-wide)
 
-  @ApiProperty({ enum: NotificationType })
-  @IsEnum(NotificationType)
-  type: NotificationType;
+  @ApiProperty({ example: 'BOOKING_CONFIRMATION' })
+  @IsString()
+  type: string;
 
-  @ApiProperty({ enum: NotificationChannel })
-  @IsEnum(NotificationChannel)
-  channel: NotificationChannel;
+  @ApiProperty({ example: 'IN_APP' })
+  @IsString()
+  channel: string;
 
   @ApiProperty({ example: 'Réservation confirmée' })
   @IsString()
@@ -27,11 +32,8 @@ export class CreateNotificationDto {
   @IsString()
   message: string;
 
-  @ApiPropertyOptional({
-    enum: NotificationPriority,
-    default: NotificationPriority.NORMAL,
-  })
-  @IsEnum(NotificationPriority)
+  @ApiPropertyOptional({ example: 'NORMAL' })
+  @IsString()
   @IsOptional()
-  priority?: NotificationPriority;
+  priority?: string;
 }

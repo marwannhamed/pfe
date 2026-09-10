@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BillingCycle } from '@prisma/client';
+import { BILLING_CYCLE } from '../../constants/enums';
 import {
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -10,14 +10,22 @@ import {
   Min,
 } from 'class-validator';
 
+type BillingCycleValue = typeof BILLING_CYCLE[keyof typeof BILLING_CYCLE];
+
 export class CreateAddonServiceDto {
-  @ApiProperty({ example: 'uuid-du-site' })
+  @ApiPropertyOptional({ example: 'uuid-du-tenant', description: 'Set automatically from the authenticated user' })
   @IsUUID()
-  site_id: string;
+  @IsOptional()
+  tenant_id?: string;
 
   @ApiProperty({ example: 'Service Café & Boissons' })
   @IsString()
   name: string;
+
+  @ApiPropertyOptional({ example: 'Coffee, tea, and snacks for meetings' })
+  @IsString()
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({ example: 'CATERING' })
   @IsString()
@@ -33,9 +41,9 @@ export class CreateAddonServiceDto {
   @IsOptional()
   currency?: string;
 
-  @ApiProperty({ enum: BillingCycle })
-  @IsEnum(BillingCycle)
-  billing_cycle: BillingCycle;
+  @ApiProperty({ enum: Object.values(BILLING_CYCLE) })
+  @IsIn(Object.values(BILLING_CYCLE))
+  billing_cycle: BillingCycleValue;
 
   @ApiPropertyOptional({ example: false })
   @IsBoolean()

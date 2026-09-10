@@ -9,9 +9,10 @@ import {
 } from 'class-validator';
 
 export class CreateBuildingDto {
-  @ApiProperty({ example: 'uuid-du-site' })
+  @ApiPropertyOptional({ example: 'uuid-du-tenant' })
   @IsUUID()
-  site_id: string;
+  @IsOptional()
+  tenant_id?: string;
 
   @ApiProperty({ example: 'Bâtiment A' })
   @IsString()
@@ -23,6 +24,20 @@ export class CreateBuildingDto {
   @IsNotEmpty()
   code: string;
 
+  @ApiPropertyOptional({ example: 'West Bay, Doha' })
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiPropertyOptional({
+    example: 10,
+    description: 'Total floors in the physical building (reference only — does not create floor records)',
+  })
+  @IsInt()
+  @IsOptional()
+  total_floors_in_building?: number;
+
+  /** @deprecated Use total_floors_in_building */
   @ApiPropertyOptional({ example: 5 })
   @IsInt()
   @IsOptional()
@@ -30,7 +45,8 @@ export class CreateBuildingDto {
 
   @ApiProperty({ example: 1200.5 })
   @IsNumber()
-  total_area_sqm: number;
+  @IsOptional()
+  total_area_sqm?: number;
 
   @ApiPropertyOptional({ example: 2010 })
   @IsInt()

@@ -1,0 +1,277 @@
+// Replace Prisma enums with string constants for SQLite compatibility
+
+export const TENANT_STATUS = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  CLOSED: 'CLOSED',
+  TRIAL: 'TRIAL',
+  /** Created from Typeform application; awaiting property manager approval. */
+  PENDING: 'PENDING',
+} as const;
+
+/** Typeform-driven tenant application workflow. */
+export const TENANT_APPLICATION_STATUS = {
+  AWAITING_SUBMISSION: 'AWAITING_SUBMISSION',
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export const USER_ROLE = {
+  /** Level 1 — platform owner (IT company). */
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  /** Level 2 — client company owner (created by Super Admin). */
+  CLIENT_ADMIN: 'CLIENT_ADMIN',
+  /** Level 2 — client sub-role: spaces, bookings, contracts. */
+  MANAGER: 'MANAGER',
+  FINANCE: 'FINANCE',
+  MAINTENANCE: 'MAINTENANCE',
+  RECEPTIONIST: 'RECEPTIONIST',
+  /** Level 3 — renter company admin. */
+  TENANT_ADMIN: 'TENANT_ADMIN',
+  /** Level 3 — renter employee (bookings/tasks only). */
+  TENANT_EMPLOYEE: 'TENANT_EMPLOYEE',
+  GUEST: 'GUEST',
+} as const;
+
+/** Maps legacy DB/JWT role strings to current roles. */
+export const LEGACY_USER_ROLE: Record<string, string> = {
+  SITE_MANAGER: USER_ROLE.MANAGER,
+  EMPLOYEE: USER_ROLE.TENANT_EMPLOYEE,
+};
+
+export function normalizeUserRole(role: string | undefined | null): string {
+  if (!role) return USER_ROLE.GUEST;
+  return LEGACY_USER_ROLE[role] ?? role;
+}
+
+export const ORGANIZATION_TYPE = {
+  /** Property manager client (Level 2). */
+  CLIENT: 'CLIENT',
+  /** Renter company using the portal (Level 3). */
+  RENTER: 'RENTER',
+} as const;
+
+export const USER_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  PENDING: 'PENDING',
+  SUSPENDED: 'SUSPENDED',
+} as const;
+
+export const SPACE_TYPE = {
+  DEDICATED_OFFICE: 'DEDICATED_OFFICE',
+  FLEXIBLE_DESK: 'FLEXIBLE_DESK',
+  HOT_DESK: 'HOT_DESK',
+  MEETING_ROOM: 'MEETING_ROOM',
+  CONFERENCE_ROOM: 'CONFERENCE_ROOM',
+  PHONE_BOOTH: 'PHONE_BOOTH',
+  EVENT_SPACE: 'EVENT_SPACE',
+} as const;
+
+export const SPACE_STATUS = {
+  AVAILABLE: 'AVAILABLE',
+  OCCUPIED: 'OCCUPIED',
+  RESERVED: 'RESERVED',
+  MAINTENANCE: 'MAINTENANCE',
+  OUT_OF_SERVICE: 'OUT_OF_SERVICE',
+} as const;
+
+export const BOOKING_APPLICATION_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REFUSED: 'REFUSED',
+} as const;
+
+export const SITE_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  CLOSED: 'CLOSED',
+} as const;
+
+export const BOOKING_STATUS = {
+  DRAFT: 'DRAFT',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  PENDING_PHONE_CONFIRMATION: 'PENDING_PHONE_CONFIRMATION',
+  AWAITING_PHYSICAL_VISIT: 'AWAITING_PHYSICAL_VISIT',
+  DOCUMENTS_PENDING_UPLOAD: 'DOCUMENTS_PENDING_UPLOAD',
+  ACTIVE: 'ACTIVE',
+  CONFIRMED: 'CONFIRMED',
+  CHECKED_IN: 'CHECKED_IN',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  REFUSED: 'REFUSED',
+  NO_SHOW: 'NO_SHOW',
+} as const;
+
+export const BOOKING_DOCUMENT_TYPE = {
+  CR_COPY: 'cr_copy',
+  QID_COPY: 'qid_copy',
+  TRADE_LICENSE: 'trade_license',
+  SIGNED_LEASE_CONTRACT: 'signed_lease_contract',
+  PAYMENT_PROOF: 'payment_proof',
+  /** @deprecated use SIGNED_LEASE_CONTRACT */
+  CONTRACT: 'contract',
+  /** @deprecated use PAYMENT_PROOF */
+  CHEQUE: 'cheque',
+  /** @deprecated use QID_COPY */
+  ID: 'id',
+  OTHER: 'other',
+} as const;
+
+export const CONTRACT_STATUS = {
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  EXPIRED: 'EXPIRED',
+  TERMINATED: 'TERMINATED',
+  RENEWED: 'RENEWED',
+} as const;
+
+export const INVOICE_STATUS = {
+  DRAFT: 'DRAFT',
+  ISSUED: 'ISSUED',
+  SENT: 'SENT',
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
+  PAID: 'PAID',
+  OVERDUE: 'OVERDUE',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+} as const;
+
+export const NOTIFICATION_TYPE = {
+  BOOKING_CONFIRMATION: 'BOOKING_CONFIRMATION',
+  BOOKING_REMINDER: 'BOOKING_REMINDER',
+  MARKETPLACE_INQUIRY: 'MARKETPLACE_INQUIRY',
+  INVOICE_ISSUED: 'INVOICE_ISSUED',
+  INVOICE_OVERDUE: 'INVOICE_OVERDUE',
+  PAYMENT_RECEIVED: 'PAYMENT_RECEIVED',
+  TICKET_UPDATED: 'TICKET_UPDATED',
+  CONTRACT_EXPIRING: 'CONTRACT_EXPIRING',
+  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+  SECURITY_ALERT: 'SECURITY_ALERT',
+  TENANT_APPLICATION: 'TENANT_APPLICATION',
+} as const;
+
+export const NOTIFICATION_CHANNEL = {
+  IN_APP: 'IN_APP',
+  EMAIL: 'EMAIL',
+  SMS: 'SMS',
+} as const;
+
+export const NOTIFICATION_PRIORITY = {
+  LOW: 'LOW',
+  NORMAL: 'NORMAL',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT',
+} as const;
+
+export const AUDIT_ACTION = {
+  CREATE: 'CREATE',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  LOGIN_FAILED: 'LOGIN_FAILED',
+  APPROVE: 'APPROVE',
+  REJECT: 'REJECT',
+} as const;
+
+export const AUDIT_SEVERITY = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+  CRITICAL: 'CRITICAL',
+} as const;
+
+export const TICKET_CATEGORY = {
+  PLUMBING: 'PLUMBING',
+  ELECTRICAL: 'ELECTRICAL',
+  HVAC: 'HVAC',
+  CLEANING: 'CLEANING',
+  FURNITURE: 'FURNITURE',
+  IT_EQUIPMENT: 'IT_EQUIPMENT',
+  OTHER: 'OTHER',
+} as const;
+
+export const TICKET_PRIORITY = {
+  LOW: 'LOW',
+  NORMAL: 'NORMAL',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT',
+  EMERGENCY: 'EMERGENCY',
+} as const;
+
+export const TICKET_STATUS = {
+  OPEN: 'OPEN',
+  ASSIGNED: 'ASSIGNED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const BILLING_CYCLE = {
+  HOURLY: 'HOURLY',
+  DAILY: 'DAILY',
+  WEEKLY: 'WEEKLY',
+  MONTHLY: 'MONTHLY',
+  QUARTERLY: 'QUARTERLY',
+  YEARLY: 'YEARLY',
+} as const;
+
+export const DISCOUNT_TYPE = {
+  PERCENTAGE: 'PERCENTAGE',
+  FIXED_AMOUNT: 'FIXED_AMOUNT',
+} as const;
+
+export const REPORT_TYPE = {
+  OCCUPANCY_RATE: 'OCCUPANCY_RATE',
+  REVENUE_BY_SITE: 'REVENUE_BY_SITE',
+  BOOKING_ANALYTICS: 'BOOKING_ANALYTICS',
+  PAYMENT_STATUS: 'PAYMENT_STATUS',
+  MAINTENANCE_SUMMARY: 'MAINTENANCE_SUMMARY',
+  FINANCIAL_SUMMARY: 'FINANCIAL_SUMMARY',
+} as const;
+
+export const REPORT_FORMAT = {
+  PDF: 'PDF',
+  CSV: 'CSV',
+  EXCEL: 'EXCEL',
+  JSON: 'JSON',
+} as const;
+
+export const CONTRACT_ITEM_TYPE = {
+  SPACE: 'SPACE',
+  ADDON_SERVICE: 'ADDON_SERVICE',
+  EQUIPMENT: 'EQUIPMENT',
+  SERVICE: 'SERVICE',
+} as const;
+
+export const DEPOSIT_REFUND_STATUS = {
+  NOT_REFUNDED: 'NOT_REFUNDED',
+  PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
+  FULLY_REFUNDED: 'FULLY_REFUNDED',
+} as const;
+
+export const INVOICE_TYPE = {
+  MONTHLY_RENT: 'MONTHLY_RENT',
+  ONE_TIME_CHARGE: 'ONE_TIME_CHARGE',
+  DEPOSIT: 'DEPOSIT',
+  PENALTY: 'PENALTY',
+  CREDIT: 'CREDIT',
+} as const;
+
+export const PAYMENT_METHOD = {
+  CASH: 'CASH',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  CREDIT_CARD: 'CREDIT_CARD',
+  DEBIT_CARD: 'DEBIT_CARD',
+  CHECK: 'CHECK',
+  ONLINE_PAYMENT: 'ONLINE_PAYMENT',
+} as const;

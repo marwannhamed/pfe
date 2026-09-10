@@ -13,32 +13,52 @@ export class PromotionCodeService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreatePromotionCodeDto) {
-    const existing = await this.prisma.promotionCode.findUnique({
+    const existing = await (this.prisma as any).promotionCode.findUnique({
       where: { code: dto.code },
     });
     if (existing)
       throw new ConflictException(`Code "${dto.code}" déjà utilisé`);
-    return this.prisma.promotionCode.create({ data: dto });
+    return (this.prisma as any).promotionCode.create({ data: dto });
   }
 
-  async findAll(siteId?: string) {
-    return this.prisma.promotionCode.findMany({
-      where: {
-        ...(siteId && { site_id: siteId }),
-        is_active: true,
-      },
+  async findAll(params?: { isActive?: boolean; page?: number; limit?: number; search?: string }) {
+    const { isActive, page = 1, limit = 10, search } = params || {};
+    
+    const where: any = {
+      ...(isActive !== undefined && { is_active: isActive }),
+    };
+
+    // Add search functionality
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Get total count for pagination
+    const total = await (this.prisma as any).promotionCode.count({ where });
+
+    // Get paginated results
+    const skip = (page - 1) * limit;
+    const data = await (this.prisma as any).promotionCode.findMany({
+      where,
       orderBy: { valid_from: 'desc' },
+      skip,
+      take: limit,
     });
+
+    return { data, total };
   }
 
   async findOne(id: string) {
-    const promo = await this.prisma.promotionCode.findUnique({ where: { id } });
+    const promo = await (this.prisma as any).promotionCode.findUnique({ where: { id } });
     if (!promo) throw new NotFoundException(`PromotionCode #${id} introuvable`);
     return promo;
   }
 
   async findByCode(code: string) {
-    const promo = await this.prisma.promotionCode.findUnique({
+    const promo = await (this.prisma as any).promotionCode.findUnique({
       where: { code },
     });
     if (!promo) throw new NotFoundException(`Code "${code}" introuvable`);
@@ -47,12 +67,12 @@ export class PromotionCodeService {
 
   async update(id: string, dto: UpdatePromotionCodeDto) {
     await this.findOne(id);
-    return this.prisma.promotionCode.update({ where: { id }, data: dto });
+    return (this.prisma as any).promotionCode.update({ where: { id }, data: dto });
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.promotionCode.delete({ where: { id } });
+    return (this.prisma as any).promotionCode.delete({ where: { id } });
   }
 
   // ─── Valider un code promo ────────────────────────────────────
@@ -87,7 +107,7 @@ export class PromotionCodeService {
     }
 
     // Incrémenter le compteur d'utilisation
-    await this.prisma.promotionCode.update({
+    await (this.prisma as any).promotionCode.update({
       where: { id: promo.id },
       data: { uses_count: { increment: 1 } },
     });

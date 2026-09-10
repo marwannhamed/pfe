@@ -4,20 +4,26 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { ConfigurationModule } from './config/configuration.module';
+import { SecurityModule } from './security/security.module';
+import { LoggingModule } from './logging/logging.module';
+import { PerformanceModule } from './performance/performance.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 // Boilerplate modules
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { CommonModule } from './common/common.module';
 import { GeneratePdfModule } from './generate-pdf/generate-pdf.module';
 
 // Domain modules
 import { TenantModule } from './tenant/tenant.module';
 import { UserModule } from './user/user.module';
-import { SiteModule } from './site/site.module';
 import { BuildingModule } from './building/building.module';
 import { FloorModule } from './floor/floor.module';
 import { SpaceModule } from './space/space.module';
+import { SpaceFeatureModule } from './space-feature/space-feature.module';
 import { PricePlanModule } from './price-plan/price-plan.module';
 import { AddonServiceModule } from './addon-service/addon-service.module';
 import { PromotionCodeModule } from './promotion-code/promotion-code.module';
@@ -28,44 +34,73 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationModule } from './notification/notification.module';
 import { ReportModule } from './report/report.module';
 import { AuditModule } from './audit/audit.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';  
+import { UploadModule } from './upload/upload.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ExportModule } from './export/export.module';
+import { CacheModule } from './cache/cache.module';
+import { SearchModule } from './search/search.module';
+import { AiModule } from './ai/ai.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
+import { EmailSequenceModule } from './email-sequence/email-sequence.module';
+import { CrispModule } from './crisp/crisp.module';
+import { FormsModule } from './forms/forms.module';
+import { BookingApplicationModule } from './booking-application/booking-application.module';
+import { resolveMailTemplateDir } from './mail/mail-template.util';
+
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-
-    // ── Mailer — uses a safe fallback when MAIL_HOST is not configured ────────
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env'],
+      expandVariables: true,
+    }),
+    ConfigurationModule,
+    SecurityModule,
+    LoggingModule,
+    PerformanceModule,
+    MonitoringModule,
+    ScheduleModule.forRoot(),
+    TasksModule, 
+    UploadModule,
+    AnalyticsModule,
+    ExportModule,
+    SearchModule,
+    AiModule,
+    MarketplaceModule,
+    EmailSequenceModule,
+    CrispModule,
+    FormsModule,
+    BookingApplicationModule,
+    // ── Mailer — Brevo API preferred; else SMTP from .env; else console log ───
     MailerModule.forRootAsync({
       useFactory: async (config: ConfigService) => {
-        const mailHost = config.get<string>('MAIL_HOST');
+        const mailHost = config.get<string>('MAIL_HOST')?.trim();
+        const mailUser = config.get<string>('MAIL_USER')?.trim();
+        const mailPass = config.get<string>('MAIL_PASSWORD')?.trim();
+        const hasSmtp =
+          !!mailHost &&
+          !!mailUser &&
+          !!mailPass &&
+          mailUser !== 'your-email@gmail.com' &&
+          mailPass !== 'your-app-password';
 
         return {
-          transport: mailHost
+          transport: hasSmtp
             ? {
-                // Real SMTP — used when MAIL_HOST is set in .env
                 host: mailHost,
                 port: Number(config.get('MAIL_PORT') ?? 587),
-                secure: false,
-                auth: {
-                  user: config.get('MAIL_USER'),
-                  pass: config.get('MAIL_PASSWORD'),
-                },
+                secure: Number(config.get('MAIL_PORT') ?? 587) === 465,
+                auth: { user: mailUser, pass: mailPass },
               }
-            : {
-                // ✅ Safe fallback — no crash when mail is not configured
-                // Uses Ethereal (fake SMTP) — emails are captured but not sent
-                host: 'smtp.ethereal.email',
-                port: 587,
-                secure: false,
-                auth: {
-                  user: 'ethereal_user',
-                  pass: 'ethereal_pass',
-                },
-              },
+            : { jsonTransport: true },
           defaults: {
-            from: `"LeaseManager" <${config.get('MAIL_FROM') ?? 'noreply@leasemanager.com'}>`,
+            from: `"${config.get('MAIL_FROM_NAME') ?? 'LeaseManager'}" <${config.get('MAIL_FROM') ?? 'noreply@leasemanager.com'}>`,
           },
           template: {
-            dir: `${__dirname}/../templates`,
+            dir: resolveMailTemplateDir(),
             adapter: new HandlebarsAdapter(),
             options: { strict: true },
           },
@@ -75,18 +110,21 @@ import { AuditModule } from './audit/audit.module';
     }),
 
     // Boilerplate
+  
     PrismaModule,
+    CommonModule,
     AuthModule,
     MailModule,
     GeneratePdfModule,
+    CacheModule,
 
     // Domain modules
     TenantModule,
     UserModule,
-    SiteModule,
     BuildingModule,
     FloorModule,
     SpaceModule,
+    SpaceFeatureModule,
     PricePlanModule,
     AddonServiceModule,
     PromotionCodeModule,

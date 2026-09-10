@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Booking Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9fafb; }
+        .details { background: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Booking Confirmed</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{tenantName}},</p>
+            <p>Your booking has been confirmed! Here are the details:</p>
+            
+            <div class="details">
+                <h3>Booking Information</h3>
+                <p><strong>Booking Number:</strong> {{bookingNumber}}</p>
+                <p><strong>Space:</strong> {{spaceName}}</p>
+                <p><strong>Start:</strong> {{startDatetime}}</p>
+                <p><strong>End:</strong> {{endDatetime}}</p>
+                <p><strong>Total Price:</strong> {{totalPrice}}</p>
+            </div>
+            
+            <p>Please arrive on time and bring any necessary materials. If you need to make changes, please contact us as soon as possible.</p>
+            
+            <p>Thank you for choosing our service!</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

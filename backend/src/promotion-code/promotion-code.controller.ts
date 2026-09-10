@@ -10,6 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  ParseUUIDPipe,
+  ValidationPipe,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +21,9 @@ import {
   ApiParam,
   ApiQuery,
   ApiBearerAuth,
+  ApiResponse,
 } from '@nestjs/swagger';
+import { ResponseDto } from '../utils/response.dto';
 import { PromotionCodeService } from './promotion-code.service';
 import { CreatePromotionCodeDto } from './dto/create-promotion-code.dto';
 import { UpdatePromotionCodeDto } from './dto/update-promotion-code.dto';
@@ -31,16 +37,60 @@ export class PromotionCodeController {
   constructor(private readonly promotionCodeService: PromotionCodeService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Créer un code promo' })
-  create(@Body() dto: CreatePromotionCodeDto) {
-    return this.promotionCodeService.create(dto);
+  @ApiOperation({ summary: 'Create new promotion code' })
+  @ApiResponse({ status: 201, description: 'Promotion code created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Body(ValidationPipe) dto: CreatePromotionCodeDto) {
+    try {
+      const code = await this.promotionCodeService.create(dto);
+      return new ResponseDto('Promotion code created successfully', code);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lister tous les codes promo' })
-  @ApiQuery({ name: 'siteId', required: false })
-  findAll(@Query('siteId') siteId?: string) {
-    return this.promotionCodeService.findAll(siteId);
+  @ApiOperation({ summary: 'Get all promotion codes with pagination' })
+  @ApiQuery({ name: 'siteId', required: false, description: 'Filter by site ID' })
+  @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)', type: Number })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 10, max: 100)', type: Number })
+  @ApiQuery({ name: 'search', required: false, description: 'Search by code or description' })
+  @ApiResponse({ status: 200, description: 'Promotion codes retrieved successfully' })
+  async findAll(
+    @Query('isActive') isActive?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+  ) {
+    try {
+      // Validate pagination parameters
+      if (page < 1) throw new BadRequestException('Page must be greater than 0');
+      if (limit < 1 || limit > 100) throw new BadRequestException('Limit must be between 1 and 100');
+
+      const result = await this.promotionCodeService.findAll({
+        isActive: isActive === 'true',
+        page,
+        limit,
+        search,
+      });
+
+      return new ResponseDto('Promotion codes retrieved successfully', {
+        data: result.data,
+        pagination: {
+          page,
+          limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / limit),
+          hasNext: page * limit < result.total,
+          hasPrev: page > 1,
+        },
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('Failed to retrieve promotion codes');
+    }
   }
 
   @Get('validate/:code')

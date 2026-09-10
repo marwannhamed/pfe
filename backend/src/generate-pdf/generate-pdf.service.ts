@@ -29,7 +29,6 @@ export class GeneratePdfService {
       const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
         pdf.create(compiledHtml).toBuffer((err, buffer) => {
           if (err) {
-            console.error('PDF Creation Error:', err);
             reject(err);
           } else {
             resolve(buffer);
@@ -49,8 +48,8 @@ export class GeneratePdfService {
 
       return pdfBuffer;
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
+      // TODO: Add proper logging service
+      throw new Error('Failed to generate PDF');
     }
   }
 }

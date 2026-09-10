@@ -1,5 +1,6 @@
 import { SetMetadata } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { USER_ROLE } from '../constants/enums';
 
-// ✅ Maintenant on passe des strings enum au lieu d'integers
-export const Roles = (...roles: UserRole[]) => SetMetadata('roles', roles);
+type UserRoleValue = typeof USER_ROLE[keyof typeof USER_ROLE];
+
+export const Roles = (...roles: UserRoleValue[]) => SetMetadata('roles', roles);

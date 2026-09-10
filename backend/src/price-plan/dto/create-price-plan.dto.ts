@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BillingCycle, SpaceType } from '@prisma/client';
+import { BILLING_CYCLE, SPACE_TYPE } from '../../constants/enums';
 import {
   IsBoolean,
   IsDateString,
@@ -20,13 +20,13 @@ export class CreatePricePlanDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ enum: SpaceType })
-  @IsEnum(SpaceType)
-  space_type: SpaceType;
+  @ApiProperty({ example: 'DEDICATED_OFFICE' })
+  @IsString()
+  space_type: string;
 
-  @ApiProperty({ enum: BillingCycle })
-  @IsEnum(BillingCycle)
-  billing_cycle: BillingCycle;
+  @ApiProperty({ example: 'MONTHLY' })
+  @IsString()
+  billing_cycle: string;
 
   @ApiProperty({ example: 1500.0 })
   @IsNumber()

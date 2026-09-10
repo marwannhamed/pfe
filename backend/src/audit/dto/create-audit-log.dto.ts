@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AuditAction, AuditSeverity } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateAuditLogDto {
   @ApiProperty({ example: 'uuid-du-tenant' })
@@ -12,9 +11,9 @@ export class CreateAuditLogDto {
   @IsOptional()
   user_id?: string;
 
-  @ApiProperty({ enum: AuditAction })
-  @IsEnum(AuditAction)
-  action: AuditAction;
+  @ApiProperty({ example: 'CREATE' })
+  @IsString()
+  action: string;
 
   @ApiProperty({ example: 'Booking' })
   @IsString()
@@ -23,6 +22,16 @@ export class CreateAuditLogDto {
   @ApiProperty({ example: 'uuid-de-la-ressource' })
   @IsUUID()
   resource_id: string;
+
+  @ApiPropertyOptional({ example: 'Booking' })
+  @IsString()
+  @IsOptional()
+  entity_type?: string;
+
+  @ApiPropertyOptional({ example: 'uuid-de-la-ressource' })
+  @IsString()
+  @IsOptional()
+  entity_id?: string;
 
   @ApiPropertyOptional({ example: { status: 'DRAFT' } })
   @IsOptional()
@@ -37,8 +46,13 @@ export class CreateAuditLogDto {
   @IsOptional()
   ip_address?: string;
 
-  @ApiPropertyOptional({ enum: AuditSeverity, default: AuditSeverity.INFO })
-  @IsEnum(AuditSeverity)
+  @ApiPropertyOptional({ example: 'Mozilla/5.0...' })
+  @IsString()
   @IsOptional()
-  severity?: AuditSeverity;
+  user_agent?: string;
+
+  @ApiPropertyOptional({ example: 'INFO' })
+  @IsString()
+  @IsOptional()
+  severity?: string;
 }

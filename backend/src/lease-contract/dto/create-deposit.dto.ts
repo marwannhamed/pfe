@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DepositRefundStatus } from '@prisma/client';
+import { DEPOSIT_REFUND_STATUS } from '../../constants/enums';
 import {
   IsDateString,
   IsEnum,
@@ -37,10 +37,10 @@ export class RefundDepositDto {
   @Min(0)
   refunded_amount: number;
 
-  @ApiPropertyOptional({ enum: DepositRefundStatus })
-  @IsEnum(DepositRefundStatus)
+  @ApiPropertyOptional({ example: 'PARTIALLY_REFUNDED' })
+  @IsString()
   @IsOptional()
-  refund_status?: DepositRefundStatus;
+  refund_status?: string;
 
   @ApiPropertyOptional({ example: 'Remboursement partiel suite à dégâts' })
   @IsString()

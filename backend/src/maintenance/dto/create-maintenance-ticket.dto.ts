@@ -1,7 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TicketCategory, TicketPriority, TicketStatus } from '@prisma/client';
 import {
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -14,32 +12,45 @@ export class CreateMaintenanceTicketDto {
   @IsUUID()
   space_id: string;
 
-  @ApiProperty({ example: 'uuid-du-user' })
+  @ApiPropertyOptional({ example: 'uuid-du-user' })
   @IsUUID()
-  created_by_user_id: string;
+  @IsOptional()
+  user_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias for user_id (portal sends this as the reporter)',
+  })
+  @IsUUID()
+  @IsOptional()
+  created_by_user_id?: string;
 
   @ApiProperty({ example: "Fuite d'eau dans les sanitaires" })
   @IsString()
   title: string;
 
-  @ApiProperty({ enum: TicketCategory })
-  @IsEnum(TicketCategory)
-  category: TicketCategory;
-
-  @ApiPropertyOptional({ enum: TicketPriority, default: TicketPriority.NORMAL })
-  @IsEnum(TicketPriority)
+  @ApiPropertyOptional()
+  @IsString()
   @IsOptional()
-  priority?: TicketPriority;
+  description?: string;
 
-  @ApiPropertyOptional({ enum: TicketStatus, default: TicketStatus.OPEN })
-  @IsEnum(TicketStatus)
+  @ApiProperty({ example: 'PLUMBING' })
+  @IsString()
+  category: string;
+
+  @ApiPropertyOptional({ example: 'NORMAL' })
+  @IsString()
   @IsOptional()
-  status?: TicketStatus;
+  priority?: string;
+
+  @ApiPropertyOptional({ example: 'OPEN' })
+  @IsString()
+  @IsOptional()
+  status?: string;
 
   @ApiPropertyOptional({ example: 'uuid-du-technicien' })
   @IsUUID()
   @IsOptional()
-  assigned_to_user_id?: string;
+  assigned_to?: string;
 
   @ApiPropertyOptional({ example: 3.5 })
   @IsNumber()
@@ -52,4 +63,9 @@ export class CreateMaintenanceTicketDto {
   @Min(0)
   @IsOptional()
   cost?: number;
+
+  @ApiPropertyOptional({ description: 'Crisp session id for support traceability' })
+  @IsString()
+  @IsOptional()
+  crisp_session_id?: string;
 }

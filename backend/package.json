@@ -27,42 +27,64 @@
     "db:studio": "npx prisma studio",
     "db:apply": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:reset-minimal": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-minimal.ps1",
     "db:migrate": "prisma migrate dev",
     "db:migrate:status": "prisma migrate status",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:up": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-postgres.ps1",
+    "db:down": "docker compose down",
+    "db:ps": "docker compose ps",
     "swagger:ts": "npx swagger-typescript-api -p ./swagger.json -o ./src/api -n myApi.ts"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^1.6.1",
-    "@nestjs/common": "^10.0.0",
-    "@nestjs/config": "^4.0.3",
-    "@nestjs/core": "^11.1.16",
+    "@nestjs/cache-manager": "^3.1.0",
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/config": "^3.1.1",
+    "@nestjs/core": "^10.4.22",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
-    "@nestjs/platform-express": "^11.1.16",
-    "@nestjs/swagger": "^11.2.6",
+    "@nestjs/platform-express": "^10.4.22",
+    "@nestjs/platform-socket.io": "^11.1.19",
+    "@nestjs/schedule": "^4.1.1",
+    "@nestjs/swagger": "^7.4.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@nestjs/websockets": "^10.4.22",
     "@prisma/client": "^5.13.0",
+    "@types/cache-manager": "^4.0.6",
     "bcrypt": "^6.0.0",
+    "cache-manager": "^7.2.8",
+    "cache-manager-redis-store": "^3.0.1",
     "class-transformer": "^0.5.1",
+    "cloudinary": "^2.9.0",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "cron": "^4.4.0",
+    "exceljs": "^4.4.0",
+    "express-rate-limit": "^8.3.2",
+    "google-auth-library": "^9.15.1",
     "handlebars": "^4.7.8",
-    "html-pdf": "^1.5.0",
+    "helmet": "^8.1.0",
+    "html-pdf": "^3.0.1",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
     "or": "^0.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "swagger-typescript-api": "^13.0.3",
     "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
-    "@nestjs/schematics": "^7.3.1",
+    "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.16",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^4.17.17",
     "@types/jest": "^29.5.2",
-    "@types/multer": "^1.4.11",
+    "@types/multer": "^1.4.13",
     "@types/node": "^20.11.5",
     "@types/nodemailer": "^6.4.14",
     "@types/passport-jwt": "^4.0.0",
@@ -95,9 +117,17 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "auth/auth.service.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "global": {
+        "branches": 7,
+        "functions": 20,
+        "lines": 20,
+        "statements": 20
+      }
+    }
   }
 }

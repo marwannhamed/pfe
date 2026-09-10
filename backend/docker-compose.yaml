@@ -10,7 +10,7 @@ services:
       # Use a named volume for persistence
       - postgres_data:/var/lib/postgresql/data   
     ports:
-      - '5432:5432'
+      - '5433:5432'
 
   adminer:
     image: adminer
@@ -32,6 +32,10 @@ services:
       - '6001:6001'
     env_file:
       - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/lease_management?schema=public
     volumes:
       - .:/app
 

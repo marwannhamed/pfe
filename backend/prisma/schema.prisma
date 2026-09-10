@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+  binaryTargets = ["native"]
 }
 
 datasource db {
@@ -9,90 +9,163 @@ datasource db {
 }
 
 model Tenant {
-  id                String          @id @default(uuid())
+  id                String              @id @default(uuid())
   name              String
-  slug              String          @unique
+  slug              String              @unique
   contact_email     String
-  status            TenantStatus    @default(TRIAL)
-  subscription_plan String          @default("basic")
-  max_users         Int             @default(10)
-  max_spaces        Int             @default(5)
-  settings          Json?           @default("{}")
-  created_at        DateTime        @default(now())
-  auditLogs         AuditLog[]
+  status            String              @default("TRIAL")
+  subscription_plan String              @default("basic")
+  max_users         Int                 @default(10)
+  max_spaces        Int                 @default(5)
+  /// CLIENT = property manager (Level 2); RENTER = booking tenant company (Level 3).
+  organization_type String              @default("CLIENT")
+  /// White-label BI embeds: { powerBi?: { title, embedUrl }, tableau?: { title, embedUrl } }
+  reporting_embeds  Json?
+  /// Brevo (Sendinblue) contact id after sync — used for marketing/automation in Brevo dashboard.
+  brevo_contact_id  String?
+  /// Normalized Typeform answers (company, industry, headcount, space preferences, move-in, etc.).
+  application_profile   Json?
+  /// Uploaded file URLs from Typeform: [{ "kind": "ID"|"REGISTRATION"|"OTHER", "url": "..." }].
+  application_documents Json?
+  created_at        DateTime            @default(now())
+  users             User[]
+  buildings         Building[]
   bookings          Booking[]
   invoices          Invoice[]
-  leaseContracts    LeaseContract[]
   payments          Payment[]
-  sites             Site[]
-  users             User[]
+  leaseContracts    LeaseContract[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  maintenanceTickets MaintenanceTicket[]
+  addOnServices     AddOnService[]
+  onboardingSequence TenantOnboardingSequence?
+  /// Applications submitted to this landlord org (property manager inbox).
+  tenantApplicationsReviewed TenantApplication[] @relation("LandlordApplications")
+  /// When this tenant was created from a Typeform application (pending org).
+  originatingApplication     TenantApplication?   @relation("ApplicantTenant")
+  tenantCompanyUsers         User[]               @relation("TenantCompanyUsers")
 
   @@map("tenants")
+}
+
+/// Tracks tenant onboarding drip after first lease is signed (ACTIVE); emails sent via Brevo transactional templates.
+model TenantOnboardingSequence {
+  id            String    @id @default(uuid())
+  tenant_id     String    @unique
+  baseline_at   DateTime
+  day0_sent_at  DateTime?
+  day1_sent_at  DateTime?
+  day3_sent_at  DateTime?
+  day7_sent_at  DateTime?
+  day30_sent_at DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@map("tenant_onboarding_sequences")
+}
+
+/// Prospective tenant inquiry via Typeform (hidden fields: inquiry_id, space_id).
+model TenantApplication {
+  id                     String   @id @default(uuid())
+  landlord_tenant_id     String
+  space_id               String?
+  status                 String   @default("AWAITING_SUBMISSION")
+  typeform_response_id   String?  @unique
+  applicant_tenant_id    String?  @unique
+  contact_email          String?
+  company_name           String?
+  raw_payload            Json?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  landlord_tenant        Tenant   @relation("LandlordApplications", fields: [landlord_tenant_id], references: [id], onDelete: Cascade)
+  applicant_tenant       Tenant?  @relation("ApplicantTenant", fields: [applicant_tenant_id], references: [id], onDelete: SetNull)
+  space                  Space?   @relation(fields: [space_id], references: [id], onDelete: SetNull)
+
+  @@map("tenant_applications")
 }
 
 model User {
   id               String              @id @default(uuid())
   tenant_id        String
-  role             UserRole            @default(EMPLOYEE)
+  role             String              @default("TENANT_EMPLOYEE")
   email            String              @unique
   password         String
-  refreshToken     String?             @db.VarChar(255)
-  first_name       String
-  last_name        String
-  status           UserStatus          @default(PENDING)
+  first_name       String?
+  last_name        String?
+  /// E.164 format e.g. +21612345678 — required for tenant admins at registration.
+  phone_number     String?
+  /// For RECEPTIONIST: the manager who created / supervises this account.
+  managed_by_id    String?
+  status           String              @default("ACTIVE")
+  /// When true, user must change password before accessing the app (client onboarding).
+  must_change_password Boolean         @default(false)
+  /// Renter company (Level 3) — TENANT_ADMIN / TENANT_EMPLOYEE only.
+  tenant_company_id    String?
+  refreshToken       String?
+  /// Active login session refresh token — cleared on logout; distinct from password-reset refreshToken.
+  session_refresh_token String?
+  avatar_url       String?
   last_login_at    DateTime?
-  preferences      Json?               @default("{}")
+  /// Last Crisp chat session id (browser) for support correlation.
+  crisp_session_id String?
+  /// Per-user notification channel/category toggles (persisted for local + prod).
+  notification_preferences Json?
   created_at       DateTime            @default(now())
-  auditLogs        AuditLog[]
-  approvedBookings Booking[]           @relation("BookingApprover")
-  createdBookings  Booking[]           @relation("BookingCreator")
-  createdContracts LeaseContract[]
-  assignedTickets  MaintenanceTicket[] @relation("TicketAssignee")
-  createdTickets   MaintenanceTicket[] @relation("TicketCreator")
-  notifications    Notification[]
-  recordedPayments Payment[]
-  reports          Report[]
-  managedSites     Site[]              @relation("SiteManager")
+  updated_at       DateTime            @updatedAt
   tenant           Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenantCompany    Tenant?             @relation("TenantCompanyUsers", fields: [tenant_company_id], references: [id], onDelete: SetNull)
+  managedBy        User?               @relation("ReceptionStaff", fields: [managed_by_id], references: [id], onDelete: SetNull)
+  receptionStaff   User[]              @relation("ReceptionStaff")
+  bookings         Booking[]
+  receptionistBookings Booking[]         @relation("BookingReceptionist")
+  uploadedBookingDocuments BookingDocument[]
+  invoices         Invoice[]
+  payments         Payment[]           @relation("PaymentUser")
+  recordedPayments Payment[]           @relation("RecordedBy")
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  maintenanceTickets       MaintenanceTicket[] @relation("MaintenanceReporter")
+  createdMaintenanceTickets MaintenanceTicket[] @relation("MaintenanceCreator")
+  assignedMaintenanceTickets MaintenanceTicket[] @relation("MaintenanceAssignee")
+  leaseContracts   LeaseContract[]
+  reports          Report[]
+  bookingApplications       BookingApplication[] @relation("BookingApplicationUser")
+  reviewedBookingApplications BookingApplication[] @relation("BookingApplicationReviewer")
+  sessions                  UserSession[]
 
   @@map("users")
 }
 
-model Site {
-  id              String          @id @default(uuid())
-  tenant_id       String
-  name            String
-  code            String          @unique
-  city            String
-  country         String
-  timezone        String          @default("UTC")
-  currency        String          @default("USD")
-  status          SiteStatus      @default(ACTIVE)
-  manager_user_id String?
-  opening_hours   Json?
-  created_at      DateTime        @default(now())
-  addOns          AddOnService[]
-  buildings       Building[]
-  pricePlans      PricePlan[]
-  promos          PromotionCode[]
-  manager         User?           @relation("SiteManager", fields: [manager_user_id], references: [id])
-  tenant          Tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+/// One row per browser/device login — allows multiple concurrent sessions per user.
+model UserSession {
+  id            String   @id @default(uuid())
+  user_id       String
+  refresh_token String   @unique
+  created_at    DateTime @default(now())
+  last_used_at  DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@map("sites")
+  @@index([user_id])
+  @@map("user_sessions")
 }
 
 model Building {
-  id             String   @id @default(uuid())
-  site_id        String
-  name           String
-  code           String
-  floors_count   Int      @default(1)
-  total_area_sqm Decimal  @db.Decimal(10, 2)
-  year_built     Int?
-  status         String   @default("ACTIVE")
-  created_at     DateTime @default(now())
-  site           Site     @relation(fields: [site_id], references: [id], onDelete: Cascade)
-  floors         Floor[]
+  id                       String   @id @default(uuid())
+  tenant_id                String
+  name                     String
+  slug                     String   @unique
+  description              String?
+  address                  String?
+  total_area_sqm           Float    @default(0)
+  /// Physical floors in the whole building (optional reference — not auto-created).
+  total_floors_in_building Int?
+  year_built               Int?
+  status                   String   @default("ACTIVE")
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+  tenant                   Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  floors                   Floor[]
 
   @@map("buildings")
 }
@@ -100,14 +173,17 @@ model Building {
 model Floor {
   id             String   @id @default(uuid())
   building_id    String
-  floor_number   Int
   name           String
-  area_sqm       Decimal  @db.Decimal(10, 2)
+  floor_number   Int
+  area_sqm       Float?
   floor_plan_url String?
   status         String   @default("ACTIVE")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
   building       Building @relation(fields: [building_id], references: [id], onDelete: Cascade)
   spaces         Space[]
 
+  @@unique([building_id, floor_number])
   @@map("floors")
 }
 
@@ -115,526 +191,402 @@ model Space {
   id                 String              @id @default(uuid())
   floor_id           String
   name               String
-  code               String              @unique
-  type               SpaceType
-  capacity           Int
-  area_sqm           Decimal             @db.Decimal(10, 2)
-  status             SpaceStatus         @default(AVAILABLE)
-  price_per_hour     Decimal?            @db.Decimal(10, 2)
-  price_per_day      Decimal?            @db.Decimal(10, 2)
-  price_per_month    Decimal?            @db.Decimal(10, 2)
-  currency           String              @default("USD")
+  slug               String              @unique
+  description        String?
+  type               String
+  status             String              @default("AVAILABLE")
+  capacity           Int?
+  area_sqm           Float?
+  hourly_rate        Float?
+  daily_rate         Float?
+  monthly_rate       Float?
+  currency           String              @default("QAR")
+  map_x              Float?
+  map_y              Float?
+  map_w              Float?
+  map_h              Float?
+  photos             String[]            @default([])
+  /// Matterport, Sketchfab, or other 3D tour embed URL shown on the public map.
+  virtual_tour_url   String?
+  /// When true, scheduled sync pushes this space to external marketplaces (if APIs configured).
+  is_listed          Boolean             @default(false)
+  /// When true, bookings for this space need manager approval before confirmation.
   requires_approval  Boolean             @default(false)
+  /// Visible on the public guest map when true (also requires location + AVAILABLE status).
+  is_published       Boolean             @default(false)
+  address            String?
+  city               String?
+  state              String?
+  zip                String?
+  country            String?
+  map_lat            Float?
+  map_lng            Float?
+  transportation_notes String?
+  coworker_listing_id   String?
+  liquidspace_listing_id String?
   created_at         DateTime            @default(now())
-  bookings           Booking[]
-  contractItems      ContractItem[]
-  maintenanceTickets MaintenanceTicket[]
-  features           SpaceFeature[]
+  updated_at         DateTime            @updatedAt
   floor              Floor               @relation(fields: [floor_id], references: [id], onDelete: Cascade)
+  bookings           Booking[]
+  features           SpaceFeature[]
+  maintenanceTickets MaintenanceTicket[]
+  tenantApplications TenantApplication[]
+  bookingApplications BookingApplication[]
+  availableAddOns     SpaceAddOnService[]
 
   @@map("spaces")
 }
 
 model SpaceFeature {
-  id           String  @id @default(uuid())
-  space_id     String
-  feature_type String
-  feature_name String
-  quantity     Int     @default(1)
-  is_available Boolean @default(true)
-  space        Space   @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  space_id    String
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  space       Space    @relation(fields: [space_id], references: [id], onDelete: Cascade)
 
   @@map("space_features")
 }
 
-model PricePlan {
-  id            String       @id @default(uuid())
-  site_id       String
-  name          String
-  space_type    SpaceType
-  billing_cycle BillingCycle
-  price         Decimal      @db.Decimal(10, 2)
-  currency      String       @default("USD")
-  tax_rate      Decimal      @default(0) @db.Decimal(5, 2)
-  is_active     Boolean      @default(true)
-  valid_from    DateTime
-  valid_to      DateTime?
-  created_at    DateTime     @default(now())
-  bookings      Booking[]
-  site          Site         @relation(fields: [site_id], references: [id], onDelete: Cascade)
+model Booking {
+  id               String              @id @default(uuid())
+  tenant_id        String
+  user_id          String
+  space_id         String
+  invoice_id       String?
+  /// Receptionist assigned for phone confirmation / visit workflow.
+  receptionist_id  String?
+  booking_number   String              @unique @default(uuid())
+  start_time       DateTime
+  end_time         DateTime
+  status           String              @default("DRAFT")
+  total_amount     Float               @default(0)
+  total_price      Float?
+  notes            String?
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  receptionist     User?               @relation("BookingReceptionist", fields: [receptionist_id], references: [id], onDelete: SetNull)
+  space            Space               @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  invoice          Invoice?            @relation(fields: [invoice_id], references: [id])
+  payments         Payment[]
+  maintenanceTickets MaintenanceTicket[]
+  addOns           BookingAddOn[]
+  documents        BookingDocument[]
+  application      BookingApplication?
 
-  @@map("price_plans")
+  @@map("bookings")
 }
 
-model AddOnService {
-  id            String         @id @default(uuid())
-  site_id       String
-  name          String
-  category      String
-  price         Decimal        @db.Decimal(10, 2)
-  currency      String         @default("USD")
-  billing_cycle BillingCycle
-  is_recurring  Boolean        @default(false)
-  is_active     Boolean        @default(true)
-  created_at    DateTime       @default(now())
-  site          Site           @relation(fields: [site_id], references: [id], onDelete: Cascade)
-  bookingAddOns BookingAddOn[]
-  contractItems ContractItem[]
+/// Scanned contract, cheque, ID, etc. linked to a booking (max 5 enforced in service).
+model BookingDocument {
+  id            String   @id @default(uuid())
+  booking_id    String
+  file_url      String
+  file_name     String
+  document_type String   @default("other")
+  uploaded_by   String
+  uploaded_at   DateTime @default(now())
+  booking       Booking  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  uploadedBy    User     @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
 
-  @@map("addon_services")
+  @@map("booking_documents")
+}
+
+/// Guest / portal user application to book a published space (manager accept → booking).
+model BookingApplication {
+  id              String    @id @default(uuid())
+  space_id        String
+  user_id         String?
+  guest_name      String?
+  guest_email     String?
+  guest_phone     String?
+  /// INDIVIDUAL | COMPANY — who is renting
+  applicant_type  String    @default("INDIVIDUAL")
+  company_name    String?
+  start_date      DateTime
+  duration_months Int
+  headcount       Int
+  intended_use    String
+  message         String?
+  status          String    @default("PENDING")
+  reviewed_by_id  String?
+  reviewed_at     DateTime?
+  refusal_reason  String?
+  booking_id      String?   @unique
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  space           Space     @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  user            User?     @relation("BookingApplicationUser", fields: [user_id], references: [id], onDelete: SetNull)
+  reviewedBy      User?     @relation("BookingApplicationReviewer", fields: [reviewed_by_id], references: [id], onDelete: SetNull)
+  booking         Booking?  @relation(fields: [booking_id], references: [id], onDelete: SetNull)
+  addOns          BookingApplicationAddOn[]
+
+  @@map("booking_applications")
+}
+
+/// Add-on services offered with a specific space.
+model SpaceAddOnService {
+  id               String       @id @default(uuid())
+  space_id         String
+  addon_service_id String
+  created_at       DateTime     @default(now())
+  space            Space        @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  addonService     AddOnService @relation(fields: [addon_service_id], references: [id], onDelete: Cascade)
+
+  @@unique([space_id, addon_service_id])
+  @@map("space_addon_services")
+}
+
+/// Add-ons selected by applicant before manager review.
+model BookingApplicationAddOn {
+  id               String             @id @default(uuid())
+  application_id   String
+  addon_service_id String
+  quantity         Float              @default(1)
+  unit_price       Float              @default(0)
+  created_at       DateTime           @default(now())
+  application      BookingApplication @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  addonService     AddOnService       @relation(fields: [addon_service_id], references: [id], onDelete: Cascade)
+
+  @@map("booking_application_add_ons")
+}
+
+model LeaseContract {
+  id              String    @id @default(uuid())
+  tenant_id       String
+  user_id         String?
+  contract_number String    @unique
+  start_date      DateTime
+  end_date        DateTime
+  monthly_rent    Float?
+  status          String    @default("DRAFT")
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  tenant          Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user            User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  invoices        Invoice[]
+
+  @@map("lease_contracts")
+}
+
+model Invoice {
+  id                String         @id @default(uuid())
+  tenant_id         String
+  user_id           String?
+  contract_id       String?
+  promotion_code_id String?
+  invoice_number    String         @unique
+  type              String
+  amount            Float          @default(0)
+  subtotal          Float          @default(0)
+  /// Invoice-level tax rate (%) — Qatar commercial leasing typically 0%.
+  tax_rate          Float          @default(0)
+  tax_amount        Float          @default(0)
+  total_amount      Float          @default(0)
+  currency          String         @default("QAR")
+  due_date          DateTime?
+  issue_date        DateTime       @default(now())
+  status            String         @default("DRAFT")
+  paid_at           DateTime?
+  /// Last Brevo overdue reminder tier: 0 = none, then 1, 7, or 14 (calendar days after due_date).
+  overdue_reminder_max_day Int     @default(0)
+  /// Crisp session when tenant engaged support (e.g. overdue nudge).
+  crisp_session_id String?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+  tenant            Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user              User?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  contract          LeaseContract? @relation(fields: [contract_id], references: [id], onDelete: SetNull)
+  promotionCode     PromotionCode? @relation(fields: [promotion_code_id], references: [id], onDelete: SetNull)
+  bookings          Booking[]
+  payments          Payment[]
+  lines             InvoiceLine[]
+
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id          String   @id @default(uuid())
+  invoice_id  String
+  description String
+  quantity    Float    @default(1)
+  unit_price  Float    @default(0)
+  tax_rate    Float    @default(0)
+  line_total  Float    @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  invoice     Invoice  @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("invoice_lines")
 }
 
 model PromotionCode {
-  id             String       @id @default(uuid())
-  site_id        String?
-  code           String       @unique
-  discount_type  DiscountType
-  discount_value Decimal      @db.Decimal(10, 2)
-  max_uses       Int?
-  uses_count     Int          @default(0)
-  valid_from     DateTime
-  valid_to       DateTime?
-  is_active      Boolean      @default(true)
-  bookings       Booking[]
-  invoices       Invoice[]
-  site           Site?        @relation(fields: [site_id], references: [id])
+  id          String    @id @default(uuid())
+  code        String    @unique
+  description String?
+  discount    Float     @default(0)
+  type        String    @default("PERCENTAGE")
+  valid_from  DateTime?
+  valid_until DateTime?
+  max_uses    Int?
+  used_count  Int       @default(0)
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  invoices    Invoice[]
 
   @@map("promotion_codes")
 }
 
-model Booking {
-  id                  String         @id @default(uuid())
-  tenant_id           String
-  space_id            String
-  created_by_user_id  String
-  approved_by_user_id String?
-  booking_number      String         @unique
-  start_datetime      DateTime
-  end_datetime        DateTime
-  status              BookingStatus  @default(DRAFT)
-  price_plan_id       String?
-  promotion_code_id   String?
-  total_price         Decimal        @db.Decimal(10, 2)
-  currency            String         @default("USD")
-  attendee_count      Int            @default(1)
-  checked_in_at       DateTime?
-  checked_out_at      DateTime?
-  parent_booking_id   String?
-  created_at          DateTime       @default(now())
-  addOns              BookingAddOn[]
-  approvedBy          User?          @relation("BookingApprover", fields: [approved_by_user_id], references: [id])
-  createdBy           User           @relation("BookingCreator", fields: [created_by_user_id], references: [id])
-  parentBooking       Booking?       @relation("BookingChildren", fields: [parent_booking_id], references: [id])
-  childBookings       Booking[]      @relation("BookingChildren")
-  pricePlan           PricePlan?     @relation(fields: [price_plan_id], references: [id])
-  promotionCode       PromotionCode? @relation(fields: [promotion_code_id], references: [id])
-  space               Space          @relation(fields: [space_id], references: [id])
-  tenant              Tenant         @relation(fields: [tenant_id], references: [id])
+model Payment {
+  id             String    @id @default(uuid())
+  tenant_id      String
+  user_id        String?
+  invoice_id     String?
+  recorded_by_id String?
+  payment_number String?
+  amount         Float
+  method         String
+  status         String    @default("PENDING")
+  transaction_id String?   @unique
+  /// Scanned cheque PDF when method is CHECK.
+  cheque_document_url String?
+  payment_date   DateTime?
+  paid_at        DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  tenant         Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user           User?     @relation("PaymentUser", fields: [user_id], references: [id], onDelete: SetNull)
+  recordedBy     User?     @relation("RecordedBy", fields: [recorded_by_id], references: [id], onDelete: SetNull)
+  invoice        Invoice?  @relation(fields: [invoice_id], references: [id], onDelete: SetNull)
+  bookings       Booking[]
 
-  @@map("bookings")
+  @@map("payments")
+}
+
+model AddOnService {
+  id            String         @id @default(uuid())
+  tenant_id     String
+  name          String
+  description   String?
+  price         Float          @default(0)
+  billing_cycle String         @default("HOURLY")   // ← String, not BillingCycle enum
+  category      String?
+  status        String         @default("ACTIVE")
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  tenant        Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  bookingAddOns        BookingAddOn[]
+  spaceLinks           SpaceAddOnService[]
+  applicationAddOns    BookingApplicationAddOn[]
+
+  @@map("add_on_services")
 }
 
 model BookingAddOn {
   id               String       @id @default(uuid())
   booking_id       String
   addon_service_id String
-  quantity         Int          @default(1)
-  unit_price       Decimal      @db.Decimal(10, 2)
-  total_price      Decimal      @db.Decimal(10, 2)
-  addonService     AddOnService @relation(fields: [addon_service_id], references: [id])
+  quantity         Float        @default(1)
+  unit_price       Float        @default(0)
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
   booking          Booking      @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  addonService     AddOnService @relation(fields: [addon_service_id], references: [id], onDelete: Cascade)
 
-  @@map("booking_addons")
-}
-
-model LeaseContract {
-  id                 String         @id @default(uuid())
-  tenant_id          String
-  created_by_user_id String
-  contract_number    String         @unique
-  status             ContractStatus @default(DRAFT)
-  start_date         DateTime
-  end_date           DateTime
-  monthly_rent       Decimal        @db.Decimal(10, 2)
-  deposit_amount     Decimal        @db.Decimal(10, 2)
-  currency           String         @default("USD")
-  payment_due_day    Int            @default(1)
-  auto_renew         Boolean        @default(false)
-  signed_at          DateTime?
-  created_at         DateTime       @default(now())
-  items              ContractItem[]
-  deposit            Deposit?
-  invoices           Invoice[]
-  createdBy          User           @relation(fields: [created_by_user_id], references: [id])
-  tenant             Tenant         @relation(fields: [tenant_id], references: [id])
-
-  @@map("lease_contracts")
-}
-
-model ContractItem {
-  id               String           @id @default(uuid())
-  contract_id      String
-  item_type        ContractItemType
-  space_id         String?
-  addon_service_id String?
-  description      String?
-  quantity         Int              @default(1)
-  unit_price       Decimal          @db.Decimal(10, 2)
-  currency         String           @default("USD")
-  addonService     AddOnService?    @relation(fields: [addon_service_id], references: [id])
-  contract         LeaseContract    @relation(fields: [contract_id], references: [id], onDelete: Cascade)
-  space            Space?           @relation(fields: [space_id], references: [id])
-
-  @@map("contract_items")
-}
-
-model Deposit {
-  id              String              @id @default(uuid())
-  contract_id     String              @unique
-  amount          Decimal             @db.Decimal(10, 2)
-  currency        String              @default("USD")
-  paid_at         DateTime?
-  refund_status   DepositRefundStatus @default(PENDING)
-  refunded_amount Decimal?            @db.Decimal(10, 2)
-  refunded_at     DateTime?
-  notes           String?
-  contract        LeaseContract       @relation(fields: [contract_id], references: [id], onDelete: Cascade)
-
-  @@map("deposits")
-}
-
-model Invoice {
-  id                String         @id @default(uuid())
-  tenant_id         String
-  contract_id       String?
-  promotion_code_id String?
-  invoice_number    String         @unique
-  type              InvoiceType
-  status            InvoiceStatus  @default(DRAFT)
-  issue_date        DateTime
-  due_date          DateTime
-  subtotal          Decimal        @db.Decimal(10, 2)
-  tax_amount        Decimal        @default(0) @db.Decimal(10, 2)
-  total_amount      Decimal        @db.Decimal(10, 2)
-  currency          String         @default("USD")
-  notes             String?
-  created_at        DateTime       @default(now())
-  lines             InvoiceLine[]
-  contract          LeaseContract? @relation(fields: [contract_id], references: [id])
-  promotionCode     PromotionCode? @relation(fields: [promotion_code_id], references: [id])
-  tenant            Tenant         @relation(fields: [tenant_id], references: [id])
-  payments          Payment[]
-
-  @@map("invoices")
-}
-
-model InvoiceLine {
-  id          String  @id @default(uuid())
-  invoice_id  String
-  description String
-  quantity    Decimal @db.Decimal(10, 2)
-  unit_price  Decimal @db.Decimal(10, 2)
-  tax_rate    Decimal @default(0) @db.Decimal(5, 2)
-  line_total  Decimal @db.Decimal(10, 2)
-  invoice     Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
-
-  @@map("invoice_lines")
-}
-
-model Payment {
-  id                  String        @id @default(uuid())
-  tenant_id           String
-  invoice_id          String
-  recorded_by_user_id String
-  payment_number      String        @unique
-  payment_method      PaymentMethod
-  amount              Decimal       @db.Decimal(10, 2)
-  currency            String        @default("USD")
-  payment_date        DateTime
-  status              PaymentStatus @default(PENDING)
-  reference_number    String?
-  created_at          DateTime      @default(now())
-  invoice             Invoice       @relation(fields: [invoice_id], references: [id])
-  recordedBy          User          @relation(fields: [recorded_by_user_id], references: [id])
-  tenant              Tenant        @relation(fields: [tenant_id], references: [id])
-
-  @@map("payments")
+  @@map("booking_add_ons")
 }
 
 model MaintenanceTicket {
-  id                  String         @id @default(uuid())
-  space_id            String
-  created_by_user_id  String
-  assigned_to_user_id String?
-  ticket_number       String         @unique
-  title               String
-  category            TicketCategory
-  priority            TicketPriority @default(NORMAL)
-  status              TicketStatus   @default(OPEN)
-  reported_at         DateTime       @default(now())
-  resolved_at         DateTime?
-  estimated_hours     Decimal?       @db.Decimal(6, 2)
-  cost                Decimal?       @db.Decimal(10, 2)
-  created_at          DateTime       @default(now())
-  assignedTo          User?          @relation("TicketAssignee", fields: [assigned_to_user_id], references: [id])
-  createdBy           User           @relation("TicketCreator", fields: [created_by_user_id], references: [id])
-  space               Space          @relation(fields: [space_id], references: [id])
+  id                 String    @id @default(uuid())
+  tenant_id          String
+  space_id           String?
+  booking_id         String?
+  user_id            String?
+  created_by_user_id String?
+  ticket_number      String    @unique
+  title              String
+  description        String?
+  category           String
+  priority           String    @default("NORMAL")
+  status             String    @default("OPEN")
+  assigned_to        String?
+  cost               Float?
+  /// Crisp conversation session id (e.g. ticket created from closed tagged chat).
+  crisp_session_id   String?
+  /// Optional: install date for equipment-linked tickets (predictive scoring).
+  equipment_installed_at DateTime?
+  /// Optional: estimated operating hours (predictive scoring).
+  usage_hours_estimate    Float?
+  reported_at        DateTime  @default(now())
+  resolved_at        DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  tenant             Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  space              Space?    @relation(fields: [space_id], references: [id], onDelete: SetNull)
+  booking            Booking?  @relation(fields: [booking_id], references: [id], onDelete: SetNull)
+  user               User?     @relation("MaintenanceReporter", fields: [user_id], references: [id], onDelete: SetNull)
+  createdBy          User?     @relation("MaintenanceCreator", fields: [created_by_user_id], references: [id], onDelete: SetNull)
+  assignee           User?     @relation("MaintenanceAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
 
   @@map("maintenance_tickets")
 }
 
 model Notification {
-  id         String               @id @default(uuid())
-  user_id    String
-  type       NotificationType
-  channel    NotificationChannel
+  id         String    @id @default(uuid())
+  tenant_id  String
+  user_id    String?
   title      String
   message    String
-  is_read    Boolean              @default(false)
+  type       String
+  channel    String    @default("IN_APP")
+  priority   String    @default("NORMAL")
+  is_read    Boolean   @default(false)
   read_at    DateTime?
-  priority   NotificationPriority @default(NORMAL)
-  created_at DateTime             @default(now())
-  user       User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  data       String?
+  created_at DateTime  @default(now())
+  tenant     Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
   @@map("notifications")
 }
 
 model Report {
-  id                   String       @id @default(uuid())
-  generated_by_user_id String
-  report_type          ReportType
-  title                String
-  parameters           Json?
-  format               ReportFormat
-  file_url             String?
-  generated_at         DateTime     @default(now())
-  generatedBy          User         @relation(fields: [generated_by_user_id], references: [id])
+  id         String   @id @default(uuid())
+  user_id    String
+  type       String
+  title      String
+  format     String   @default("JSON")
+  status     String   @default("COMPLETED")
+  parameters Json?
+  payload    Json?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("reports")
 }
 
 model AuditLog {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   tenant_id     String
   user_id       String?
-  action        AuditAction
-  resource_type String
-  resource_id   String
-  old_values    Json?
-  new_values    Json?
+  action        String
+  resource_type String?
+  resource_id   String?
+  entity_type   String?
+  entity_id     String?
+  severity      String   @default("INFO")
+  old_values    String?
+  new_values    String?
   ip_address    String?
-  severity      AuditSeverity @default(INFO)
-  created_at    DateTime      @default(now())
-  tenant        Tenant        @relation(fields: [tenant_id], references: [id])
-  user          User?         @relation(fields: [user_id], references: [id])
+  user_agent    String?
+  created_at    DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user          User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
-}
-
-enum TenantStatus {
-  ACTIVE
-  SUSPENDED
-  CLOSED
-  TRIAL
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  PENDING
-  SUSPENDED
-}
-
-enum UserRole {
-  SUPER_ADMIN
-  TENANT_ADMIN
-  SITE_MANAGER
-  FINANCE
-  EMPLOYEE
-  MAINTENANCE
-  GUEST
-}
-
-enum SpaceType {
-  DEDICATED_OFFICE
-  FLEXIBLE_DESK
-  HOT_DESK
-  MEETING_ROOM
-  CONFERENCE_ROOM
-  PHONE_BOOTH
-  EVENT_SPACE
-}
-
-enum SpaceStatus {
-  AVAILABLE
-  OCCUPIED
-  RESERVED
-  MAINTENANCE
-  OUT_OF_SERVICE
-}
-
-enum SiteStatus {
-  ACTIVE
-  INACTIVE
-  CLOSED
-}
-
-enum BillingCycle {
-  HOURLY
-  DAILY
-  WEEKLY
-  MONTHLY
-  QUARTERLY
-  YEARLY
-}
-
-enum DiscountType {
-  PERCENTAGE
-  FIXED_AMOUNT
-}
-
-enum BookingStatus {
-  DRAFT
-  PENDING_APPROVAL
-  CONFIRMED
-  CHECKED_IN
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-}
-
-enum ContractStatus {
-  DRAFT
-  ACTIVE
-  EXPIRED
-  TERMINATED
-  RENEWED
-}
-
-enum ContractItemType {
-  SPACE
-  ADDON_SERVICE
-}
-
-enum DepositRefundStatus {
-  PENDING
-  PARTIALLY_REFUNDED
-  FULLY_REFUNDED
-  FORFEITED
-}
-
-enum InvoiceType {
-  MONTHLY_RENT
-  USAGE_BASED
-  DEPOSIT
-  ADDON_SERVICE
-  LATE_FEE
-}
-
-enum InvoiceStatus {
-  DRAFT
-  ISSUED
-  SENT
-  PARTIALLY_PAID
-  PAID
-  OVERDUE
-  CANCELLED
-}
-
-enum PaymentMethod {
-  CASH
-  CHECK
-  BANK_TRANSFER
-  CREDIT_CARD
-  ONLINE_PAYMENT
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
-enum TicketPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-  EMERGENCY
-}
-
-enum TicketCategory {
-  PLUMBING
-  ELECTRICAL
-  HVAC
-  CLEANING
-  FURNITURE
-  IT_EQUIPMENT
-  OTHER
-}
-
-enum TicketStatus {
-  OPEN
-  ASSIGNED
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
-  CANCELLED
-}
-
-enum NotificationType {
-  BOOKING_CONFIRMATION
-  BOOKING_REMINDER
-  INVOICE_ISSUED
-  INVOICE_OVERDUE
-  PAYMENT_RECEIVED
-  TICKET_UPDATED
-  CONTRACT_EXPIRING
-}
-
-enum NotificationChannel {
-  IN_APP
-  EMAIL
-  SMS
-}
-
-enum NotificationPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum ReportType {
-  OCCUPANCY_RATE
-  REVENUE_BY_SITE
-  BOOKING_ANALYTICS
-  PAYMENT_STATUS
-  MAINTENANCE_SUMMARY
-  FINANCIAL_SUMMARY
-}
-
-enum ReportFormat {
-  PDF
-  CSV
-  EXCEL
-  JSON
-}
-
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  LOGIN
-  LOGOUT
-  APPROVE
-  REJECT
-}
-
-enum AuditSeverity {
-  INFO
-  WARNING
-  ERROR
-  CRITICAL
 }

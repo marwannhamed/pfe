@@ -1,15 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SpaceStatus, SpaceType } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
-  IsEnum,
   IsInt,
   IsNumber,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
+import { SpaceFeatureInputDto } from './space-feature-input.dto';
 
 export class CreateSpaceDto {
   @ApiProperty({ example: 'uuid-du-floor' })
@@ -21,14 +23,19 @@ export class CreateSpaceDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'SP-101' })
+  @ApiPropertyOptional({ example: 'sp-101' })
   @IsString()
-  @IsNotEmpty()
-  code: string;
+  @IsOptional()
+  slug?: string;
 
-  @ApiProperty({ enum: SpaceType })
-  @IsEnum(SpaceType)
-  type: SpaceType;
+  @ApiPropertyOptional({ example: 'SP-101' })
+  @IsString()
+  @IsOptional()
+  code?: string;
+
+  @ApiProperty({ example: 'DEDICATED_OFFICE' })
+  @IsString()
+  type: string;
 
   @ApiProperty({ example: 10 })
   @IsInt()
@@ -38,10 +45,10 @@ export class CreateSpaceDto {
   @IsNumber()
   area_sqm: number;
 
-  @ApiPropertyOptional({ enum: SpaceStatus, default: SpaceStatus.AVAILABLE })
-  @IsEnum(SpaceStatus)
+  @ApiPropertyOptional({ example: 'AVAILABLE' })
+  @IsString()
   @IsOptional()
-  status?: SpaceStatus;
+  status?: string;
 
   @ApiPropertyOptional({ example: 25.0 })
   @IsNumber()
@@ -66,5 +73,78 @@ export class CreateSpaceDto {
   @ApiPropertyOptional({ example: false })
   @IsBoolean()
   @IsOptional()
+  is_listed?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
   requires_approval?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  is_published?: boolean;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  zip?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  map_lat?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  map_lng?: number;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  transportation_notes?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ example: 'https://my.matterport.com/show/?m=abc123' })
+  @IsString()
+  @IsOptional()
+  virtual_tour_url?: string;
+
+  @ApiPropertyOptional({ type: [SpaceFeatureInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SpaceFeatureInputDto)
+  features?: SpaceFeatureInputDto[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Add-on service IDs available for this space' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  addon_service_ids?: string[];
 }

@@ -22,32 +22,56 @@ import { SpaceService } from './space.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { USER_ROLE } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
+
+const R_SPACE_LIST = [
+  USER_ROLE.SUPER_ADMIN,
+  USER_ROLE.CLIENT_ADMIN,
+  USER_ROLE.MANAGER,
+  USER_ROLE.FINANCE,
+  USER_ROLE.TENANT_ADMIN,
+  USER_ROLE.TENANT_EMPLOYEE,
+  USER_ROLE.MAINTENANCE,
+  USER_ROLE.RECEPTIONIST,
+] as const;
 
 @ApiTags('Spaces')
 @Controller('spaces')
 export class SpaceController {
   constructor(private readonly spaceService: SpaceService) {}
 
-  // ── PUBLIC endpoints (no JWT needed — guests can browse) ─────────────────
+  @Get('public/map')
+  @ApiOperation({ summary: 'Published available spaces for guest map (no auth)' })
+  findPublishedMap() {
+    return this.spaceService.findPublishedForMap();
+  }
+
+  @Get('public/:id')
+  @ApiOperation({ summary: 'One published space for guest map (no auth)' })
+  @ApiParam({ name: 'id' })
+  findOnePublished(@Param('id') id: string) {
+    return this.spaceService.findOnePublished(id);
+  }
 
   @Get()
-  @ApiOperation({ summary: 'List all spaces — public' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...R_SPACE_LIST)
+  @ApiOperation({ summary: 'List spaces (scoped by role)' })
   @ApiQuery({ name: 'floorId', required: false })
   @ApiQuery({ name: 'type', required: false })
   @ApiQuery({ name: 'status', required: false })
   findAll(
+    @CurrentUser() user: AuthUser,
     @Query('floorId') floorId?: string,
     @Query('type') type?: string,
     @Query('status') status?: string,
   ) {
-    return this.spaceService.findAll(floorId, type, status);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get one space — public' })
-  @ApiParam({ name: 'id' })
-  findOne(@Param('id') id: string) {
-    return this.spaceService.findOne(id);
+    return this.spaceService.findAllForUser(user, floorId, type, status);
   }
 
   @Get(':id/availability')
@@ -63,32 +87,60 @@ export class SpaceController {
     return this.spaceService.isAvailable(id, start, end);
   }
 
-  // ── PROTECTED endpoints (JWT required) ───────────────────────────────────
+  @Get(':id')
+  @ApiOperation({ summary: 'Get one space — public' })
+  @ApiParam({ name: 'id' })
+  findOne(@Param('id') id: string) {
+    return this.spaceService.findOne(id);
+  }
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Create a space' })
-  create(@Body() dto: CreateSpaceDto) {
-    return this.spaceService.create(dto);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateSpaceDto) {
+    return this.spaceService.create(user, dto);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Update a space' })
   @ApiParam({ name: 'id' })
-  update(@Param('id') id: string, @Body() dto: UpdateSpaceDto) {
-    return this.spaceService.update(id, dto);
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateSpaceDto) {
+    return this.spaceService.update(user, id, dto);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a space' })
   @ApiParam({ name: 'id' })
-  remove(@Param('id') id: string) {
-    return this.spaceService.remove(id);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.spaceService.remove(user, id);
+  }
+
+  @Patch(':id/map-position')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
+  updateMapPosition(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: any,
+  ) {
+    return this.spaceService.updateMapPosition(user, id, dto);
+  }
+
+  @Delete(':id/map-position')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
+  clearMapPosition(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.spaceService.clearMapPosition(user, id);
   }
 }

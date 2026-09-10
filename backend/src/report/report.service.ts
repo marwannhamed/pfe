@@ -1,25 +1,110 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
+import { GenerateReportDto } from './dto/generate-report.dto';
 import {
-  ReportType,
-  InvoiceStatus,
-  PaymentStatus,
-  TicketStatus,
-} from '@prisma/client';
+  REPORT_TYPE,
+  INVOICE_STATUS,
+  PAYMENT_STATUS,
+  TICKET_STATUS,
+} from '../constants/enums';
+
+/** UI template keys → backend report types */
+const TEMPLATE_TYPE_MAP: Record<string, string> = {
+  'booking-summary': REPORT_TYPE.BOOKING_ANALYTICS,
+  'financial-summary': REPORT_TYPE.FINANCIAL_SUMMARY,
+  'occupancy-analysis': REPORT_TYPE.OCCUPANCY_RATE,
+};
+
+const REPORT_TEMPLATES = [
+  {
+    key: 'booking-summary',
+    name: 'Booking Summary Report',
+    type: REPORT_TYPE.BOOKING_ANALYTICS,
+    formats: ['PDF', 'Excel', 'CSV', 'JSON'],
+  },
+  {
+    key: 'financial-summary',
+    name: 'Financial Summary Report',
+    type: REPORT_TYPE.FINANCIAL_SUMMARY,
+    formats: ['PDF', 'Excel', 'JSON'],
+  },
+  {
+    key: 'occupancy-analysis',
+    name: 'Occupancy Analysis Report',
+    type: REPORT_TYPE.OCCUPANCY_RATE,
+    formats: ['PDF', 'Excel', 'JSON'],
+  },
+];
 
 @Injectable()
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
+  resolveReportType(type: string): string {
+    return TEMPLATE_TYPE_MAP[type] ?? type;
+  }
+
+  getTemplates() {
+    return REPORT_TEMPLATES;
+  }
+
   // ─── CREATE ──────────────────────────────────────────────────
   async create(dto: CreateReportDto) {
     return this.prisma.report.create({
       data: {
-        ...dto,
-        generated_at: new Date(),
+        user_id: dto.user_id,
+        type: dto.type,
+        title: dto.title,
+        format: dto.format,
+        parameters: dto.parameters as Prisma.InputJsonValue | undefined,
+        status: 'COMPLETED',
       },
-      include: { generatedBy: true },
+      include: { user: true },
+    });
+  }
+
+  async generateAndSave(dto: GenerateReportDto, defaultUserId: string) {
+    const resolvedType = this.resolveReportType(dto.type);
+    const data = await this.generateReportData(resolvedType, dto.parameters);
+    const title =
+      dto.title?.trim() ||
+      REPORT_TEMPLATES.find((t) => t.key === dto.type || t.type === resolvedType)
+        ?.name ||
+      `Report — ${resolvedType}`;
+
+    return this.prisma.report.create({
+      data: {
+        user_id: dto.user_id ?? defaultUserId,
+        type: resolvedType,
+        title,
+        format: dto.format,
+        parameters: dto.parameters as Prisma.InputJsonValue | undefined,
+        payload: data as Prisma.InputJsonValue,
+        status: 'COMPLETED',
+      },
+      include: { user: true },
+    });
+  }
+
+  getDownloadPayload(id: string) {
+    return this.findOne(id).then((report) => {
+      const payload = {
+        id: report.id,
+        title: report.title,
+        type: report.type,
+        format: report.format,
+        status: report.status,
+        parameters: report.parameters,
+        payload: report.payload,
+        created_at: report.created_at,
+      };
+      return {
+        filename: `report-${report.id}.json`,
+        content: JSON.stringify(payload, null, 2),
+        mimeType: 'application/json',
+      };
     });
   }
 
@@ -27,11 +112,11 @@ export class ReportService {
   async findAll(userId?: string, type?: string) {
     return this.prisma.report.findMany({
       where: {
-        ...(userId && { generated_by_user_id: userId }),
-        ...(type && { report_type: type as ReportType }),
+        ...(userId && { user_id: userId }),
+        ...(type && { type: this.resolveReportType(type) }),
       },
-      include: { generatedBy: true },
-      orderBy: { generated_at: 'desc' },
+      include: { user: true },
+      orderBy: { created_at: 'desc' },
     });
   }
 
@@ -39,7 +124,7 @@ export class ReportService {
   async findOne(id: string) {
     const report = await this.prisma.report.findUnique({
       where: { id },
-      include: { generatedBy: true },
+      include: { user: true },
     });
     if (!report) throw new NotFoundException(`Report #${id} introuvable`);
     return report;
@@ -52,19 +137,19 @@ export class ReportService {
   }
 
   // ─── GENERATE REPORT DATA ─────────────────────────────────────
-  async generateReportData(type: ReportType, params?: Record<string, any>) {
+  async generateReportData(type: string, params?: Record<string, any>) {
     switch (type) {
-      case ReportType.OCCUPANCY_RATE:
+      case REPORT_TYPE.OCCUPANCY_RATE:
         return this.getOccupancyReport(params);
-      case ReportType.REVENUE_BY_SITE:
+      case REPORT_TYPE.REVENUE_BY_SITE:
         return this.getRevenueReport(params);
-      case ReportType.BOOKING_ANALYTICS:
+      case REPORT_TYPE.BOOKING_ANALYTICS:
         return this.getBookingAnalytics(params);
-      case ReportType.PAYMENT_STATUS:
+      case REPORT_TYPE.PAYMENT_STATUS:
         return this.getPaymentStatusReport(params);
-      case ReportType.MAINTENANCE_SUMMARY:
+      case REPORT_TYPE.MAINTENANCE_SUMMARY:
         return this.getMaintenanceSummary(params);
-      case ReportType.FINANCIAL_SUMMARY:
+      case REPORT_TYPE.FINANCIAL_SUMMARY:
         return this.getFinancialSummary(params);
       default:
         return {};
@@ -74,8 +159,8 @@ export class ReportService {
   // ─── OCCUPANCY REPORT ─────────────────────────────────────────
   private async getOccupancyReport(params?: Record<string, any>) {
     const spaces = await this.prisma.space.findMany({
-      where: params?.site_id
-        ? { floor: { building: { site_id: params.site_id } } }
+      where: params?.building_id
+        ? { floor: { building_id: params.building_id } }
         : {},
     });
 
@@ -100,7 +185,7 @@ export class ReportService {
   private async getRevenueReport(params?: Record<string, any>) {
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        status: InvoiceStatus.PAID,
+        status: INVOICE_STATUS.PAID,
         ...(params?.tenant_id && { tenant_id: params.tenant_id }),
       },
       include: { payments: true },
@@ -150,21 +235,21 @@ export class ReportService {
     const [total, completed, pending, failed, refunded] = await Promise.all([
       this.prisma.payment.count({ where }),
       this.prisma.payment.count({
-        where: { ...where, status: PaymentStatus.COMPLETED },
+        where: { ...where, status: PAYMENT_STATUS.COMPLETED },
       }),
       this.prisma.payment.count({
-        where: { ...where, status: PaymentStatus.PENDING },
+        where: { ...where, status: PAYMENT_STATUS.PENDING },
       }),
       this.prisma.payment.count({
-        where: { ...where, status: PaymentStatus.FAILED },
+        where: { ...where, status: PAYMENT_STATUS.FAILED },
       }),
       this.prisma.payment.count({
-        where: { ...where, status: PaymentStatus.REFUNDED },
+        where: { ...where, status: PAYMENT_STATUS.REFUNDED },
       }),
     ]);
 
     const totalAmount = await this.prisma.payment.aggregate({
-      where: { ...where, status: PaymentStatus.COMPLETED },
+      where: { ...where, status: PAYMENT_STATUS.COMPLETED },
       _sum: { amount: true },
     });
 
@@ -185,21 +270,21 @@ export class ReportService {
     const [total, open, inProgress, resolved, closed] = await Promise.all([
       this.prisma.maintenanceTicket.count({ where }),
       this.prisma.maintenanceTicket.count({
-        where: { ...where, status: TicketStatus.OPEN },
+        where: { ...where, status: TICKET_STATUS.OPEN },
       }),
       this.prisma.maintenanceTicket.count({
-        where: { ...where, status: TicketStatus.IN_PROGRESS },
+        where: { ...where, status: TICKET_STATUS.IN_PROGRESS },
       }),
       this.prisma.maintenanceTicket.count({
-        where: { ...where, status: TicketStatus.RESOLVED },
+        where: { ...where, status: TICKET_STATUS.RESOLVED },
       }),
       this.prisma.maintenanceTicket.count({
-        where: { ...where, status: TicketStatus.CLOSED },
+        where: { ...where, status: TICKET_STATUS.CLOSED },
       }),
     ]);
 
     const totalCost = await this.prisma.maintenanceTicket.aggregate({
-      where: { ...where, status: TicketStatus.CLOSED },
+      where: { ...where, status: TICKET_STATUS.CLOSED },
       _sum: { cost: true },
     });
 
@@ -230,12 +315,12 @@ export class ReportService {
       (s, i) =>
         s +
         i.payments
-          .filter((p) => p.status === PaymentStatus.COMPLETED)
+          .filter((p) => p.status === PAYMENT_STATUS.COMPLETED)
           .reduce((ps, p) => ps + Number(p.amount), 0),
       0,
     );
     const totalOverdue = invoices
-      .filter((i) => i.status === InvoiceStatus.OVERDUE)
+      .filter((i) => i.status === INVOICE_STATUS.OVERDUE)
       .reduce((s, i) => s + Number(i.total_amount), 0);
 
     return {

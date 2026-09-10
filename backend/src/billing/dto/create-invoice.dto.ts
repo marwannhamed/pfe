@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { InvoiceStatus, InvoiceType } from '@prisma/client';
+import { INVOICE_STATUS, INVOICE_TYPE } from '../../constants/enums';
+import { DEFAULT_CURRENCY } from '../../constants/qatar';
 import {
   IsDateString,
   IsEnum,
@@ -25,9 +26,9 @@ export class CreateInvoiceDto {
   @IsOptional()
   promotion_code_id?: string;
 
-  @ApiProperty({ enum: InvoiceType })
-  @IsEnum(InvoiceType)
-  type: InvoiceType;
+  @ApiProperty({ example: 'MONTHLY_RENT' })
+  @IsString()
+  type: string;
 
   @ApiProperty({ example: '2026-03-01' })
   @IsDateString()
@@ -41,6 +42,12 @@ export class CreateInvoiceDto {
   @IsNumber()
   @Min(0)
   subtotal: number;
+
+  @ApiPropertyOptional({ example: 0, description: 'Tax rate in percent (Qatar default 0%)' })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  tax_rate?: number;
 
   @ApiPropertyOptional({ example: 475.0 })
   @IsNumber()
@@ -62,8 +69,8 @@ export class CreateInvoiceDto {
   @IsOptional()
   notes?: string;
 
-  @ApiPropertyOptional({ enum: InvoiceStatus, default: InvoiceStatus.DRAFT })
-  @IsEnum(InvoiceStatus)
+  @ApiPropertyOptional({ example: 'DRAFT' })
+  @IsString()
   @IsOptional()
-  status?: InvoiceStatus;
+  status?: string;
 }

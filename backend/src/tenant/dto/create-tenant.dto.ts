@@ -8,7 +8,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { TenantStatus } from '@prisma/client';
+import { TENANT_STATUS } from '../../constants/enums';
 
 export class CreateTenantDto {
   @ApiProperty({ example: 'Acme Corp' })
@@ -25,10 +25,10 @@ export class CreateTenantDto {
   @IsEmail()
   contact_email: string;
 
-  @ApiPropertyOptional({ enum: TenantStatus, default: TenantStatus.TRIAL })
-  @IsEnum(TenantStatus)
+  @ApiPropertyOptional({ example: 'TRIAL' })
+  @IsString()
   @IsOptional()
-  status?: TenantStatus;
+  status?: string;
 
   @ApiPropertyOptional({ example: 'premium' })
   @IsString()

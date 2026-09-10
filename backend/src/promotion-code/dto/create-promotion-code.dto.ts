@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DiscountType } from '@prisma/client';
+import { DISCOUNT_TYPE } from '../../constants/enums';
 import {
   IsBoolean,
   IsDateString,
@@ -22,9 +22,9 @@ export class CreatePromotionCodeDto {
   @IsString()
   code: string;
 
-  @ApiProperty({ enum: DiscountType })
-  @IsEnum(DiscountType)
-  discount_type: DiscountType;
+  @ApiProperty({ example: 'PERCENTAGE' })
+  @IsString()
+  discount_type: string;
 
   @ApiProperty({ example: 20.0 })
   @IsNumber()

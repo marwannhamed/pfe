@@ -38,13 +38,13 @@ export class PricePlanController {
 
   @Get()
   @ApiOperation({ summary: 'Lister tous les plans tarifaires' })
-  @ApiQuery({ name: 'siteId', required: false })
+  @ApiQuery({ name: 'buildingId', required: false })
   @ApiQuery({ name: 'spaceType', required: false })
   findAll(
-    @Query('siteId') siteId?: string,
+    @Query('buildingId') buildingId?: string,
     @Query('spaceType') spaceType?: string,
   ) {
-    return this.pricePlanService.findAll(siteId, spaceType);
+    return this.pricePlanService.findAll(buildingId, spaceType);
   }
 
   @Get(':id')

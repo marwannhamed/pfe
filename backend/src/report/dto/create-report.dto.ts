@@ -1,23 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ReportFormat, ReportType } from '@prisma/client';
+import { REPORT_FORMAT, REPORT_TYPE } from '../../constants/enums';
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateReportDto {
   @ApiProperty({ example: 'uuid-du-user' })
   @IsUUID()
-  generated_by_user_id: string;
+  user_id: string;
 
-  @ApiProperty({ enum: ReportType })
-  @IsEnum(ReportType)
-  report_type: ReportType;
+  @ApiProperty({ example: 'OCCUPANCY_RATE' })
+  @IsString()
+  type: string;
 
   @ApiProperty({ example: 'Rapport Occupation Mars 2026' })
   @IsString()
   title: string;
 
-  @ApiProperty({ enum: ReportFormat })
-  @IsEnum(ReportFormat)
-  format: ReportFormat;
+  @ApiProperty({ example: 'PDF' })
+  @IsString()
+  format: string;
 
   @ApiPropertyOptional({ example: { site_id: 'uuid', month: '2026-03' } })
   @IsOptional()

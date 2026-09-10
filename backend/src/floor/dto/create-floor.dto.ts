@@ -14,9 +14,10 @@ export class CreateFloorDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 450.0 })
+  @ApiPropertyOptional({ example: 450.0 })
   @IsNumber()
-  area_sqm: number;
+  @IsOptional()
+  area_sqm?: number;
 
   @ApiPropertyOptional({ example: 'https://example.com/plan.pdf' })
   @IsString()

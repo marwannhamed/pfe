@@ -2,10 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import {
-  NotificationChannel,
-  NotificationPriority,
-  NotificationType,
-} from '@prisma/client';
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_PRIORITY,
+  NOTIFICATION_TYPE,
+} from '../constants/enums';
 
 @Injectable()
 export class NotificationService {
@@ -15,10 +15,16 @@ export class NotificationService {
   async create(dto: CreateNotificationDto) {
     return this.prisma.notification.create({
       data: {
-        ...dto,
-        priority: dto.priority ?? NotificationPriority.NORMAL,
+        priority: dto.priority ?? 'NORMAL',
+        user_id: dto.user_id,
+        tenant_id: dto.tenant_id,
+        type: dto.type,
+        channel: dto.channel ?? 'IN_APP',
+        title: dto.title,
+        message: dto.message,
+        is_read: false,
+        read_at: null,
       },
-      include: { user: true },
     });
   }
 
@@ -28,21 +34,86 @@ export class NotificationService {
     dto: Omit<CreateNotificationDto, 'user_id'>,
   ) {
     const data = userIds.map((user_id) => ({
+      tenant_id: dto.tenant_id,
       user_id,
-      ...dto,
-      priority: dto.priority ?? NotificationPriority.NORMAL,
+      type: dto.type,
+      channel: dto.channel,
+      title: dto.title,
+      message: dto.message,
+      priority: dto.priority,
     }));
+    return (this.prisma as any).notification.createMany({ data });
+  }
 
-    return this.prisma.notification.createMany({ data });
+  // ─── NOTIFICATION PREFERENCES ──────────────────────────────────
+  private defaultPreferences(userId: string) {
+    return {
+      user_id: userId,
+      channels: {
+        in_app: true,
+        email: true,
+        sms: false,
+      },
+      categories: {
+        booking: true,
+        invoice: true,
+        contract: true,
+        maintenance: true,
+        security: true,
+      },
+      quiet_hours: {
+        enabled: false,
+        start: '22:00',
+        end: '07:00',
+      },
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  async getPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { notification_preferences: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const stored = user.notification_preferences as Record<string, unknown> | null;
+    if (stored && typeof stored === 'object') {
+      return { ...this.defaultPreferences(userId), ...stored, user_id: userId };
+    }
+    return this.defaultPreferences(userId);
+  }
+
+  async updatePreferences(userId: string, preferences: Record<string, unknown>) {
+    const merged = {
+      ...this.defaultPreferences(userId),
+      ...preferences,
+      user_id: userId,
+      updated_at: new Date().toISOString(),
+    };
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { notification_preferences: merged as any },
+    });
+
+    return merged;
   }
 
   // ─── FIND ALL ─────────────────────────────────────────────────
   async findAll(userId?: string, isRead?: string, type?: string) {
+    const readFilter =
+      isRead === undefined
+        ? undefined
+        : isRead === 'true'
+          ? { is_read: true }
+          : { is_read: false };
+
     return this.prisma.notification.findMany({
       where: {
         ...(userId && { user_id: userId }),
-        ...(isRead !== undefined && { is_read: isRead === 'true' }),
-        ...(type && { type: type as NotificationType }),
+        ...(readFilter && readFilter),
+        ...(type && { type }),
       },
       include: { user: true },
       orderBy: { created_at: 'desc' },
@@ -51,9 +122,9 @@ export class NotificationService {
 
   // ─── FIND ONE ─────────────────────────────────────────────────
   async findOne(id: string) {
-    const notif = await this.prisma.notification.findUnique({
+    const notif = await (this.prisma as any).notification.findUnique({
       where: { id },
-      include: { user: true },
+      include: { user: true } as any,
     });
     if (!notif) throw new NotFoundException(`Notification #${id} introuvable`);
     return notif;
@@ -62,30 +133,26 @@ export class NotificationService {
   // ─── MARK AS READ ─────────────────────────────────────────────
   async markAsRead(id: string) {
     await this.findOne(id);
+    const now = new Date();
     return this.prisma.notification.update({
       where: { id },
-      data: {
-        is_read: true,
-        read_at: new Date(),
-      },
+      data: { is_read: true, read_at: now },
     });
   }
 
   // ─── MARK ALL AS READ ─────────────────────────────────────────
   async markAllAsRead(userId: string) {
+    const now = new Date();
     return this.prisma.notification.updateMany({
       where: { user_id: userId, is_read: false },
-      data: {
-        is_read: true,
-        read_at: new Date(),
-      },
+      data: { is_read: true, read_at: now },
     });
   }
 
   // ─── DELETE ──────────────────────────────────────────────────
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.notification.delete({ where: { id } });
+    return (this.prisma as any).notification.delete({ where: { id } });
   }
 
   // ─── GET UNREAD COUNT ─────────────────────────────────────────
@@ -98,24 +165,24 @@ export class NotificationService {
 
   // ─── SEND SYSTEM NOTIFICATION ─────────────────────────────────
   async sendBookingConfirmation(userId: string, bookingNumber: string) {
-    return this.create({
+    return (this as any).create({
       user_id: userId,
-      type: NotificationType.BOOKING_CONFIRMATION,
-      channel: NotificationChannel.IN_APP,
+      type: 'BOOKING_CONFIRMATION',
+      channel: 'IN_APP',
       title: 'Réservation confirmée ✅',
       message: `Votre réservation ${bookingNumber} a été confirmée.`,
-      priority: NotificationPriority.NORMAL,
+      priority: 'NORMAL',
     });
   }
 
   async sendInvoiceOverdue(userId: string, invoiceNumber: string) {
-    return this.create({
+    return (this as any).create({
       user_id: userId,
-      type: NotificationType.INVOICE_OVERDUE,
-      channel: NotificationChannel.IN_APP,
+      type: 'INVOICE_OVERDUE',
+      channel: 'IN_APP',
       title: 'Facture en retard ⚠️',
       message: `La facture ${invoiceNumber} est en retard de paiement.`,
-      priority: NotificationPriority.HIGH,
+      priority: 'HIGH',
     });
   }
 
@@ -124,13 +191,13 @@ export class NotificationService {
     contractNumber: string,
     daysLeft: number,
   ) {
-    return this.create({
+    return (this as any).create({
       user_id: userId,
-      type: NotificationType.CONTRACT_EXPIRING,
-      channel: NotificationChannel.IN_APP,
+      type: 'CONTRACT_EXPIRING',
+      channel: 'IN_APP',
       title: 'Contrat expirant bientôt 📋',
       message: `Le contrat ${contractNumber} expire dans ${daysLeft} jours.`,
-      priority: NotificationPriority.HIGH,
+      priority: 'HIGH',
     });
   }
 }

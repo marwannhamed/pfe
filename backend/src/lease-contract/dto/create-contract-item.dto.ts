@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ContractItemType } from '@prisma/client';
+import { CONTRACT_ITEM_TYPE } from '../../constants/enums';
 import {
   IsEnum,
   IsInt,
@@ -11,9 +11,9 @@ import {
 } from 'class-validator';
 
 export class CreateContractItemDto {
-  @ApiProperty({ enum: ContractItemType })
-  @IsEnum(ContractItemType)
-  item_type: ContractItemType;
+  @ApiProperty({ example: 'SPACE' })
+  @IsString()
+  item_type: string;
 
   @ApiPropertyOptional({ example: 'uuid-du-space' })
   @IsUUID()

@@ -10,7 +10,11 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
@@ -24,6 +28,11 @@ import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreateInvoiceLineDto } from './dto/create-invoice-line.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { USER_ROLE } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
 
 @ApiTags('Billing')
 @ApiBearerAuth()
@@ -37,46 +46,73 @@ export class BillingController {
   // ════════════════════════════════════════════════════════════
 
   @Post('invoices')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Créer une facture' })
   createInvoice(@Body() dto: CreateInvoiceDto) {
     return this.billingService.createInvoice(dto);
   }
 
   @Get('invoices')
+  @UseGuards(RolesGuard)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Lister toutes les factures' })
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'type', required: false })
   findAllInvoices(
+    @CurrentUser() user: AuthUser,
     @Query('tenantId') tenantId?: string,
     @Query('status') status?: string,
     @Query('type') type?: string,
   ) {
-    return this.billingService.findAllInvoices(tenantId, status, type);
+    return this.billingService.findAllInvoices(user, tenantId, status, type);
   }
 
   @Get('invoices/overdue')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN)
   @ApiOperation({ summary: 'Factures en retard de paiement' })
   @ApiQuery({ name: 'tenantId', required: false })
-  getOverdueInvoices(@Query('tenantId') tenantId?: string) {
-    return this.billingService.getOverdueInvoices(tenantId);
+  getOverdueInvoices(@CurrentUser() user: AuthUser, @Query('tenantId') tenantId?: string) {
+    return this.billingService.getOverdueInvoices(user, tenantId);
   }
 
   @Get('invoices/summary')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN)
   @ApiOperation({ summary: 'Résumé financier' })
   @ApiQuery({ name: 'tenantId', required: false })
-  getFinancialSummary(@Query('tenantId') tenantId?: string) {
-    return this.billingService.getFinancialSummary(tenantId);
+  getFinancialSummary(@CurrentUser() user: AuthUser, @Query('tenantId') tenantId?: string) {
+    return this.billingService.getFinancialSummary(user, tenantId);
   }
 
   @Get('invoices/:id')
+  @UseGuards(RolesGuard)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Récupérer une facture' })
   @ApiParam({ name: 'id' })
-  findOneInvoice(@Param('id') id: string) {
-    return this.billingService.findOneInvoice(id);
+  findOneInvoice(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.findOneInvoiceForUser(user, id);
   }
 
   @Patch('invoices/:id')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Mettre à jour une facture' })
   @ApiParam({ name: 'id' })
   updateInvoice(@Param('id') id: string, @Body() dto: UpdateInvoiceDto) {
@@ -84,6 +120,8 @@ export class BillingController {
   }
 
   @Patch('invoices/:id/send')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Envoyer une facture (→ SENT)' })
   @ApiParam({ name: 'id' })
   sendInvoice(@Param('id') id: string) {
@@ -91,6 +129,8 @@ export class BillingController {
   }
 
   @Patch('invoices/:id/cancel')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Annuler une facture (→ CANCELLED)' })
   @ApiParam({ name: 'id' })
   cancelInvoice(@Param('id') id: string) {
@@ -99,6 +139,8 @@ export class BillingController {
 
   @Delete('invoices/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE)
   @ApiOperation({ summary: 'Supprimer une facture' })
   @ApiParam({ name: 'id' })
   removeInvoice(@Param('id') id: string) {
@@ -108,6 +150,8 @@ export class BillingController {
   // ─── INVOICE LINES ────────────────────────────────────────────
 
   @Post('invoices/:id/lines')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Ajouter une ligne à la facture' })
   @ApiParam({ name: 'id' })
   addInvoiceLine(@Param('id') id: string, @Body() dto: CreateInvoiceLineDto) {
@@ -116,6 +160,8 @@ export class BillingController {
 
   @Delete('invoices/:id/lines/:lineId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Supprimer une ligne de facture' })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'lineId' })
@@ -129,29 +175,74 @@ export class BillingController {
 
   @Post('payments')
   @ApiOperation({ summary: 'Enregistrer un paiement' })
-  createPayment(@Body() dto: CreatePaymentDto) {
-    return this.billingService.createPayment(dto);
+  createPayment(
+    @Body() dto: CreatePaymentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.billingService.createPayment(dto, user);
   }
 
   @Get('payments')
+  @UseGuards(RolesGuard)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Lister tous les paiements' })
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'invoiceId', required: false })
   findAllPayments(
+    @CurrentUser() user: AuthUser,
     @Query('tenantId') tenantId?: string,
     @Query('invoiceId') invoiceId?: string,
   ) {
-    return this.billingService.findAllPayments(tenantId, invoiceId);
+    return this.billingService.findAllPayments(user, tenantId, invoiceId);
   }
 
   @Get('payments/:id')
+  @UseGuards(RolesGuard)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Récupérer un paiement' })
   @ApiParam({ name: 'id' })
-  findOnePayment(@Param('id') id: string) {
-    return this.billingService.findOnePayment(id);
+  findOnePayment(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.findOnePaymentForUser(user, id);
+  }
+
+  @Post('payments/:id/cheque-document')
+  @ApiOperation({ summary: 'Upload scanned cheque PDF for a payment' })
+  @ApiParam({ name: 'id' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadChequeDocument(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.billingService.uploadChequeDocument(user, id, file);
+  }
+
+  @Patch('payments/:id/confirm')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
+  @ApiOperation({ summary: 'Confirmer un paiement en attente (→ COMPLETED)' })
+  @ApiParam({ name: 'id' })
+  confirmPayment(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.billingService.confirmPayment(id, user);
   }
 
   @Patch('payments/:id/refund')
+  @UseGuards(RolesGuard)
+  @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Rembourser un paiement (→ REFUNDED)' })
   @ApiParam({ name: 'id' })
   refundPayment(@Param('id') id: string) {

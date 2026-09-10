@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ContractStatus } from '@prisma/client';
+import { CONTRACT_STATUS } from '../../constants/enums';
 import {
   IsBoolean,
   IsDateString,
@@ -21,11 +21,11 @@ export class CreateLeaseContractDto {
   @IsUUID()
   created_by_user_id: string;
 
-  @ApiProperty({ example: '2026-01-01' })
+  @ApiProperty({ example: '2026-01-01T00:00:00.000Z' })
   @IsDateString()
   start_date: string;
 
-  @ApiProperty({ example: '2026-12-31' })
+  @ApiProperty({ example: '2026-12-31T00:00:00.000Z' })
   @IsDateString()
   end_date: string;
 
@@ -55,8 +55,8 @@ export class CreateLeaseContractDto {
   @IsOptional()
   auto_renew?: boolean;
 
-  @ApiPropertyOptional({ enum: ContractStatus, default: ContractStatus.DRAFT })
-  @IsEnum(ContractStatus)
+  @ApiPropertyOptional({ example: 'DRAFT' })
+  @IsString()
   @IsOptional()
-  status?: ContractStatus;
+  status?: string;
 }

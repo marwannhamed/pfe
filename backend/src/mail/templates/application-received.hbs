@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #111;">
+  <h2>New tenant application</h2>
+  <p><strong>{{applicantName}}</strong> ({{applicantEmail}}) submitted the Typeform application.</p>
+  <ul>
+    {{#each summaryLines}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  <p><a href="{{applicationsUrl}}">Open Applications in admin</a></p>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Overdue Invoice</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9fafb; }
+        .overdue-details { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .payment-btn { display: inline-block; background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Overdue Invoice — Action Required</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{tenantName}},</p>
+            <p>You have an overdue invoice. Please pay as soon as possible.</p>
+            <div class="overdue-details">
+                <h3>Invoice Details</h3>
+                <p><strong>Invoice Number:</strong> {{invoiceNumber}}</p>
+                <p><strong>Amount Due:</strong> ${{amount}}</p>
+                <p><strong>Due Date:</strong> {{dueDate}}</p>
+                {{#if daysOverdue}}<p><strong>Days Overdue:</strong> {{daysOverdue}}</p>{{/if}}
+            </div>
+            <a href="{{paymentUrl}}" class="payment-btn">Pay Invoice Now</a>
+        </div>
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

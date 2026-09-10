@@ -8,15 +8,12 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  adminer:
-    image: adminer
-    container_name: adminer
-    restart: always
-    ports:
-      - 8080:8080
-    depends_on:
-      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   api:
     build:
@@ -24,14 +21,25 @@ services:
       dockerfile: Dockerfile.prod
     restart: always
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - '6001:6001'
     env_file:
       - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/lease_management?schema=public
     volumes:
       - generated_files:/app/generatedFiles # Docker volume for generatedFiles
       - uploaded_files:/app/uploadedFiles # Docker volume for uploadedFiles
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:6001/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:

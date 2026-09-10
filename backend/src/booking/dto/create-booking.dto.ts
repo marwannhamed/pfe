@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BookingStatus } from '@prisma/client';
+import { BOOKING_STATUS } from '../../constants/enums';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -9,7 +10,10 @@ import {
   IsString,
   IsUUID,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApplicationAddonDto } from '../../booking-application/dto/application-addon.dto';
 
 export class CreateBookingDto {
   @ApiProperty({ example: 'uuid-du-tenant' })
@@ -48,10 +52,10 @@ export class CreateBookingDto {
   @IsOptional()
   attendee_count?: number;
 
-  @ApiPropertyOptional({ enum: BookingStatus, default: BookingStatus.DRAFT })
-  @IsEnum(BookingStatus)
+  @ApiPropertyOptional({ example: 'DRAFT' })
+  @IsString()
   @IsOptional()
-  status?: BookingStatus;
+  status?: string;
 
   @ApiPropertyOptional({ example: 'uuid-du-price-plan' })
   @IsUUID()
@@ -67,4 +71,11 @@ export class CreateBookingDto {
   @IsUUID()
   @IsOptional()
   parent_booking_id?: string;
+
+  @ApiPropertyOptional({ type: [ApplicationAddonDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ApplicationAddonDto)
+  addons?: ApplicationAddonDto[];
 }
