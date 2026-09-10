@@ -15,7 +15,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { CommonModule } from './common/common.module';
-import { GeneratePdfModule } from './generate-pdf/generate-pdf.module';
 
 // Domain modules
 import { TenantModule } from './tenant/tenant.module';
@@ -35,7 +34,7 @@ import { NotificationModule } from './notification/notification.module';
 import { ReportModule } from './report/report.module';
 import { AuditModule } from './audit/audit.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TasksModule } from './tasks/tasks.module';  
+import { TasksModule } from './tasks/tasks.module';
 import { UploadModule } from './upload/upload.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ExportModule } from './export/export.module';
@@ -48,7 +47,6 @@ import { CrispModule } from './crisp/crisp.module';
 import { FormsModule } from './forms/forms.module';
 import { BookingApplicationModule } from './booking-application/booking-application.module';
 import { resolveMailTemplateDir } from './mail/mail-template.util';
-
 
 @Module({
   imports: [
@@ -63,7 +61,7 @@ import { resolveMailTemplateDir } from './mail/mail-template.util';
     PerformanceModule,
     MonitoringModule,
     ScheduleModule.forRoot(),
-    TasksModule, 
+    TasksModule,
     UploadModule,
     AnalyticsModule,
     ExportModule,
@@ -110,12 +108,11 @@ import { resolveMailTemplateDir } from './mail/mail-template.util';
     }),
 
     // Boilerplate
-  
+
     PrismaModule,
     CommonModule,
     AuthModule,
     MailModule,
-    GeneratePdfModule,
     CacheModule,
 
     // Domain modules
