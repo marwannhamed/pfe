@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Tabs, Skeleton, Badge, message } from 'antd';
+import { Tabs, Skeleton, Badge } from 'antd';
+import { message } from '../../utils/feedback';
 import {
   ArrowLeftOutlined, EditOutlined, CalendarOutlined,
   EnvironmentOutlined, CheckCircleOutlined, ClockCircleOutlined,
@@ -11,6 +12,8 @@ import {
 import { spaceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import type { SpaceStatus, SpaceType, SpaceFeature } from '../../types';
+import { usePageTheme } from '../../hooks/usePageTheme';
+import PageShell from '../../components/ui/PageShell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<SpaceStatus, { label: string; bg: string; color: string }> = {
@@ -36,19 +39,6 @@ const SPACE_IMAGES: Partial<Record<SpaceType, string>> = {
   MEETING_ROOM:     'https://storage.googleapis.com/uxpilot-auth.appspot.com/003f0a7ed6-51e10a5837f3a2b32d90.png',
   CONFERENCE_ROOM:  'https://storage.googleapis.com/uxpilot-auth.appspot.com/6dda684c29-c0b8088cdd8ac699d9dd.png',
   HOT_DESK:         'https://storage.googleapis.com/uxpilot-auth.appspot.com/0254182f08-a6d9808c18964b46ecef.png',
-};
-
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-};
-
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '9px 12px',
-  border: '1px solid #e5e7eb', borderRadius: 8,
-  fontSize: 13, color: '#0f172a', outline: 'none',
-  background: '#fff', boxSizing: 'border-box',
 };
 
 // ─── Price Calculator ─────────────────────────────────────────────────────────
@@ -83,6 +73,7 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { input: INPUT, t: th } = usePageTheme();
   const qc = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
 
@@ -147,7 +138,7 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
   return (
     <div style={{
       border: '2px solid #2563eb', borderRadius: 14,
-      background: '#fff', overflow: 'hidden',
+      background: th.cardBg, overflow: 'hidden',
       boxShadow: '0 8px 32px rgba(37,99,235,0.12)',
       animation: 'slideDown 0.25s ease',
     }}>
@@ -186,7 +177,7 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
                 Start Date <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
-                style={{ ...INPUT, borderColor: errors.start_date ? '#ef4444' : '#e5e7eb' }}
+                style={{ ...INPUT, borderColor: errors.start_date ? '#ef4444' : th.cardBorder }}
                 type="date" min={today}
                 value={form.start_date}
                 onChange={e => setF('start_date', e.target.value)}
@@ -202,7 +193,7 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
                 End Date <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
-                style={{ ...INPUT, borderColor: errors.end_date ? '#ef4444' : '#e5e7eb' }}
+                style={{ ...INPUT, borderColor: errors.end_date ? '#ef4444' : th.cardBorder }}
                 type="date" min={form.start_date || today}
                 value={form.end_date}
                 onChange={e => setF('end_date', e.target.value)}
@@ -230,7 +221,7 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
             <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 4 }}>(max {space.capacity})</span>
           </label>
           <input
-            style={{ ...INPUT, width: '50%', borderColor: errors.attendee_count ? '#ef4444' : '#e5e7eb' }}
+            style={{ ...INPUT, width: '50%', borderColor: errors.attendee_count ? '#ef4444' : th.cardBorder }}
             type="number" min="1" max={space.capacity}
             value={form.attendee_count}
             onChange={e => setF('attendee_count', e.target.value)}
@@ -295,13 +286,14 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SpaceDetailPage() {
+  const { card: CARD, headerCard, btnSecondary, t: th } = usePageTheme();
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
 
   // ── Role checks ──
-  const isAdmin      = !!(user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role));
-  const isTenant     = !!(user?.role && ['TENANT_ADMIN', 'EMPLOYEE'].includes(user.role));
+  const isAdmin      = !!(user?.role && ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER'].includes(user.role));
+  const isTenant     = !!(user?.role && ['TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user.role));
   const tenantId     = (user as any)?.tenant_id ?? '';
   const userId       = user?.id ?? '';
 
@@ -313,7 +305,10 @@ export default function SpaceDetailPage() {
 
   const { data: space, isLoading, isError, refetch } = useQuery({
     queryKey: ['space', id],
-    queryFn:  () => spaceApi.getOne(id!).then(r => r.data),
+    queryFn:  async () => {
+      const res = await spaceApi.getOne(id!);
+      return (res as { data?: unknown })?.data ?? res;
+    },
     enabled:  !!id,
   });
 
@@ -324,21 +319,23 @@ export default function SpaceDetailPage() {
   };
 
   if (isLoading) return (
-    <div style={{ padding: 24 }}>
+    <PageShell>
       <Skeleton active paragraph={{ rows: 2 }} style={{ marginBottom: 20 }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <Skeleton active paragraph={{ rows: 6 }} />
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
-    </div>
+    </PageShell>
   );
 
   if (isError || !space) return (
-    <div style={{ padding: 24, textAlign: 'center' }}>
-      <WarningOutlined style={{ fontSize: 40, color: '#d97706', display: 'block', margin: '0 auto 12px' }} />
-      <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load space</div>
-      <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button>
-    </div>
+    <PageShell>
+      <div style={{ textAlign: 'center' }}>
+        <WarningOutlined style={{ fontSize: 40, color: '#d97706', display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load space</div>
+        <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button>
+      </div>
+    </PageShell>
   );
 
   const sm                = STATUS_META[space.status as SpaceStatus] ?? STATUS_META.AVAILABLE;
@@ -349,7 +346,7 @@ export default function SpaceDetailPage() {
   const canBook           = space.status === 'AVAILABLE' && isAuthenticated;
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <PageShell>
 
       {/* ── Success banner ── */}
       {bookingDone && (
@@ -373,12 +370,12 @@ export default function SpaceDetailPage() {
       )}
 
       {/* ── Header ── */}
-      <div style={{ ...CARD, padding: '18px 24px', marginBottom: 20 }}>
+      <div style={headerCard}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <button
               onClick={() => navigate(backPath)}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 10 }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: th.textSub, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 10 }}
             >
               <ArrowLeftOutlined /> Back to Spaces
             </button>
@@ -388,7 +385,7 @@ export default function SpaceDetailPage() {
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{space.name}</h2>
+                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: th.text }}>{space.name}</h2>
                   <span style={{ background: sm.bg, color: sm.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{sm.label}</span>
                   {space.requires_approval && (
                     <span style={{ background: '#fef3c7', color: '#92400e', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>
@@ -396,8 +393,8 @@ export default function SpaceDetailPage() {
                     </span>
                   )}
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'monospace' }}>#{space.code}</span>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: th.textSub, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'monospace' }}>#{space.slug ?? space.code}</span>
                   <span>· {tm.label}</span>
                   {space.floor && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -411,13 +408,13 @@ export default function SpaceDetailPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => refetch()} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
+            <button onClick={() => refetch()} style={{ ...btnSecondary, padding: '8px 12px', color: th.textSub }}>
               <ReloadOutlined />
             </button>
 
             {/* Admin-only: Edit button */}
             {isAdmin && (
-              <button style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button style={{ ...btnSecondary, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <EditOutlined /> Edit
               </button>
             )}
@@ -460,9 +457,9 @@ export default function SpaceDetailPage() {
             { label: 'Capacity',     value: space.capacity,                                                                                    sub: `${space.capacity === 1 ? 'person' : 'people'} max`, color: '#d97706', bg: '#fffbeb' },
             { label: 'Features',     value: availableFeatures.length,                                                                          sub: 'Available features', color: '#7c3aed', bg: '#f5f3ff' },
           ].map(k => (
-            <div key={k.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px' }}>
-              <p style={{ margin: '0 0 4px', fontSize: 11, color: '#64748b' }}>{k.label}</p>
-              <p style={{ margin: '0 0 2px', fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{k.value}</p>
+            <div key={k.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '14px 16px' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 11, color: th.textSub }}>{k.label}</p>
+              <p style={{ margin: '0 0 2px', fontSize: 22, fontWeight: 800, color: th.text, lineHeight: 1 }}>{k.value}</p>
               <p style={{ margin: 0, fontSize: 11, color: k.color }}>{k.sub}</p>
             </div>
           ))}
@@ -622,12 +619,13 @@ export default function SpaceDetailPage() {
                       <p style={{ margin: 0, fontSize: 14 }}>No features added yet.</p>
                     </div>
                   ) : (
-                    Array.from(new Set(allFeatures.map(f => f.feature_type))).map(featureType => {
+                    Array.from(new Set(allFeatures.map(f => f.feature_type).filter(Boolean))).map(featureType => {
                       const items = allFeatures.filter(f => f.feature_type === featureType);
+                      const label = String(featureType).replace(/_/g, ' ').toLowerCase();
                       return (
                         <div key={featureType} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px', marginBottom: 14 }}>
                           <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12, textTransform: 'capitalize' }}>
-                            {featureType.replace(/_/g, ' ').toLowerCase()}
+                            {label}
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                             {items.map((f: SpaceFeature) => (
@@ -662,6 +660,6 @@ export default function SpaceDetailPage() {
           ]}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

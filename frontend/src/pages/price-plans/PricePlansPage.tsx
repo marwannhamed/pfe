@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Modal, Form, InputNumber, Select, DatePicker, Switch, Skeleton, Empty, message } from 'antd';
+import { Modal, Form, InputNumber, Select, DatePicker, Switch, Skeleton, Empty } from 'antd';
+import { message, modal } from '../../utils/feedback';
 import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { pricePlanApi, siteApi } from '../../api/services';
 import type { PricePlan, SpaceType, BillingCycle } from '../../types';
@@ -26,7 +27,7 @@ function PlanModal({ open, onClose, editPlan }: { open: boolean; onClose: () => 
 
   const { data: sites = [] } = useQuery({
     queryKey: ['sites-all'],
-    queryFn:  () => siteApi.getAll().then(r => r.data),
+    queryFn:  () => siteApi.getAll(),
     enabled:  open,
   });
 
@@ -122,7 +123,7 @@ export default function PricePlansPage() {
   const all = plans as PricePlan[];
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, minHeight: '100%' }}>
       <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
           <div>
@@ -180,7 +181,7 @@ export default function PricePlansPage() {
                 <button onClick={() => { setEdit(plan); setModal(true); }} style={{ flex: 1, padding: '8px', borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                   <EditOutlined /> Edit
                 </button>
-                <button onClick={() => Modal.confirm({ title: 'Delete this plan?', okType: 'danger', okText: 'Delete', onOk: () => deleteMut.mutate(plan.id) })} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={() => modal.confirm({ title: 'Delete this plan?', okType: 'danger', okText: 'Delete', onOk: () => deleteMut.mutate(plan.id) })} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <DeleteOutlined style={{ fontSize: 13, color: '#dc2626' }} />
                 </button>
               </div>

@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select, message } from 'antd';
+import { Select } from 'antd';
+import { message } from '../../utils/feedback';
+import { mapBookings } from '../../utils/booking';
 import {
   LeftOutlined, RightOutlined, PlusOutlined,
   CloseOutlined, LoadingOutlined, CalendarOutlined,
@@ -9,6 +11,9 @@ import {
 } from '@ant-design/icons';
 import { bookingApi, spaceApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import { usePageTheme } from '../../hooks/usePageTheme';
+import PageShell from '../../components/ui/PageShell';
+import { isQatarWeekend } from '../../constants/qatar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -45,23 +50,6 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string; dot
   NO_SHOW:          { label: 'No Show',    bg: '#fef3c7', color: '#b45309', dot: '#f59e0b' },
 };
 
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 14,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-};
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '10px 12px',
-  border: '1.5px solid #e5e7eb', borderRadius: 9,
-  fontSize: 13, color: '#0f172a', outline: 'none',
-  background: '#fff', boxSizing: 'border-box',
-};
-const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#374151',
-  display: 'block', marginBottom: 5,
-  textTransform: 'uppercase', letterSpacing: '0.05em',
-};
-
 // ─── Quick Book Modal ─────────────────────────────────────────────────────────
 function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   date:     Date;
@@ -71,11 +59,20 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   tenantId: string;
   userId:   string;
 }) {
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
+  const LABEL: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, color: th.textSub,
+    display: 'block', marginBottom: 5,
+    textTransform: 'uppercase', letterSpacing: '0.05em',
+  };
   const qc   = useQueryClient();
   const dateStr = date.toISOString().split('T')[0];
 
+  const bookableSpaces = spaces.filter((s) => s.status === 'AVAILABLE');
+  const defaultSpaceId = spaceId || bookableSpaces[0]?.id || '';
+
   const [form, setForm] = useState({
-    space_id:   spaceId || (spaces[0]?.id ?? ''),
+    space_id:   defaultSpaceId,
     start_date: dateStr,
     start_time: '09:00',
     end_date:   dateStr,
@@ -83,9 +80,20 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
     attendees:  '1',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (spaceId) {
+      setForm((f) => ({
+        ...f,
+        space_id: spaceId,
+        start_date: dateStr,
+        end_date: dateStr,
+      }));
+    }
+  }, [spaceId, dateStr]);
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
 
-  const selectedSpace = spaces.find(s => s.id === form.space_id);
+  const selectedSpace = bookableSpaces.find(s => s.id === form.space_id);
   const diffMs   = new Date(`${form.end_date}T${form.end_time}`).getTime() - new Date(`${form.start_date}T${form.start_time}`).getTime();
   const hours    = diffMs > 0 ? diffMs / 3600000 : 0;
   const price    = selectedSpace && hours > 0
@@ -100,7 +108,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
 
   const mutation = useMutation({
     mutationFn: (d: any) => bookingApi.create(d),
-    onSuccess:  () => { message.success('Booking created! 🎉'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); qc.invalidateQueries({ queryKey: ['bookings'] }); onClose(); },
+    onSuccess:  () => { message.success('Booking submitted for approval'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); qc.invalidateQueries({ queryKey: ['bookings'] }); onClose(); },
     onError:    (err: any) => { const m = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(m) ? m.join(', ') : m); },
   });
 
@@ -110,6 +118,8 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
     const s = new Date(`${form.start_date}T${form.start_time}`);
     const en = new Date(`${form.end_date}T${form.end_time}`);
     if (en <= s) e.end_time = 'Must be after start';
+    if (isQatarWeekend(new Date(`${form.start_date}T12:00:00`))) e.start_date = 'Friday and Saturday are weekends in Qatar';
+    if (isQatarWeekend(new Date(`${form.end_date}T12:00:00`))) e.end_date = 'Friday and Saturday are weekends in Qatar';
     if (Number(form.attendees) < 1) e.attendees = 'Min 1';
     if (selectedSpace && Number(form.attendees) > selectedSpace.capacity) e.attendees = `Max ${selectedSpace.capacity}`;
     return e;
@@ -126,7 +136,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
       end_datetime:       new Date(`${form.end_date}T${form.end_time}`).toISOString(),
       total_price:        price,
       attendee_count:     Number(form.attendees),
-      currency:           selectedSpace?.currency ?? 'USD',
+      currency:           selectedSpace?.currency ?? 'QAR',
     });
   };
 
@@ -135,7 +145,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 520, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+      <div style={{ ...CARD, borderRadius: 18, width: '100%', maxWidth: 520, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg,#1e293b,#2563eb)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -162,7 +172,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
               onChange={v => setF('space_id', v)}
               placeholder="Select a space..."
               style={{ width: '100%' }}
-              options={spaces.filter(s => s.status === 'AVAILABLE').map(s => ({
+              options={bookableSpaces.map(s => ({
                 value: s.id,
                 label: `${s.name} · Cap: ${s.capacity} · ${s.type?.replace(/_/g,' ')}`,
               }))}
@@ -194,7 +204,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
             </div>
             <div>
               <label style={LABEL}>End Time</label>
-              <input style={{ ...INPUT, borderColor: errors.end_time ? '#ef4444' : '#e5e7eb' }} type="time" value={form.end_time} onChange={e => setF('end_time', e.target.value)} />
+              <input style={{ ...INPUT, borderColor: errors.end_time ? '#ef4444' : th.cardBorder }} type="time" value={form.end_time} onChange={e => setF('end_time', e.target.value)} />
               {errors.end_time && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.end_time}</div>}
             </div>
           </div>
@@ -203,7 +213,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={LABEL}>Attendees</label>
-              <input style={{ ...INPUT, borderColor: errors.attendees ? '#ef4444' : '#e5e7eb' }} type="number" min="1" max={selectedSpace?.capacity ?? 999} value={form.attendees} onChange={e => setF('attendees', e.target.value)} />
+              <input style={{ ...INPUT, borderColor: errors.attendees ? '#ef4444' : th.cardBorder }} type="number" min="1" max={selectedSpace?.capacity ?? 999} value={form.attendees} onChange={e => setF('attendees', e.target.value)} />
               {errors.attendees && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.attendees}</div>}
             </div>
             <div>
@@ -218,16 +228,16 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
           </div>
 
           {/* Price summary */}
-          <div style={{ background: price > 0 ? '#f0fdf4' : '#f8fafc', border: `1px solid ${price > 0 ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 12, color: '#64748b' }}>Estimated Price</div>
+          <div style={{ background: price > 0 ? '#f0fdf4' : th.tableHead, border: `1px solid ${price > 0 ? '#bbf7d0' : th.cardBorder}`, borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: th.textSub }}>Estimated Price</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: price > 0 ? '#15803d' : '#94a3b8' }}>
               {price > 0 ? `${currSym}${price.toFixed(2)}` : '—'}
             </div>
           </div>
         </div>
 
-        <div style={{ padding: '14px 24px 22px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151' }}>Cancel</button>
+        <div style={{ padding: '14px 24px 22px', borderTop: `1px solid ${th.cardBorder}`, display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: th.text }}>Cancel</button>
           <button onClick={submit} disabled={mutation.isPending}
             style={{ flex: 2, padding: '11px', borderRadius: 10, background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: mutation.isPending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             {mutation.isPending ? <><LoadingOutlined /> Creating...</> : <><PlusOutlined /> Confirm Booking</>}
@@ -240,9 +250,10 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
 
 // ─── Booking Detail Modal ─────────────────────────────────────────────────────
 function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () => void }) {
+  const { card: CARD, btnSecondary, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const { user } = useAuthStore();
-  const isAdmin  = ['SUPER_ADMIN','SITE_MANAGER'].includes(user?.role ?? '');
+  const isAdmin  = ['SUPER_ADMIN','MANAGER'].includes(user?.role ?? '');
   const cfg      = STATUS_CFG[booking.status] ?? STATUS_CFG.DRAFT;
 
   const cancelMut = useMutation({
@@ -253,7 +264,10 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
   const approveMut = useMutation({
     mutationFn: () => bookingApi.approve(booking.id, user?.id ?? ''),
     onSuccess:  () => { message.success('Booking approved! ✅'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); onClose(); },
-    onError:    () => message.error('Failed to approve'),
+    onError: (err: any) => {
+      const m = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to approve';
+      message.error(Array.isArray(m) ? m[0] : m);
+    },
   });
 
   const start = new Date(booking.start_datetime);
@@ -263,29 +277,29 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+      <div style={{ ...CARD, borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
 
         {/* Status header */}
         <div style={{ background: cfg.bg, padding: '18px 24px', borderBottom: `3px solid ${cfg.dot}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.dot, boxShadow: `0 0 8px ${cfg.dot}` }} />
             <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: '#0f172a', fontFamily: 'monospace' }}>{booking.booking_number}</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: th.text, fontFamily: 'monospace' }}>{booking.booking_number}</div>
               <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.dot}33`, fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20 }}>{cfg.label}</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+          <button onClick={onClose} style={{ ...btnSecondary, width: 30, height: 30, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}>
             <CloseOutlined style={{ fontSize: 12 }} />
           </button>
         </div>
 
         <div style={{ padding: '20px 24px' }}>
           {/* Space info */}
-          <div style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: th.tableHead, borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 42, height: 42, borderRadius: 11, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏢</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>{booking.space?.name ?? 'Space'}</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{booking.space?.type?.replace(/_/g,' ')} · Cap: {booking.space?.capacity}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: th.text }}>{booking.space?.name ?? 'Space'}</div>
+              <div style={{ fontSize: 12, color: th.textSub }}>{booking.space?.type?.replace(/_/g,' ')} · Cap: {booking.space?.capacity}</div>
             </div>
           </div>
 
@@ -299,9 +313,9 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
               { label: '💰 Price',      value: `$${parseFloat(booking.total_price || 0).toLocaleString()}` },
               ...(booking.tenant?.name ? [{ label: '🏢 Tenant', value: booking.tenant.name }] : []),
             ].map(row => (
-              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f8fafc', fontSize: 13 }}>
-                <span style={{ color: '#64748b' }}>{row.label}</span>
-                <span style={{ fontWeight: 600, color: '#0f172a' }}>{row.value}</span>
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${th.cardBorder}`, fontSize: 13 }}>
+                <span style={{ color: th.textSub }}>{row.label}</span>
+                <span style={{ fontWeight: 600, color: th.text }}>{row.value}</span>
               </div>
             ))}
           </div>
@@ -320,7 +334,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
                 {cancelMut.isPending ? <LoadingOutlined /> : '✕'} Cancel
               </button>
             )}
-            <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500 }}>Close</button>
+            <button onClick={onClose} style={{ ...btnSecondary, flex: 1, padding: '10px' }}>Close</button>
           </div>
         </div>
       </div>
@@ -356,8 +370,8 @@ function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }:
     <div>
       {/* Day headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 2 }}>
-        {DAYS.map(d => (
-          <div key={d} style={{ padding: '8px 0', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{d}</div>
+        {DAYS.map((d, i) => (
+          <div key={d} style={{ padding: '8px 0', textAlign: 'center', fontSize: 11, fontWeight: 700, color: i === 5 || i === 6 ? '#dc2626' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{d}</div>
         ))}
       </div>
 
@@ -368,17 +382,18 @@ function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }:
 
           const isToday  = sameDay(day, today);
           const isPast   = day < startOfDay(today);
+          const isWeekend = isQatarWeekend(day);
           const dayBooks = getBookingsForDay(day);
 
           return (
             <div
               key={i}
-              onClick={() => !isPast && onDayClick(day)}
+              onClick={() => !isPast && !isWeekend && onDayClick(day)}
               style={{
                 minHeight: 100, padding: '6px 8px', borderRadius: 10,
-                background: isToday ? '#eff6ff' : isPast ? '#fafafa' : '#fff',
-                border: `1.5px solid ${isToday ? '#2563eb' : '#f1f5f9'}`,
-                cursor: isPast ? 'default' : 'pointer',
+                background: isToday ? '#eff6ff' : isWeekend ? '#fef2f2' : isPast ? '#fafafa' : '#fff',
+                border: `1.5px solid ${isToday ? '#2563eb' : isWeekend ? '#fecaca' : '#f1f5f9'}`,
+                cursor: isPast || isWeekend ? 'default' : 'pointer',
                 transition: 'all 0.12s',
                 position: 'relative',
               }}
@@ -396,7 +411,7 @@ function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }:
                 }}>
                   {day.getDate()}
                 </span>
-                {!isPast && dayBooks.length === 0 && (
+                {!isPast && !isWeekend && dayBooks.length === 0 && (
                   <span style={{ fontSize: 14, color: '#e5e7eb', opacity: 0 }} className="plus-hint">＋</span>
                 )}
               </div>
@@ -466,13 +481,14 @@ function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
       {days.map((day, i) => {
         const isToday  = sameDay(day, today);
         const isPast   = day < startOfDay(today);
+        const isWeekend = isQatarWeekend(day);
         const dayBooks = getBookingsForDay(day);
 
         return (
           <div key={i}>
             {/* Day header */}
-            <div style={{ textAlign: 'center', marginBottom: 8, padding: '8px 4px', borderRadius: 10, background: isToday ? '#2563eb' : '#f8fafc' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? '#bfdbfe' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ textAlign: 'center', marginBottom: 8, padding: '8px 4px', borderRadius: 10, background: isToday ? '#2563eb' : isWeekend ? '#fef2f2' : '#f8fafc' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? '#bfdbfe' : isWeekend ? '#dc2626' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {DAYS[day.getDay()]}
               </div>
               <div style={{ fontSize: 20, fontWeight: 900, color: isToday ? '#fff' : isPast ? '#cbd5e1' : '#0f172a' }}>
@@ -485,7 +501,7 @@ function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
 
             {/* Bookings */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 300 }}
-              onClick={() => !isPast && dayBooks.length === 0 && onDayClick(day)}>
+              onClick={() => !isPast && !isWeekend && dayBooks.length === 0 && onDayClick(day)}>
               {dayBooks.map(b => {
                 const cfg   = STATUS_CFG[b.status] ?? STATUS_CFG.DRAFT;
                 const start = new Date(b.start_datetime);
@@ -509,7 +525,7 @@ function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
                   </div>
                 );
               })}
-              {!isPast && (
+              {!isPast && !isWeekend && (
                 <button onClick={() => onDayClick(day)}
                   style={{ width: '100%', padding: '8px', borderRadius: 8, border: '1.5px dashed #e5e7eb', background: 'transparent', cursor: 'pointer', fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, transition: 'all 0.12s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; }}
@@ -527,10 +543,12 @@ function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BookingCalendarPage() {
+  const { card: CARD, headerCard, btnSecondary, t: th } = usePageTheme();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuthStore();
 
-  const isBackOffice = ['SUPER_ADMIN','SITE_MANAGER'].includes(user?.role ?? '');
+  const isBackOffice = ['SUPER_ADMIN','MANAGER'].includes(user?.role ?? '');
   const tenantId     = (user as any)?.tenant_id ?? '';
   const userId       = user?.id ?? '';
   const basePath     = isBackOffice ? '/admin' : '/portal';
@@ -542,6 +560,14 @@ export default function BookingCalendarPage() {
   const [spaceFilter,    setSpaceFilter] = useState('');
   const [quickBookDate,  setQuickBook]  = useState<Date | null>(null);
   const [detailBooking,  setDetail]     = useState<any | null>(null);
+
+  useEffect(() => {
+    const preselect = searchParams.get('spaceId');
+    if (!preselect) return;
+    setSpaceFilter(preselect);
+    setQuickBook(new Date());
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Week start
   const weekStart = useMemo(() => {
@@ -560,10 +586,10 @@ export default function BookingCalendarPage() {
   });
   const { data: spacesRaw } = useQuery({
     queryKey: ['calendar-spaces'],
-    queryFn:  () => spaceApi.getAll().then(r => r.data),
+    queryFn:  () => spaceApi.getAll(),
   });
 
-  const allBookings = toArray<any>(bookingsRaw);
+  const allBookings = mapBookings(bookingsRaw);
   const allSpaces   = toArray<any>(spacesRaw);
 
   // Filter by space
@@ -606,7 +632,7 @@ export default function BookingCalendarPage() {
     : `${fmt(weekStart)} – ${fmt(new Date(weekStart.getTime() + 6 * 86400000))}`;
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <PageShell>
 
       {/* Modals */}
       {quickBookDate && (
@@ -627,13 +653,13 @@ export default function BookingCalendarPage() {
       )}
 
       {/* ── Header ── */}
-      <div style={{ ...CARD, padding: '18px 24px', marginBottom: 20 }}>
+      <div style={headerCard}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 16 }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: th.text, display: 'flex', alignItems: 'center', gap: 10 }}>
               <CalendarOutlined style={{ color: '#2563eb' }} /> Booking Calendar
             </h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
+            <p style={{ margin: 0, fontSize: 13, color: th.textSub }}>
               Visual overview of all bookings · click a day to book · click a booking to view
             </p>
           </div>
@@ -643,7 +669,7 @@ export default function BookingCalendarPage() {
               <PlusOutlined /> New Booking
             </button>
             <button onClick={() => navigate(`${basePath}/bookings`)}
-              style={{ padding: '9px 14px', border: '1px solid #e5e7eb', background: '#fff', borderRadius: 9, fontSize: 13, color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              style={{ ...btnSecondary, padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
               <UnorderedListOutlined /> List View
             </button>
           </div>
@@ -660,7 +686,7 @@ export default function BookingCalendarPage() {
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1 }}>{loadingB ? '—' : s.value}</div>
-              <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: th.textSub, marginTop: 3 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -671,11 +697,11 @@ export default function BookingCalendarPage() {
 
         {/* Nav + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={prev} style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151' }}>
+          <button onClick={prev} style={{ ...btnSecondary, width: 34, height: 34, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <LeftOutlined style={{ fontSize: 12 }} />
           </button>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a', minWidth: 200, textAlign: 'center' }}>{title}</h3>
-          <button onClick={next} style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151' }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: th.text, minWidth: 200, textAlign: 'center' }}>{title}</h3>
+          <button onClick={next} style={{ ...btnSecondary, width: 34, height: 34, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <RightOutlined style={{ fontSize: 12 }} />
           </button>
           <button onClick={goToday} style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
@@ -709,13 +735,13 @@ export default function BookingCalendarPage() {
           />
 
           {/* View toggle */}
-          <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 9, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', border: `1px solid ${th.cardBorder}`, borderRadius: 9, overflow: 'hidden' }}>
             <button onClick={() => setView('month')}
-              style={{ padding: '6px 14px', background: view === 'month' ? '#2563eb' : '#fff', color: view === 'month' ? '#fff' : '#64748b', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+              style={{ padding: '6px 14px', background: view === 'month' ? '#2563eb' : th.cardBg, color: view === 'month' ? '#fff' : th.textSub, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
               <AppstoreOutlined /> Month
             </button>
             <button onClick={() => setView('week')}
-              style={{ padding: '6px 14px', background: view === 'week' ? '#2563eb' : '#fff', color: view === 'week' ? '#fff' : '#64748b', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+              style={{ padding: '6px 14px', background: view === 'week' ? '#2563eb' : th.cardBg, color: view === 'week' ? '#fff' : th.textSub, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
               <CalendarOutlined /> Week
             </button>
           </div>
@@ -752,19 +778,19 @@ export default function BookingCalendarPage() {
         </div>
 
         {/* Legend */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Legend:</span>
+        <div style={{ padding: '14px 24px', borderTop: `1px solid ${th.cardBorder}`, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Legend:</span>
           {Object.entries(STATUS_CFG).map(([, cfg]) => (
-            <div key={cfg.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#374151' }}>
+            <div key={cfg.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: th.textSub }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot }} />
               {cfg.label}
             </div>
           ))}
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: th.textMuted }}>
             Click any empty day to create a booking
           </span>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

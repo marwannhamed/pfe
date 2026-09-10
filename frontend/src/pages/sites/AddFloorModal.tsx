@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import { message } from '../../utils/feedback';
 import { CloseOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { floorApi } from '../../api/services';
+import type { Building } from '../../types';
 
 const OVERLAY: React.CSSProperties = {
   position: 'fixed', inset: 0,
@@ -57,15 +58,22 @@ function Field({ label, required, children, error }: {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
-  buildingId: string;
-  buildingName: string;
+  buildings: Building[];
+  defaultBuildingId?: string;
   onClose: () => void;
+  onAddBuilding?: () => void;
 }
 
-export default function AddFloorModal({ buildingId, buildingName, onClose }: Props) {
+export default function AddFloorModal({ buildings, defaultBuildingId, onClose, onAddBuilding }: Props) {
   const qc = useQueryClient();
 
+  const initialBuildingId =
+    defaultBuildingId && buildings.some((b) => b.id === defaultBuildingId)
+      ? defaultBuildingId
+      : buildings[0]?.id ?? '';
+
   const [form, setForm] = useState({
+    building_id:   initialBuildingId,
     floor_number:  '',
     name:          '',
     area_sqm:      '',
@@ -81,6 +89,7 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
 
   const validate = () => {
     const e: Record<string, string> = {};
+    if (!form.building_id)   e.building_id = 'Select a building';
     if (!form.floor_number)  e.floor_number = 'Floor number is required';
     if (!form.name.trim())   e.name         = 'Floor name is required';
     if (!form.area_sqm)      e.area_sqm     = 'Area is required';
@@ -92,8 +101,9 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
     onSuccess: () => {
       message.success('Floor created successfully!');
       // Invalidate site detail (which nests buildings→floors) and floors list
-      qc.invalidateQueries({ queryKey: ['site'] });
+      qc.invalidateQueries({ queryKey: ['floors-page'] });
       qc.invalidateQueries({ queryKey: ['floors'] });
+      qc.invalidateQueries({ queryKey: ['buildings-for-floors'] });
       qc.invalidateQueries({ queryKey: ['buildings'] });
       onClose();
     },
@@ -108,7 +118,7 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
     if (Object.keys(e).length) { setErrors(e); return; }
 
     mutation.mutate({
-      building_id:  buildingId,
+      building_id:  form.building_id,
       floor_number: Number(form.floor_number),
       name:         form.name.trim(),
       area_sqm:     parseFloat(form.area_sqm), // ✅ send as number
@@ -128,9 +138,10 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Add New Floor</h2>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Add floor you manage</h2>
             <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
-              Building: <strong style={{ color: '#2563eb' }}>{buildingName}</strong>
+              Choose the building, then enter the floor details.
+              Use the real level number (e.g. <strong>2</strong> if you only lease the 2nd floor).
             </p>
           </div>
           <button
@@ -143,19 +154,49 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
 
         {/* Body */}
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {buildings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <p style={{ margin: '0 0 12px', fontSize: 14, color: '#475569' }}>
+                Create a building first, then add floors to it.
+              </p>
+              {onAddBuilding && (
+                <button
+                  type="button"
+                  onClick={onAddBuilding}
+                  style={{ padding: '10px 18px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <PlusOutlined style={{ marginRight: 6 }} /> Create building
+                </button>
+              )}
+            </div>
+          ) : (
+          <>
+          <Field label="Building" required error={errors.building_id}>
+            <select
+              style={{ ...INPUT, borderColor: errors.building_id ? '#ef4444' : '#e5e7eb', cursor: 'pointer' }}
+              value={form.building_id}
+              onChange={e => set('building_id', e.target.value)}
+            >
+              <option value="">Select a building…</option>
+              {buildings.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}{b.address ? ` — ${b.address}` : ''}</option>
+              ))}
+            </select>
+          </Field>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
-            <Field label="Floor Number" required error={errors.floor_number}>
+            <Field label="Floor level #" required error={errors.floor_number}>
               <input
                 style={{ ...INPUT, borderColor: errors.floor_number ? '#ef4444' : '#e5e7eb' }}
                 type="number"
-                placeholder="e.g. 1"
+                placeholder="e.g. 2 for 2nd floor"
                 value={form.floor_number}
                 onChange={e => set('floor_number', e.target.value)}
               />
             </Field>
 
-            <Field label="Floor Name" required error={errors.name}>
+            <Field label="Display name" required error={errors.name}>
               <input
                 style={{ ...INPUT, borderColor: errors.name ? '#ef4444' : '#e5e7eb' }}
                 placeholder="e.g. Ground Floor"
@@ -196,6 +237,8 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
               onChange={e => set('floor_plan_url', e.target.value)}
             />
           </Field>
+          </>
+          )}
         </div>
 
         {/* Footer */}
@@ -209,7 +252,7 @@ export default function AddFloorModal({ buildingId, buildingName, onClose }: Pro
           </button>
           <button
             onClick={handleSubmit}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || buildings.length === 0}
             style={{ padding: '9px 22px', borderRadius: 8, background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: mutation.isPending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
           >
             {mutation.isPending ? <><LoadingOutlined /> Creating...</> : <><PlusOutlined /> Create Floor</>}

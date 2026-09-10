@@ -96,20 +96,20 @@ export default function PublicHomePage() {
               />
             </div>
             <button
-              onClick={() => navigate('/spaces')}
+              onClick={() => navigate('/map')}
               style={{ padding:'0 28px', background:'linear-gradient(135deg,#1d4ed8,#2563eb)', border:'none', color:'#fff', fontSize:15, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}
             >
-              <SearchOutlined /> Search
+              <SearchOutlined /> Search on map
             </button>
           </div>
 
           {/* CTA buttons */}
           <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
             <button
-              onClick={() => navigate('/spaces')}
+              onClick={() => navigate('/map')}
               style={{ padding:'14px 32px', borderRadius:10, background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.25)', color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
             >
-              <AppstoreOutlined /> Browse All Spaces
+              <EnvironmentOutlined /> Explore map
             </button>
             <button
               onClick={() => navigate('/register')}
@@ -261,8 +261,8 @@ export default function PublicHomePage() {
               <button onClick={() => navigate('/register')} style={{ padding:'15px 36px', borderRadius:10, background:'#fff', border:'none', color:'#1d4ed8', fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:8, boxShadow:'0 4px 16px rgba(0,0,0,0.2)' }}>
                 Get Started Free <ArrowRightOutlined />
               </button>
-              <button onClick={() => navigate('/spaces')} style={{ padding:'15px 36px', borderRadius:10, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontSize:16, fontWeight:600, cursor:'pointer' }}>
-                Browse Spaces
+              <button onClick={() => navigate('/map')} style={{ padding:'15px 36px', borderRadius:10, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontSize:16, fontWeight:600, cursor:'pointer' }}>
+                Explore map
               </button>
             </div>
             <p style={{ marginTop:24, fontSize:13, color:'#475569', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>

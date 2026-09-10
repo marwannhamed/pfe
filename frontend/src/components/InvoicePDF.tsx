@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, PDFViewer, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface InvoicePDFProps {
@@ -15,17 +14,35 @@ interface InvoicePDFProps {
     description?:   string;
     tenant?:        { name?: string; contact_email?: string; slug?: string };
     contract?:      { contract_number?: string };
-    payments?:      { amount: string; payment_date: string; payment_method: string; status: string }[];
+    payments?:      {
+      amount: string | number;
+      payment_date: string;
+      status: string;
+      method?: string;
+      payment_method?: string;
+    }[];
+    lines?:         { description?: string; quantity?: number; unit_price?: number | string; line_total?: number | string }[];
   };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+function formatDate(d?: string | null) {
+  if (!d) return '—';
+  const parsed = new Date(d);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
-function formatAmt(amount: string | number, currency = 'USD') {
+function formatAmt(amount: string | number | null | undefined, currency = 'USD') {
   const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
-  return `${sym}${parseFloat(String(amount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const n = parseFloat(String(amount ?? 0));
+  return `${sym}${(Number.isNaN(n) ? 0 : n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+function labelFromCode(value?: string | null, fallback = '—') {
+  if (!value || typeof value !== 'string') return fallback;
+  return value.replace(/_/g, ' ');
+}
+function paymentMethodLabel(p: { method?: string; payment_method?: string }) {
+  return labelFromCode(p.payment_method ?? p.method, 'Payment');
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -122,12 +139,23 @@ const S = StyleSheet.create({
 
 // ─── PDF Document ─────────────────────────────────────────────────────────────
 function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
-  const totalPaid = (invoice.payments ?? [])
-    .filter(p => p.status === 'COMPLETED')
-    .reduce((s, p) => s + parseFloat(p.amount), 0);
-  const remaining = parseFloat(invoice.total_amount) - totalPaid;
-  const statusColor = STATUS_COLORS[invoice.status] ?? '#475569';
-  const statusBg    = STATUS_BG[invoice.status]    ?? '#f1f5f9';
+  const status = invoice.status ?? 'DRAFT';
+  const invType = invoice.type ?? 'LEASE';
+  const currency = invoice.currency ?? 'USD';
+  const totalAmount = parseFloat(String(invoice.total_amount ?? 0)) || 0;
+  const payments = invoice.payments ?? [];
+  const lineItems = (invoice.lines ?? []).filter((l) => l?.description);
+  const primaryDescription =
+    invoice.description?.trim() ||
+    lineItems[0]?.description?.trim() ||
+    `${labelFromCode(invType)} — ${invoice.invoice_number ?? ''}`;
+
+  const totalPaid = payments
+    .filter((p) => p.status === 'COMPLETED')
+    .reduce((s, p) => s + (parseFloat(String(p.amount)) || 0), 0);
+  const remaining = totalAmount - totalPaid;
+  const statusColor = STATUS_COLORS[status] ?? '#475569';
+  const statusBg    = STATUS_BG[status]    ?? '#f1f5f9';
 
   return (
     <Document title={`Invoice ${invoice.invoice_number}`} author="LeaseManager" subject="Lease Invoice">
@@ -151,7 +179,7 @@ function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
         {/* Status badge */}
         <View style={S.statusBadge}>
           <View style={[S.badgeInner, { backgroundColor: statusBg }]}>
-            <Text style={[S.badgeText, { color: statusColor }]}>{invoice.status.replace(/_/g, ' ')}</Text>
+            <Text style={[S.badgeText, { color: statusColor }]}>{labelFromCode(status)}</Text>
           </View>
         </View>
 
@@ -173,14 +201,14 @@ function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
           <View style={{ width: 40 }} />
           <View style={[S.infoBlock, { alignItems: 'flex-end' }]}>
             <Text style={S.infoLabel}>Invoice Details</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 20 }}>
-              <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <View style={{ alignItems: 'flex-end', marginRight: 20 }}>
                 <Text style={S.infoSub}>Issue Date</Text>
                 <Text style={S.infoValue}>{formatDate(invoice.issue_date)}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={S.infoSub}>Due Date</Text>
-                <Text style={[S.infoValue, invoice.status === 'OVERDUE' ? { color: '#b91c1c' } : {}]}>
+                <Text style={[S.infoValue, status === 'OVERDUE' ? { color: '#b91c1c' } : {}]}>
                   {formatDate(invoice.due_date)}
                 </Text>
               </View>
@@ -201,38 +229,38 @@ function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
           <Text style={[S.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Amount</Text>
         </View>
 
-        <View style={S.tableRow}>
-          <Text style={[S.tableCell, { flex: 3 }]}>
-            {invoice.description || `${invoice.type.replace(/_/g, ' ')} — ${invoice.invoice_number}`}
-          </Text>
-          <Text style={[S.tableCell, { flex: 1, textAlign: 'center', textTransform: 'capitalize' }]}>
-            {invoice.type.replace(/_/g, ' ').toLowerCase()}
-          </Text>
-          <Text style={[S.tableCellBold, { flex: 1, textAlign: 'right' }]}>
-            {formatAmt(invoice.total_amount, invoice.currency)}
-          </Text>
-        </View>
+        {(lineItems.length > 0 ? lineItems : [{ description: primaryDescription, line_total: totalAmount }]).map((line, idx) => (
+          <View key={idx} style={[S.tableRow, idx % 2 === 1 ? S.tableRowAlt : {}]}>
+            <Text style={[S.tableCell, { flex: 3 }]}>{line.description ?? primaryDescription}</Text>
+            <Text style={[S.tableCell, { flex: 1, textAlign: 'center' }]}>
+              {labelFromCode(invType).toLowerCase()}
+            </Text>
+            <Text style={[S.tableCellBold, { flex: 1, textAlign: 'right' }]}>
+              {formatAmt(line.line_total ?? totalAmount, currency)}
+            </Text>
+          </View>
+        ))}
 
         {/* ── Totals ── */}
         <View style={S.totalsBox}>
           <View style={S.totalRow}>
             <Text style={S.totalLabel}>Subtotal</Text>
-            <Text style={S.totalValue}>{formatAmt(invoice.total_amount, invoice.currency)}</Text>
+            <Text style={S.totalValue}>{formatAmt(totalAmount, currency)}</Text>
           </View>
           {totalPaid > 0 && (
             <View style={S.totalRow}>
               <Text style={[S.totalLabel, { color: '#15803d' }]}>Paid</Text>
-              <Text style={[S.totalValue, { color: '#15803d' }]}>− {formatAmt(totalPaid, invoice.currency)}</Text>
+              <Text style={[S.totalValue, { color: '#15803d' }]}>− {formatAmt(totalPaid, currency)}</Text>
             </View>
           )}
           <View style={S.grandTotalRow}>
             <Text style={S.grandTotalLabel}>{remaining > 0 ? 'Amount Due' : 'Total Paid'}</Text>
-            <Text style={S.grandTotalValue}>{formatAmt(remaining > 0 ? remaining : parseFloat(invoice.total_amount), invoice.currency)}</Text>
+            <Text style={S.grandTotalValue}>{formatAmt(remaining > 0 ? remaining : totalAmount, currency)}</Text>
           </View>
         </View>
 
         {/* ── Payment History ── */}
-        {(invoice.payments ?? []).length > 0 && (
+        {payments.length > 0 && (
           <>
             <Text style={S.sectionTitle}>Payment History</Text>
             <View style={[S.tableHeader, { backgroundColor: '#334155' }]}>
@@ -241,26 +269,26 @@ function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
               <Text style={[S.tableHeaderText, { flex: 1 }]}>Status</Text>
               <Text style={[S.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Amount</Text>
             </View>
-            {(invoice.payments ?? []).map((p, i) => (
+            {payments.map((p, i) => (
               <View key={i} style={[S.payRow, i % 2 === 0 ? {} : { backgroundColor: '#f8fafc' }]}>
                 <Text style={[S.payLabel, { flex: 2 }]}>{formatDate(p.payment_date)}</Text>
-                <Text style={[S.payLabel, { flex: 2, textTransform: 'capitalize' }]}>{p.payment_method.replace(/_/g, ' ').toLowerCase()}</Text>
-                <Text style={[S.payLabel, { flex: 1, color: p.status === 'COMPLETED' ? '#15803d' : '#94a3b8' }]}>{p.status}</Text>
-                <Text style={[S.payValue, { flex: 1, textAlign: 'right' }]}>{formatAmt(p.amount, invoice.currency)}</Text>
+                <Text style={[S.payLabel, { flex: 2 }]}>{paymentMethodLabel(p).toLowerCase()}</Text>
+                <Text style={[S.payLabel, { flex: 1, color: p.status === 'COMPLETED' ? '#15803d' : '#94a3b8' }]}>{p.status ?? '—'}</Text>
+                <Text style={[S.payValue, { flex: 1, textAlign: 'right' }]}>{formatAmt(p.amount, currency)}</Text>
               </View>
             ))}
           </>
         )}
 
         {/* ── Notes ── */}
-        {invoice.status === 'OVERDUE' ? (
+        {status === 'OVERDUE' ? (
           <View style={[S.notesBox, { borderLeftColor: '#ef4444', backgroundColor: '#fff5f5' }]}>
             <Text style={[S.notesLabel, { color: '#ef4444' }]}>⚠ Overdue Notice</Text>
             <Text style={S.notesText}>
               This invoice is past its due date of {formatDate(invoice.due_date)}. Please arrange payment as soon as possible to avoid any service interruption. Contact us at billing@leasemanager.com if you need assistance.
             </Text>
           </View>
-        ) : invoice.status === 'PAID' ? (
+        ) : status === 'PAID' ? (
           <View style={[S.notesBox, { borderLeftColor: '#15803d', backgroundColor: '#f0fdf4' }]}>
             <Text style={[S.notesLabel, { color: '#15803d' }]}>✓ Payment Confirmed</Text>
             <Text style={S.notesText}>
@@ -292,7 +320,12 @@ function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
 }
 
 // ─── Download Button ──────────────────────────────────────────────────────────
+function canRenderInvoicePdf(invoice: InvoicePDFProps['invoice'] | null | undefined) {
+  return Boolean(invoice?.invoice_number && invoice?.total_amount != null);
+}
+
 export function InvoiceDownloadButton({ invoice, style }: { invoice: InvoicePDFProps['invoice']; style?: React.CSSProperties }) {
+  if (!canRenderInvoicePdf(invoice)) return null;
   return (
     <PDFDownloadLink
       document={<InvoicePDFDocument invoice={invoice} />}
@@ -319,6 +352,7 @@ export function InvoiceDownloadButton({ invoice, style }: { invoice: InvoicePDFP
 
 // ─── Preview Modal ────────────────────────────────────────────────────────────
 export function InvoicePreviewModal({ invoice, onClose }: { invoice: InvoicePDFProps['invoice']; onClose: () => void }) {
+  if (!canRenderInvoicePdf(invoice)) return null;
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}

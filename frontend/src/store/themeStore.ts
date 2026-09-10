@@ -73,6 +73,16 @@ export const useThemeStore = create<ThemeStore>()(
         set({ isDark: next, t: next ? DARK : LIGHT });
       },
     }),
-    { name: 'lm-theme' }
-  )
+    {
+      name: 'lm-theme',
+      partialize: (state) => ({ isDark: state.isDark }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.isDark) {
+          useThemeStore.setState({ isDark: true, t: DARK });
+        } else if (state && !state.isDark) {
+          useThemeStore.setState({ isDark: false, t: LIGHT });
+        }
+      },
+    },
+  ),
 );

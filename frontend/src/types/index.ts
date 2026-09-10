@@ -1,12 +1,35 @@
 // ─── Enums — exact match to Prisma schema ────────────────────────────────────
 
-export type UserRole      = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'SITE_MANAGER' | 'FINANCE' | 'EMPLOYEE' | 'MAINTENANCE' | 'GUEST';
+export type UserRole      = 'SUPER_ADMIN' | 'CLIENT_ADMIN' | 'MANAGER' | 'FINANCE' | 'MAINTENANCE' | 'RECEPTIONIST' | 'TENANT_ADMIN' | 'TENANT_EMPLOYEE' | 'GUEST';
 export type UserStatus    = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
 export type TenantStatus  = 'ACTIVE' | 'SUSPENDED' | 'CLOSED' | 'TRIAL';
 export type SiteStatus    = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 export type SpaceType     = 'DEDICATED_OFFICE' | 'FLEXIBLE_DESK' | 'HOT_DESK' | 'MEETING_ROOM' | 'CONFERENCE_ROOM' | 'PHONE_BOOTH' | 'EVENT_SPACE';
 export type SpaceStatus   = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE' | 'OUT_OF_SERVICE';
-export type BookingStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+export type BookingStatus =
+  | 'DRAFT'
+  | 'PENDING_APPROVAL'
+  | 'PENDING_PHONE_CONFIRMATION'
+  | 'AWAITING_PHYSICAL_VISIT'
+  | 'DOCUMENTS_PENDING_UPLOAD'
+  | 'ACTIVE'
+  | 'CONFIRMED'
+  | 'CHECKED_IN'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'REFUSED'
+  | 'NO_SHOW';
+
+export type BookingDocumentType =
+  | 'cr_copy'
+  | 'qid_copy'
+  | 'trade_license'
+  | 'signed_lease_contract'
+  | 'payment_proof'
+  | 'contract'
+  | 'cheque'
+  | 'id'
+  | 'other';
 export type ContractStatus= 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'TERMINATED' | 'RENEWED';
 export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 export type InvoiceType   = 'MONTHLY_RENT' | 'USAGE_BASED' | 'DEPOSIT' | 'ADDON_SERVICE' | 'LATE_FEE';
@@ -23,6 +46,9 @@ export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS';
 export type NotificationPriority= 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type ReportType    = 'OCCUPANCY_RATE' | 'REVENUE_BY_SITE' | 'BOOKING_ANALYTICS' | 'PAYMENT_STATUS' | 'MAINTENANCE_SUMMARY' | 'FINANCIAL_SUMMARY';
 export type ReportFormat  = 'PDF' | 'CSV' | 'EXCEL' | 'JSON';
+export type DiscountType  = 'PERCENTAGE' | 'FIXED_AMOUNT';
+export type ContractItemType = 'SPACE' | 'ADDON_SERVICE';
+export type DepositRefundStatus = 'PENDING' | 'PARTIALLY_REFUNDED' | 'FULLY_REFUNDED' | 'FORFEITED';
 
 // ─── Models — exact field names from Prisma ───────────────────────────────────
 
@@ -35,6 +61,7 @@ export interface Tenant {
   subscription_plan: string;
   max_users:         number;
   max_spaces:        number;
+  organization_type?: 'CLIENT' | 'RENTER';
   settings?:         Record<string, unknown>;
   created_at:        string;
   // relations
@@ -47,20 +74,29 @@ export interface User {
   tenant_id:     string;
   role:          UserRole;
   email:         string;
-  first_name:    string;
-  last_name:     string;
+  password?:     string; // For creation/update
+  first_name:    string | null;
+  last_name:     string | null;
+  phone_number?: string | null;
+  managed_by_id?: string | null;
+  must_change_password?: boolean;
+  tenant_company_id?:  string | null;
   status:        UserStatus;
+  avatar_url?:   string;
   last_login_at?: string;
+  crisp_session_id?: string;
   preferences?:  Record<string, unknown>;
+  refreshToken?: string; // For auth
   created_at:    string;
   // relations
-  tenant?:       Tenant;
+  tenant?:       Tenant | Pick<Tenant, 'id' | 'name' | 'slug' | 'subscription_plan' | 'status'>;
 }
 
 export interface Site {
   id:              string;
   tenant_id:       string;
   name:            string;
+  slug?:           string;
   code:            string;
   city:            string;
   country:         string;
@@ -69,6 +105,8 @@ export interface Site {
   status:          SiteStatus;
   manager_user_id?: string;
   opening_hours?:  Record<string, unknown>;
+  gmb_location_id?: string | null;
+  gmb_account_id?:  string | null;
   created_at:      string;
   // relations
   buildings?:      Building[];
@@ -78,17 +116,22 @@ export interface Site {
 
 export interface Building {
   id:             string;
-  site_id:        string;
+  tenant_id:      string;
   name:           string;
+  slug?:          string;
   code:           string;
+  address?:       string;
+  /** Floors this client added and manages. */
   floors_count:   number;
+  /** Optional: total floors in the physical building. */
+  total_floors_in_building?: number | null;
   total_area_sqm: string;
   year_built?:    number;
   status:         string;
   created_at:     string;
   // relations
   floors?:        Floor[];
-  site?:          Site;
+  tenant?:        Tenant;
 }
 
 export interface Floor {
@@ -127,10 +170,19 @@ export interface Space {
   price_per_month?:  string;
   currency:          string;
   requires_approval: boolean;
+  is_listed?: boolean;
   created_at:        string;
+  photos:            string[];        // Array of photo URLs
+  map_x?:             number;         // Map position X
+  map_y?:             number;         // Map position Y
+  map_w?:             number;         // Map width
+  map_h?:             number;         // Map height
   // relations
   features?:         SpaceFeature[];
   floor?:            Floor;
+  bookingAddOns?:    BookingAddOn[];
+  contractItems?:    ContractItem[];
+  maintenanceTickets?: MaintenanceTicket[];
 }
 
 export interface Booking {
@@ -150,11 +202,21 @@ export interface Booking {
   attendee_count:       number;
   checked_in_at?:       string;
   checked_out_at?:      string;
+  parent_booking_id?:   string;
   created_at:           string;
+  receptionist_id?:     string;
+  user?:                User;
+  receptionist?:        User;
+  documents?:           BookingDocument[];
   // relations
   space?:               Space;
   createdBy?:           User;
   approvedBy?:          User;
+  pricePlan?:           PricePlan;
+  promotionCode?:       PromotionCode;
+  parentBooking?:       Booking;
+  childBookings?:       Booking[];
+  addOns?:              BookingAddOn[];
 }
 
 export interface LeaseContract {
@@ -171,30 +233,41 @@ export interface LeaseContract {
   payment_due_day:     number;
   auto_renew:          boolean;
   signed_at?:          string;
+  document_url?:       string;
   created_at:          string;
   // relations
   tenant?:             Tenant;
   createdBy?:          User;
+  items?:              ContractItem[];
+  deposit?:            Deposit;
+  invoices?:           Invoice[];
 }
 
 export interface Invoice {
   id:              string;
   tenant_id:       string;
   contract_id?:    string;
+  promotion_code_id?: string;
   invoice_number:  string;
   type:            InvoiceType;
   status:          InvoiceStatus;
   issue_date:      string;
   due_date:        string;
   subtotal:        string;
+  tax_rate?:       string;
   tax_amount:      string;
   total_amount:    string;
   currency:        string;
+  document_url?:   string;
   notes?:          string;
+  crisp_session_id?: string;
   created_at:      string;
   // relations
   tenant?:         Tenant;
+  contract?:       LeaseContract;
+  promotionCode?:  PromotionCode;
   payments?:       Payment[];
+  lines?:          InvoiceLine[];
 }
 
 export interface Payment {
@@ -209,6 +282,7 @@ export interface Payment {
   payment_date:         string;
   status:               PaymentStatus;
   reference_number?:    string;
+  cheque_document_url?: string;
   created_at:           string;
 }
 
@@ -226,6 +300,7 @@ export interface MaintenanceTicket {
   resolved_at?:         string;
   estimated_hours?:     string;
   cost?:                string;
+  crisp_session_id?:    string;
   created_at:           string;
   // relations
   space?:               Space;
@@ -354,4 +429,192 @@ export interface CreateMaintenanceTicketDto {
   title:              string;
   category:           TicketCategory;
   priority?:          TicketPriority;
+  description?:       string;
+}
+
+// ─── Additional Models (Backend-only features now exposed) ────────────────
+
+export interface AddOnService {
+  id:            string;
+  site_id:       string;
+  name:          string;
+  category:      string;
+  price:         string;
+  currency:      string;
+  billing_cycle: BillingCycle;
+  is_recurring:  boolean;
+  is_active:     boolean;
+  created_at:    string;
+  // relations
+  site?:         Site;
+  bookingAddOns?: BookingAddOn[];
+  contractItems?: ContractItem[];
+}
+
+export interface PromotionCode {
+  id:             string;
+  site_id?:       string;
+  code:           string;
+  discount_type:  DiscountType;
+  discount_value: string;
+  max_uses?:      number;
+  uses_count:     number;
+  valid_from:     string;
+  valid_to?:      string;
+  is_active:      boolean;
+  created_at:     string;
+  // relations
+  site?:          Site;
+  bookings?:      Booking[];
+  invoices?:      Invoice[];
+}
+
+export interface BookingDocument {
+  id:             string;
+  booking_id:     string;
+  file_url:       string;
+  file_name:      string;
+  document_type:  BookingDocumentType;
+  uploaded_by:    string;
+  uploaded_at:    string;
+  uploadedBy?:    User;
+}
+
+export interface BookingAddOn {
+  id:               string;
+  booking_id:       string;
+  addon_service_id: string;
+  quantity:         number;
+  unit_price:       string;
+  total_price:      string;
+  // relations
+  addonService?:    AddOnService;
+  booking?:         Booking;
+}
+
+export interface ContractItem {
+  id:               string;
+  contract_id:      string;
+  item_type:        ContractItemType;
+  space_id?:        string;
+  addon_service_id?: string;
+  description?:     string;
+  quantity:         number;
+  unit_price:       string;
+  currency:         string;
+  // relations
+  addonService?:    AddOnService;
+  contract?:        LeaseContract;
+  space?:           Space;
+}
+
+export interface Deposit {
+  id:              string;
+  contract_id:     string;
+  amount:          string;
+  currency:        string;
+  paid_at?:        string;
+  refund_status:   DepositRefundStatus;
+  refunded_amount?: string;
+  refunded_at?:    string;
+  notes?:          string;
+  // relations
+  contract?:       LeaseContract;
+}
+
+export interface InvoiceLine {
+  id:          string;
+  invoice_id:  string;
+  description: string;
+  quantity:    string;
+  unit_price:  string;
+  tax_rate:    string;
+  line_total:  string;
+  // relations
+  invoice?:    Invoice;
+}
+
+export interface Report {
+  id:                   string;
+  generated_by_user_id: string;
+  report_type:          ReportType;
+  title:                string;
+  parameters?:          Record<string, unknown>;
+  format:               ReportFormat;
+  file_url?:            string;
+  generated_at:         string;
+  // relations
+  generatedBy?:         User;
+}
+
+// ─── Email Management Types ────────────────────────────────────────────────
+
+export interface EmailTemplate {
+  name: string;
+  subject: string;
+  template: string;
+  variables: string[];
+}
+
+export interface EmailTestRequest {
+  template: string;
+  to: string;
+  data: Record<string, any>;
+}
+
+export interface EmailPreview {
+  html: string;
+  subject: string;
+}
+
+// ─── Analytics Types ───────────────────────────────────────────────────────
+
+export interface AnalyticsOverview {
+  totalRevenue: string;
+  totalBookings: number;
+  activeSpaces: number;
+  occupancyRate: number;
+  period: { from: string; to: string };
+}
+
+export interface RevenueTrend {
+  date: string;
+  revenue: string;
+  bookings: number;
+}
+
+export interface BookingStatusData {
+  status: BookingStatus;
+  count: number;
+  percentage: number;
+}
+
+export interface SpaceUtilization {
+  spaceId: string;
+  spaceName: string;
+  utilizationRate: number;
+  totalHours: number;
+  bookedHours: number;
+}
+
+export interface MaintenanceStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+  averageResolutionTime: number;
+}
+
+export interface TopSpace {
+  spaceId: string;
+  spaceName: string;
+  bookings: number;
+  revenue: string;
+}
+
+export interface RevenueByTenant {
+  tenantId: string;
+  tenantName: string;
+  revenue: string;
+  bookings: number;
 }

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from 'antd';
 import {
@@ -9,8 +9,9 @@ import {
 import { ReloadOutlined } from '@ant-design/icons';
 import { bookingApi, billingApi, contractApi, siteApi, tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import { can } from '../../permissions/can';
 
-// ─── Types & Helpers ──────────────────────────────────────────────────────────
+// --- Types & Helpers ----------------------------------------------------------
 type Range = '7d' | '30d' | '3m' | '1y';
 
 function toArray<T>(raw: any): T[] {
@@ -39,7 +40,7 @@ function fmtAmt(n: number) {
   return `$${n.toFixed(0)}`;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// --- Constants ----------------------------------------------------------------
 const PALETTE = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
 
 const CARD: React.CSSProperties = {
@@ -73,7 +74,7 @@ const METHOD_LABELS: Record<string, string> = {
   ONLINE_PAYMENT: 'Online',
 };
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+// --- Custom Tooltip -----------------------------------------------------------
 function ChartTooltip({ active, payload, label, currency = true }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -90,7 +91,7 @@ function ChartTooltip({ active, payload, label, currency = true }: any) {
   );
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+// --- Section Header -----------------------------------------------------------
 function SectionHeader({ title, sub }: { title: string; sub: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -100,7 +101,7 @@ function SectionHeader({ title, sub }: { title: string; sub: string }) {
   );
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
+// --- KPI Card -----------------------------------------------------------------
 function KpiCard({ label, value, sub, color, bg, icon, trend }: {
   label: string; value: string | number; sub: string;
   color: string; bg: string; icon: string; trend?: { value: number; label: string };
@@ -114,7 +115,7 @@ function KpiCard({ label, value, sub, color, bg, icon, trend }: {
           <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>{sub}</p>
           {trend && (
             <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: trend.value >= 0 ? '#059669' : '#dc2626', background: trend.value >= 0 ? '#f0fdf4' : '#fef2f2', padding: '2px 8px', borderRadius: 20 }}>
-              {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}% {trend.label}
+              {trend.value >= 0 ? '?' : '?'} {Math.abs(trend.value)}% {trend.label}
             </div>
           )}
         </div>
@@ -127,11 +128,11 @@ function KpiCard({ label, value, sub, color, bg, icon, trend }: {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 export default function ReportsPage() {
   const { user }   = useAuthStore();
   const isSuperAdmin  = user?.role === 'SUPER_ADMIN';
-  const isSiteManager = user?.role === 'SITE_MANAGER';
+  const isSiteManager = user?.role === 'MANAGER';
   const isFinance     = user?.role === 'FINANCE';
   const canAccess     = isSuperAdmin || isSiteManager || isFinance;
 
@@ -140,16 +141,21 @@ export default function ReportsPage() {
 
   const rangeStart = getRangeStart(range);
 
-  // ── Data fetching ────────────────────────────────────────────────────────────
+  // -- Data fetching ------------------------------------------------------------
   const { data: bookingsRaw,  isLoading: l1 } = useQuery({ queryKey: ['rpt-bookings',  refreshKey], queryFn: () => bookingApi.getAll().then(r => r.data) });
   const { data: invoicesRaw,  isLoading: l2 } = useQuery({ queryKey: ['rpt-invoices',  refreshKey], queryFn: () => billingApi.getInvoices().then(r => r.data) });
   const { data: paymentsRaw,  isLoading: l3 } = useQuery({ queryKey: ['rpt-payments',  refreshKey], queryFn: () => billingApi.getPayments().then(r => r.data) });
   const { data: contractsRaw, isLoading: l4 } = useQuery({ queryKey: ['rpt-contracts', refreshKey], queryFn: () => contractApi.getAll().then(r => r.data) });
-  const { data: sitesRaw,     isLoading: l5 } = useQuery({ queryKey: ['rpt-sites',     refreshKey], queryFn: () => siteApi.getAll().then(r => r.data) });
-  const { data: tenantsRaw,   isLoading: l6 } = useQuery({ queryKey: ['rpt-tenants',   refreshKey], queryFn: () => tenantApi.getAll().then(r => r.data) });
+  const { data: sitesRaw,     isLoading: l5 } = useQuery({ queryKey: ['rpt-sites',     refreshKey], queryFn: () => siteApi.getAll() });
+  const canListTenants = can(user?.role, 'tenant.list');
+  const { data: tenantsRaw,   isLoading: l6 } = useQuery({
+    queryKey: ['rpt-tenants', refreshKey],
+    queryFn: () => tenantApi.getAll().then(r => r.data),
+    enabled: canListTenants,
+  });
   const { data: summaryRaw } = useQuery({ queryKey: ['rpt-summary', refreshKey], queryFn: () => billingApi.getFinancialSummary().then(r => r.data) });
 
-  const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
+  const isLoading = l1 || l2 || l3 || l4 || l5 || (canListTenants && l6);
 
   const bookings  = toArray<any>(bookingsRaw);
   const invoices  = toArray<any>(invoicesRaw);
@@ -158,14 +164,14 @@ export default function ReportsPage() {
   const sites     = toArray<any>(sitesRaw);
   const tenants   = toArray<any>(tenantsRaw);
 
-  // ── Filter by range ──────────────────────────────────────────────────────────
+  // -- Filter by range ----------------------------------------------------------
   const inRange = (d: string) => new Date(d) >= rangeStart;
 
   const rangeBookings  = bookings.filter(b  => inRange(b.created_at));
   const rangeInvoices  = invoices.filter(i  => inRange(i.issue_date));
   const rangePayments  = payments.filter(p  => inRange(p.payment_date));
 
-  // ── KPIs ─────────────────────────────────────────────────────────────────────
+  // -- KPIs ---------------------------------------------------------------------
   const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || 0), 0);
   const activeContracts= contracts.filter(c => c.status === 'ACTIVE').length;
   const totalBookings  = rangeBookings.length;
@@ -176,7 +182,7 @@ export default function ReportsPage() {
     ? Math.round((sites.filter((s: any) => (s.available_spaces ?? 0) < (s.total_spaces ?? 1)).length / sites.length) * 100)
     : 0;
 
-  // ── Revenue over time ────────────────────────────────────────────────────────
+  // -- Revenue over time --------------------------------------------------------
   const revenueChart = useMemo(() => {
     const buckets: Record<string, number> = {};
     rangePayments.filter(p => p.status === 'COMPLETED').forEach(p => {
@@ -186,7 +192,7 @@ export default function ReportsPage() {
     return Object.entries(buckets).map(([date, revenue]) => ({ date, Revenue: Math.round(revenue) }));
   }, [rangePayments, range]);
 
-  // ── Booking trends ───────────────────────────────────────────────────────────
+  // -- Booking trends -----------------------------------------------------------
   const bookingChart = useMemo(() => {
     const buckets: Record<string, { Confirmed: number; Pending: number; Cancelled: number }> = {};
     rangeBookings.forEach(b => {
@@ -199,14 +205,14 @@ export default function ReportsPage() {
     return Object.entries(buckets).map(([date, v]) => ({ date, ...v }));
   }, [rangeBookings, range]);
 
-  // ── Invoice status breakdown ─────────────────────────────────────────────────
+  // -- Invoice status breakdown -------------------------------------------------
   const invoiceStatusChart = useMemo(() => {
     const counts: Record<string, number> = {};
     invoices.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
     return Object.entries(counts).map(([name, value]) => ({ name, value, color: INVOICE_STATUS_COLORS[name] ?? '#94a3b8' }));
   }, [invoices]);
 
-  // ── Payment method breakdown ─────────────────────────────────────────────────
+  // -- Payment method breakdown -------------------------------------------------
   const paymentMethodChart = useMemo(() => {
     const counts: Record<string, number> = {};
     payments.filter(p => p.status === 'COMPLETED').forEach(p => {
@@ -216,17 +222,17 @@ export default function ReportsPage() {
     return Object.entries(counts).map(([name, value]) => ({ name: METHOD_LABELS[name] ?? name, value, color: PAYMENT_METHOD_COLORS[name] ?? '#94a3b8' }));
   }, [payments]);
 
-  // ── Occupancy rate per site ──────────────────────────────────────────────────
+  // -- Occupancy rate per site --------------------------------------------------
   const occupancyChart = useMemo(() => {
     return sites.map((s: any) => ({
-      name: s.name?.length > 12 ? s.name.substring(0, 12) + '…' : s.name,
+      name: s.name?.length > 12 ? s.name.substring(0, 12) + '�' : s.name,
       Occupied:  Math.max(0, (s.total_spaces ?? 0) - (s.available_spaces ?? 0)),
       Available: s.available_spaces ?? 0,
       Rate: s.total_spaces > 0 ? Math.round(((s.total_spaces - (s.available_spaces ?? 0)) / s.total_spaces) * 100) : 0,
     }));
   }, [sites]);
 
-  // ── Top tenants by revenue ───────────────────────────────────────────────────
+  // -- Top tenants by revenue ---------------------------------------------------
   const topTenantsChart = useMemo(() => {
     const byTenant: Record<string, number> = {};
     payments.filter(p => p.status === 'COMPLETED').forEach((p: any) => {
@@ -242,7 +248,7 @@ export default function ReportsPage() {
       .slice(0, 8);
   }, [payments, tenants]);
 
-  // ── Contract status breakdown ────────────────────────────────────────────────
+  // -- Contract status breakdown ------------------------------------------------
   const contractStatusChart = useMemo(() => {
     const counts: Record<string, number> = {};
     contracts.forEach(c => { counts[c.status] = (counts[c.status] || 0) + 1; });
@@ -253,7 +259,7 @@ export default function ReportsPage() {
   if (!canAccess) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>??</div>
         <h2 style={{ color: '#0f172a' }}>Access Restricted</h2>
         <p style={{ color: '#64748b' }}>Reports are available to Super Admin, Site Manager, and Finance roles only.</p>
       </div>
@@ -269,15 +275,15 @@ export default function ReportsPage() {
 
   const EmptyChart = ({ height = 200 }: { height?: number }) => (
     <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 32 }}>📊</div>
+      <div style={{ fontSize: 32 }}>??</div>
       <div style={{ fontSize: 12 }}>No data for this period</div>
     </div>
   );
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, minHeight: '100%' }}>
 
-      {/* ── Page Header ── */}
+      {/* -- Page Header -- */}
       <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -312,25 +318,25 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ── KPI Row ── */}
+      {/* -- KPI Row -- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 20 }}>
         {isLoading ? Array.from({ length: 5 }).map((_, i) => (
           <div key={i} style={{ ...CARD, padding: '16px 18px' }}><Skeleton active paragraph={{ rows: 2 }} /></div>
         )) : <>
-          <KpiCard label="Revenue" value={`$${Math.round(totalRevenue).toLocaleString()}`} sub={`Last ${range}`} color="#2563eb" bg="#eff6ff" icon="💰" />
-          <KpiCard label="Active Contracts" value={activeContracts} sub={`${contracts.length} total`} color="#059669" bg="#f0fdf4" icon="📋" />
-          <KpiCard label="Bookings" value={totalBookings} sub={`${confirmedBookings} confirmed`} color="#f59e0b" bg="#fffbeb" icon="📅" />
-          <KpiCard label="Paid Invoices" value={paidInvoices} sub={`${overdueInvoices} overdue`} color="#7c3aed" bg="#f5f3ff" icon="✅" />
-          <KpiCard label="Tenants" value={tenants.length} sub={`${activeContracts} with active lease`} color="#0891b2" bg="#f0f9ff" icon="🏢" />
+          <KpiCard label="Revenue" value={`$${Math.round(totalRevenue).toLocaleString()}`} sub={`Last ${range}`} color="#2563eb" bg="#eff6ff" icon="??" />
+          <KpiCard label="Active Contracts" value={activeContracts} sub={`${contracts.length} total`} color="#059669" bg="#f0fdf4" icon="??" />
+          <KpiCard label="Bookings" value={totalBookings} sub={`${confirmedBookings} confirmed`} color="#f59e0b" bg="#fffbeb" icon="??" />
+          <KpiCard label="Paid Invoices" value={paidInvoices} sub={`${overdueInvoices} overdue`} color="#7c3aed" bg="#f5f3ff" icon="?" />
+          <KpiCard label="Tenants" value={tenants.length} sub={`${activeContracts} with active lease`} color="#0891b2" bg="#f0f9ff" icon="??" />
         </>}
       </div>
 
-      {/* ── Row 1: Revenue + Booking Trends ── */}
+      {/* -- Row 1: Revenue + Booking Trends -- */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
         {/* Revenue over time */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="💰 Revenue Over Time" sub={`Collected payments · Last ${range}`} />
+          <SectionHeader title="?? Revenue Over Time" sub={`Collected payments � Last ${range}`} />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : revenueChart.length === 0 ? <EmptyChart /> : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={revenueChart} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
@@ -352,7 +358,7 @@ export default function ReportsPage() {
 
         {/* Booking trends */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="📅 Booking Trends" sub={`Bookings by status · Last ${range}`} />
+          <SectionHeader title="?? Booking Trends" sub={`Bookings by status � Last ${range}`} />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : bookingChart.length === 0 ? <EmptyChart /> : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={bookingChart} margin={{ top: 5, right: 10, left: 0, bottom: 0 }} barSize={12}>
@@ -370,12 +376,12 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ── Row 2: Invoice Status + Payment Methods + Contract Status ── */}
+      {/* -- Row 2: Invoice Status + Payment Methods + Contract Status -- */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
 
         {/* Invoice status breakdown */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="🧾 Invoice Status" sub="All invoices breakdown" />
+          <SectionHeader title="?? Invoice Status" sub="All invoices breakdown" />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : invoiceStatusChart.length === 0 ? <EmptyChart height={180} /> : (
             <>
               <ResponsiveContainer width="100%" height={160}>
@@ -401,7 +407,7 @@ export default function ReportsPage() {
 
         {/* Payment methods */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="💳 Payment Methods" sub="Completed payments breakdown" />
+          <SectionHeader title="?? Payment Methods" sub="Completed payments breakdown" />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : paymentMethodChart.length === 0 ? <EmptyChart height={180} /> : (
             <>
               <ResponsiveContainer width="100%" height={160}>
@@ -427,7 +433,7 @@ export default function ReportsPage() {
 
         {/* Contract status */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="📋 Contract Status" sub="All contracts breakdown" />
+          <SectionHeader title="?? Contract Status" sub="All contracts breakdown" />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : contractStatusChart.length === 0 ? <EmptyChart height={180} /> : (
             <>
               <ResponsiveContainer width="100%" height={160}>
@@ -452,12 +458,12 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ── Row 3: Occupancy + Top Tenants ── */}
+      {/* -- Row 3: Occupancy + Top Tenants -- */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
         {/* Occupancy per site */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="🏢 Occupancy per Site" sub="Occupied vs available spaces" />
+          <SectionHeader title="?? Occupancy per Site" sub="Occupied vs available spaces" />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : occupancyChart.length === 0 ? <EmptyChart /> : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={occupancyChart} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }} barSize={14}>
@@ -485,7 +491,7 @@ export default function ReportsPage() {
 
         {/* Top tenants by revenue */}
         <div style={{ ...CARD, padding: '20px 24px' }}>
-          <SectionHeader title="🏆 Top Tenants by Revenue" sub="Collected payments per tenant" />
+          <SectionHeader title="?? Top Tenants by Revenue" sub="Collected payments per tenant" />
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : topTenantsChart.length === 0 ? <EmptyChart /> : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={topTenantsChart} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }} barSize={14}>
@@ -502,9 +508,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ── Summary Table ── */}
+      {/* -- Summary Table -- */}
       <div style={{ ...CARD, padding: '20px 24px' }}>
-        <SectionHeader title="📊 Financial Summary" sub="Aggregated figures across all tenants" />
+        <SectionHeader title="?? Financial Summary" sub="Aggregated figures across all tenants" />
         {isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: '#f1f5f9', borderRadius: 10, overflow: 'hidden' }}>
             {[

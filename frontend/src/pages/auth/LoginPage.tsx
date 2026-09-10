@@ -1,20 +1,35 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
+import { useEffect, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { getPendingBookingSpace } from '../../utils/pendingBookingSpace';
+import { useAuthStore, hasValidSession, isAuthPending } from '../../store/authStore';
+import { resolvePostAuthPath } from '../../utils/authRedirect';
+import AuthSessionLoader from '../../components/AuthSessionLoader';
 import {
   HomeOutlined, EyeOutlined, EyeInvisibleOutlined,
   UserOutlined, LockOutlined,
 } from '@ant-design/icons';
 
 export default function LoginPage() {
-  const navigate       = useNavigate();
-  const { login, user }= useAuthStore() as any;
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { login, user, hasHydrated } = useAuthStore();
 
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (hasValidSession()) {
+      navigate(resolvePostAuthPath(user), { replace: true });
+    }
+  }, [hasHydrated, user, navigate]);
+
+  if (isAuthPending()) {
+    return <AuthSessionLoader />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,25 +37,23 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      // authStore.login(email, password) handles everything
       await login(email, password);
 
-      // After login, user is in store — redirect based on role
       const u = useAuthStore.getState().user as any;
-      const role = u?.role ?? '';
+      const pendingSpace = searchParams.get('space_id') ?? getPendingBookingSpace();
+      if (pendingSpace && !u?.must_change_password) {
+        navigate(`/apply/${pendingSpace}`, { replace: true });
+        return;
+      }
 
-      if      (role === 'SUPER_ADMIN')  navigate('/admin/dashboard',             { replace: true });
-      else if (role === 'SITE_MANAGER') navigate('/admin/site-dashboard',         { replace: true });
-      else if (role === 'FINANCE')      navigate('/admin/finance-dashboard',      { replace: true });
-      else if (role === 'MAINTENANCE')  navigate('/admin/maintenance-dashboard',  { replace: true });
-      else                              navigate('/portal/dashboard',             { replace: true });
+      navigate(resolvePostAuthPath(u), { replace: true });
     } catch (err: any) {
       let message = 'Login failed. Please check your credentials.';
-      const data  = err?.response?.data;
+      const data = err?.response?.data;
       if (data) {
         if (typeof data === 'string' && data.length < 300) message = data;
         else if (data?.message) message = Array.isArray(data.message) ? data.message[0] : String(data.message);
-        else if (data?.error)   message = String(data.error);
+        else if (data?.error) message = String(data.error);
       } else if (err?.message && !err.message.includes('JSON')) {
         message = err.message;
       }
@@ -78,9 +91,9 @@ export default function LoginPage() {
             A complete platform for managing spaces, contracts, tenants and billing.
           </p>
           {[
-            { icon: '🏢', text: 'Site & space management'       },
-            { icon: '👥', text: 'Tenant & contract tracking'    },
-            { icon: '💳', text: 'Billing & payment management'  },
+            { icon: '🏢', text: 'Site & space management' },
+            { icon: '👥', text: 'Tenant & contract tracking' },
+            { icon: '💳', text: 'Billing & payment management' },
             { icon: '📊', text: 'Real-time analytics & reports' },
           ].map(f => (
             <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -106,7 +119,6 @@ export default function LoginPage() {
           <h2 style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>Welcome back</h2>
           <p style={{ color: '#64748b', marginBottom: 32, fontSize: 15 }}>Sign in to your management dashboard</p>
 
-          {/* Error */}
           {error && (
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
@@ -116,7 +128,6 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Email */}
             <div style={{ marginBottom: 18 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Email address</label>
               <div style={{ position: 'relative' }}>
@@ -128,12 +139,11 @@ export default function LoginPage() {
                   placeholder="you@company.com"
                   style={{ width: '100%', padding: '12px 14px 12px 42px', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 14, outline: 'none', color: '#0f172a', background: '#fff', boxSizing: 'border-box' }}
                   onFocus={e => (e.target.style.borderColor = '#2563eb')}
-                  onBlur={e  => (e.target.style.borderColor = '#e5e7eb')}
+                  onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
               </div>
             </div>
 
-            {/* Password */}
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Password</label>
@@ -148,7 +158,7 @@ export default function LoginPage() {
                   placeholder="••••••••••"
                   style={{ width: '100%', padding: '12px 44px 12px 42px', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 14, outline: 'none', color: '#0f172a', background: '#fff', boxSizing: 'border-box' }}
                   onFocus={e => (e.target.style.borderColor = '#2563eb')}
-                  onBlur={e  => (e.target.style.borderColor = '#e5e7eb')}
+                  onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
                 <button
                   type="button"
@@ -173,26 +183,6 @@ export default function LoginPage() {
             Don't have an account?{' '}
             <Link to="/register" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>Create one</Link>
           </p>
-
-          {/* Quick test accounts */}
-          <div style={{ marginTop: 32, padding: '16px', background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb' }}>
-            <p style={{ margin: '0 0 10px', fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>Quick test accounts</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {[
-                { role: 'Super Admin',  email: 'admin@leasemanager.com'  },
-                { role: 'Tenant Admin', email: 'tenant@leasemanager.com' },
-                { role: 'Site Manager', email: 'manager@leasemanager.com'},
-              ].map(acc => (
-                <button
-                  key={acc.role}
-                  onClick={() => { setEmail(acc.email); setPassword('Password123!'); }}
-                  style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#f8fafc', fontSize: 11, cursor: 'pointer', color: '#374151', fontWeight: 500 }}
-                >
-                  {acc.role}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

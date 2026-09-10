@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { setPendingBookingSpace, getPendingBookingSpace } from '../../utils/pendingBookingSpace';
 import { Form, Input, Button, Alert, Typography, Card } from 'antd';
 import {
   HomeOutlined, BankOutlined, UserOutlined,
@@ -45,6 +46,14 @@ function CompanyStep({ form }: { form: any }) {
       </Form.Item>
 
       <Form.Item
+        label={<Text style={{ fontWeight: 600, color: '#374151' }}>Commercial Registration (CR) Number</Text>}
+        name="cr_number"
+        rules={[{ required: true, message: 'CR number is required' }]}
+      >
+        <Input placeholder="e.g. 12345678" style={{ borderRadius: 8, height: 46 }} />
+      </Form.Item>
+
+      <Form.Item
         label={<Text style={{ fontWeight: 600, color: '#374151' }}>Contact email</Text>}
         name="contact_email"
         rules={[
@@ -86,6 +95,23 @@ function PersonalStep({ companyName }: { companyName: string }) {
         rules={[{ required: true, message: 'Email is required' }, { type: 'email', message: 'Please enter a valid email' }]}
       >
         <Input prefix={<UserOutlined style={{ color: '#9ca3af' }} />} placeholder="john.smith@acme.com" style={{ borderRadius: 8, height: 46 }} autoComplete="email" />
+      </Form.Item>
+      <Form.Item
+        label={<Text style={{ fontWeight: 600, color: '#374151' }}>Phone number</Text>}
+        name="phone_number"
+        rules={[
+          { required: true, message: 'Phone is required' },
+          { pattern: /^\+[1-9]\d{6,14}$/, message: 'Use international format e.g. +97412345678' },
+        ]}
+      >
+        <Input placeholder="+97412345678" style={{ borderRadius: 8, height: 46 }} />
+      </Form.Item>
+      <Form.Item
+        label={<Text style={{ fontWeight: 600, color: '#374151' }}>QID Number (signing representative)</Text>}
+        name="qid_number"
+        rules={[{ required: true, message: 'QID number is required' }]}
+      >
+        <Input placeholder="e.g. 28901234567" style={{ borderRadius: 8, height: 46 }} />
       </Form.Item>
       <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 36, height: 36, background: '#2563eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -150,6 +176,12 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const pendingSpaceId = searchParams.get('space_id');
+
+  useEffect(() => {
+    if (pendingSpaceId) setPendingBookingSpace(pendingSpaceId);
+  }, [pendingSpaceId]);
 
   const STEPS = [
     { title: 'Company',  description: 'Name & contact' },
@@ -158,8 +190,8 @@ export default function RegisterPage() {
   ];
 
   const fieldsPerStep: Record<number, string[]> = {
-    0: ['company_name', 'slug', 'contact_email'],
-    1: ['first_name', 'last_name', 'email'],
+    0: ['company_name', 'slug', 'cr_number', 'contact_email'],
+    1: ['first_name', 'last_name', 'email', 'phone_number', 'qid_number'],
     2: ['password', 'confirm_password'],
   };
 
@@ -179,10 +211,13 @@ export default function RegisterPage() {
       await authApi.registerTenant({
         company_name:  v.company_name,
         slug:          v.slug,
+        cr_number:     v.cr_number,
         contact_email: v.contact_email,
         first_name:    v.first_name,
         last_name:     v.last_name,
         email:         v.email,
+        phone_number:  v.phone_number,
+        qid_number:    v.qid_number,
         password:      v.password,
       });
       setIsSuccess(true);
@@ -206,10 +241,18 @@ export default function RegisterPage() {
               Status: <strong>Pending</strong> — a Super Admin will activate your account shortly.
             </Text>
           </div>
-          <Button type="primary" block size="large" onClick={() => navigate('/login')}
+          <Button type="primary" block size="large" onClick={() => {
+            const sid = getPendingBookingSpace();
+            navigate(sid ? `/login?space_id=${sid}` : '/login');
+          }}
             style={{ height: 48, borderRadius: 8, fontSize: 15, fontWeight: 600, background: '#2563eb', border: 'none' }}>
             Go to Sign In
           </Button>
+          {getPendingBookingSpace() && (
+            <Text style={{ display: 'block', marginTop: 12, fontSize: 12, color: '#64748b' }}>
+              After sign-in you can complete your booking application for the selected space.
+            </Text>
+          )}
         </Card>
       </div>
     );

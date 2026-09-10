@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import { message } from '../../utils/feedback';
 import { CloseOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { buildingApi } from '../../api/services';
+import { useAuthStore } from '../../store/authStore';
 
 const OVERLAY: React.CSSProperties = {
   position: 'fixed', inset: 0,
@@ -57,18 +58,18 @@ function Field({ label, required, children, error }: {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
-  siteId: string;
-  siteName: string;
   onClose: () => void;
 }
 
-export default function AddBuildingModal({ siteId, siteName, onClose }: Props) {
+export default function AddBuildingModal({ onClose }: Props) {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
 
   const [form, setForm] = useState({
     name:           '',
     code:           '',
-    floors_count:   '1',
+    address:        '',
+    total_floors_in_building: '',
     total_area_sqm: '',
     year_built:     '',
     status:         'ACTIVE',
@@ -85,17 +86,23 @@ export default function AddBuildingModal({ siteId, siteName, onClose }: Props) {
     if (!form.name.trim())           e.name           = 'Building name is required';
     if (!form.code.trim())           e.code           = 'Building code is required';
     if (!form.total_area_sqm)        e.total_area_sqm = 'Total area is required';
-    if (Number(form.floors_count) < 1) e.floors_count = 'Must have at least 1 floor';
+    if (
+      form.total_floors_in_building &&
+      Number(form.total_floors_in_building) < 1
+    ) {
+      e.total_floors_in_building = 'Enter a valid floor count or leave empty';
+    }
     return e;
   };
 
   const mutation = useMutation({
     mutationFn: (payload: any) => buildingApi.create(payload),
     onSuccess: () => {
-      message.success('Building created successfully!');
+      message.success('Building saved — now add the floor(s) you manage');
       // Invalidate both the site detail (which nests buildings) and buildings list
-      qc.invalidateQueries({ queryKey: ['site'] });
       qc.invalidateQueries({ queryKey: ['buildings'] });
+      qc.invalidateQueries({ queryKey: ['buildings-for-floors'] });
+      qc.invalidateQueries({ queryKey: ['buildings-publish'] });
       onClose();
     },
     onError: (err: any) => {
@@ -109,12 +116,15 @@ export default function AddBuildingModal({ siteId, siteName, onClose }: Props) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     mutation.mutate({
-      site_id:        siteId,
+      ...(user?.tenant_id ? { tenant_id: user.tenant_id } : {}),
       name:           form.name.trim(),
       code:           form.code.trim().toUpperCase(),
-      floors_count:   Number(form.floors_count),
       total_area_sqm: parseFloat(form.total_area_sqm),
       status:         form.status,
+      ...(form.address.trim() && { address: form.address.trim() }),
+      ...(form.total_floors_in_building && {
+        total_floors_in_building: Number(form.total_floors_in_building),
+      }),
       ...(form.year_built && { year_built: Number(form.year_built) }),
     });
   };
@@ -132,7 +142,7 @@ export default function AddBuildingModal({ siteId, siteName, onClose }: Props) {
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Add New Building</h2>
             <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
-              Adding to: <strong style={{ color: '#2563eb' }}>{siteName}</strong>
+              Register where your spaces are located. You add only the floors you manage next.
             </p>
           </div>
           <button
@@ -165,17 +175,29 @@ export default function AddBuildingModal({ siteId, siteName, onClose }: Props) {
               />
             </Field>
 
-            <Field label="Number of Floors" required error={errors.floors_count}>
+            <Field label="Address" error={errors.address}>
               <input
-                style={{ ...INPUT, borderColor: errors.floors_count ? '#ef4444' : '#e5e7eb' }}
-                type="number" min="1"
-                placeholder="e.g. 5"
-                value={form.floors_count}
-                onChange={e => set('floors_count', e.target.value)}
+                style={INPUT}
+                placeholder="e.g. West Bay, Doha"
+                value={form.address}
+                onChange={e => set('address', e.target.value)}
               />
             </Field>
 
-            <Field label="Total Area (m²)" required error={errors.total_area_sqm}>
+            <Field label="Total floors in building (optional)" error={errors.total_floors_in_building}>
+              <input
+                style={{ ...INPUT, borderColor: errors.total_floors_in_building ? '#ef4444' : '#e5e7eb' }}
+                type="number" min="1"
+                placeholder="e.g. 10 — whole building, for reference"
+                value={form.total_floors_in_building}
+                onChange={e => set('total_floors_in_building', e.target.value)}
+              />
+            </Field>
+            <p style={{ gridColumn: '1 / -1', margin: '-8px 0 0', fontSize: 11, color: '#64748b' }}>
+              This does not create floors. On the <strong>Floors</strong> page, add only the level(s) you lease (e.g. floor 2 only, or floors 1 and 3).
+            </p>
+
+            <Field label="Leasable area you manage (m²)" required error={errors.total_area_sqm}>
               <input
                 style={{ ...INPUT, borderColor: errors.total_area_sqm ? '#ef4444' : '#e5e7eb' }}
                 type="number" min="0" step="0.1"

@@ -20,6 +20,9 @@ import {
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import PageShell from '../../components/ui/PageShell';
+import PageHeader from '../../components/ui/PageHeader';
+import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -201,6 +204,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { t }    = useThemeStore();
+  const billingPath = '/admin/analytics';
   const [refreshKey, setRefreshKey] = useState(0);
 
   // ── CARD now uses t ──
@@ -211,8 +215,8 @@ export default function AdminDashboard() {
   };
 
   const opts = (key: string) => ({ queryKey: [key, refreshKey] });
-  const { data: sitesRaw,      isLoading: l1 } = useQuery({ ...opts('d-sites'),      queryFn: () => siteApi.getAll().then(r => r.data) });
-  const { data: spacesRaw,     isLoading: l2 } = useQuery({ ...opts('d-spaces'),     queryFn: () => spaceApi.getAll().then(r => r.data) });
+  const { data: sitesRaw,      isLoading: l1 } = useQuery({ ...opts('d-sites'),      queryFn: () => siteApi.getAll() });
+  const { data: spacesRaw,     isLoading: l2 } = useQuery({ ...opts('d-spaces'),     queryFn: () => spaceApi.getAll() });
   const { data: tenantsRaw,    isLoading: l3 } = useQuery({ ...opts('d-tenants'),    queryFn: () => tenantApi.getAll().then(r => r.data) });
   const { data: usersRaw,      isLoading: l4 } = useQuery({ ...opts('d-users'),      queryFn: () => userApi.getAll().then(r => r.data) });
   const { data: bookingsRaw,   isLoading: l5 } = useQuery({ ...opts('d-bookings'),   queryFn: () => bookingApi.getAll().then(r => r.data) });
@@ -302,25 +306,24 @@ export default function AdminDashboard() {
   const recentInvoices = [...invoices].sort((a, b) => new Date(b.created_at ?? b.issue_date).getTime() - new Date(a.created_at ?? a.issue_date).getTime()).slice(0, 5);
 
   return (
-    <div style={{ padding: 24, background: t.pageBg, minHeight: '100%' }}>
+    <PageShell>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>Performance Analytics Dashboard</h2>
-          <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
-            Welcome back, <strong style={{ color: t.text }}>{user?.first_name}</strong> · Real-time overview across all sites and tenants
-          </p>
-        </div>
-        <button onClick={() => setRefreshKey(k => k + 1)}
-          style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <ReloadOutlined spin={isLoading} /> Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Performance Analytics Dashboard"
+        subtitle={`Welcome back, ${user?.first_name ?? 'Admin'} · Real-time overview across all sites and tenants`}
+        actions={
+          <button onClick={() => setRefreshKey(k => k + 1)}
+            style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ReloadOutlined spin={isLoading} /> Refresh
+          </button>
+        }
+      />
+
+      <RoleDashboardHero role={user?.role} userName={user?.first_name} />
 
       {/* Alert banners */}
       {overdueInv > 0 && (
-        <div onClick={() => navigate('/admin/billing')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+        <div onClick={() => navigate(billingPath)} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
           <WarningOutlined style={{ color: '#dc2626', fontSize: 18 }} />
           <span style={{ fontWeight: 600, color: '#b91c1c', fontSize: 14 }}>{overdueInv} overdue invoice{overdueInv > 1 ? 's' : ''} require immediate attention</span>
           <ArrowRightOutlined style={{ color: '#dc2626', marginLeft: 'auto' }} />
@@ -352,7 +355,7 @@ export default function AdminDashboard() {
 
       {/* KPI Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 16 }}>
-        <KpiCard label="Total Sites"       value={sites.length}      sub={`${sites.filter(s => s.status === 'ACTIVE').length} active`}           color="#2563eb" bg="#eff6ff" icon={<BankOutlined />}        path="/admin/sites"        loading={isLoading} />
+        <KpiCard label="Published Listings" value={spaces.filter((s: any) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
         <KpiCard label="Total Spaces"      value={spaces.length}     sub={`${occRate}% occupancy rate`}                                           color="#059669" bg="#f0fdf4" icon={<AppstoreOutlined />}    path="/admin/spaces"       loading={isLoading} />
         <KpiCard label="Active Tenants"    value={activeTenants}     sub={`${tenants.length} total registered`}                                   color="#d97706" bg="#fffbeb" icon={<TeamOutlined />}        path="/admin/tenants"      loading={isLoading} />
         <KpiCard label="Active Contracts"  value={activeContracts}   sub={`${contracts.length} total · ${expiringCount} expiring soon`}           color="#7c3aed" bg="#f5f3ff" icon={<FileTextOutlined />}   path="/admin/contracts"    loading={isLoading} />
@@ -360,8 +363,8 @@ export default function AdminDashboard() {
 
       {/* KPI Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-        <KpiCard label="Revenue Collected" value={`$${Math.round(totalRevenue).toLocaleString()}`}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path="/admin/billing"      loading={isLoading} />
-        <KpiCard label="Pending Revenue"   value={`$${Math.round(totalPending).toLocaleString()}`}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path="/admin/billing"      loading={isLoading} />
+        <KpiCard label="Revenue Collected" value={`$${Math.round(totalRevenue).toLocaleString()}`}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
+        <KpiCard label="Pending Revenue"   value={`$${Math.round(totalPending).toLocaleString()}`}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Total Bookings"    value={bookings.length}   sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                 color="#2563eb" bg="#eff6ff" icon={<CalendarOutlined />}    path="/admin/bookings"     loading={isLoading} />
         <KpiCard label="Open Tickets"      value={(mxStats as any)?.open ?? 0} sub={`${(mxStats as any)?.in_progress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
       </div>
@@ -592,7 +595,7 @@ export default function AdminDashboard() {
       <div style={CARD}>
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>🧾 Recent Invoices</div>
-          <button onClick={() => navigate('/admin/billing')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
+          <button onClick={() => navigate(billingPath)} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', padding: '10px 20px', background: t.tableHead, borderBottom: `1px solid ${t.divider}`, fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <span>Invoice #</span><span>Type</span><span>Due Date</span><span>Amount</span><span>Status</span>
@@ -623,7 +626,7 @@ export default function AdminDashboard() {
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: t.text }}>📍 Branch Overview</div>
-            <button onClick={() => navigate('/admin/sites')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
+            <button onClick={() => navigate('/admin/spaces')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
             {sites.slice(0, 4).map((site: any) => {
@@ -633,7 +636,7 @@ export default function AdminDashboard() {
               const occColor   = occR >= 80 ? '#22c55e' : occR >= 50 ? '#f59e0b' : '#ef4444';
               return (
                 <div key={site.id} style={{ ...CARD, padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s' }}
-                  onClick={() => navigate(`/admin/sites/${site.id}`)}
+                  onClick={() => navigate('/admin/spaces')}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = t.cardShadow; }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
@@ -655,6 +658,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

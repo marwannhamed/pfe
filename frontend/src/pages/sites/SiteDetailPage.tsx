@@ -1,5 +1,5 @@
-﻿import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Tabs, Skeleton, Badge, Empty } from 'antd';
 import {
@@ -12,8 +12,9 @@ import { useAuthStore } from '../../store/authStore';
 import type { Site, Space, SpaceStatus, SpaceType, Building, Floor } from '../../types';
 import AddBuildingModal from './AddBuildingModal';
 import AddFloorModal    from './AddFloorModal';
+import { GoogleBusinessPanel } from '../../components/GoogleBusinessPanel';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 const SPACE_STATUS_META: Record<SpaceStatus, { label: string; bg: string; color: string }> = {
   AVAILABLE:      { label: 'Available',      bg: '#dcfce7', color: '#15803d' },
   OCCUPIED:       { label: 'Occupied',       bg: '#dbeafe', color: '#1d4ed8' },
@@ -33,7 +34,7 @@ const SPACE_TYPE_LABEL: Record<SpaceType, string> = {
 };
 
 function formatPrice(space: Space): string {
-  const sym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const sym = space.currency === 'EUR' ? '�' : space.currency === 'GBP' ? '�' : '$';
   if (space.price_per_month) return `${sym}${parseFloat(space.price_per_month).toLocaleString()}/mo`;
   if (space.price_per_day)   return `${sym}${parseFloat(space.price_per_day).toLocaleString()}/day`;
   if (space.price_per_hour)  return `${sym}${parseFloat(space.price_per_hour).toLocaleString()}/hr`;
@@ -70,35 +71,37 @@ const CARD: React.CSSProperties = {
   boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
 };
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 export default function SiteDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const gmbReturn = searchParams.get('gmb');
   const { user } = useAuthStore();
-  const isAdmin  = user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role);
+  const isAdmin  = user?.role && ['SUPER_ADMIN', 'MANAGER'].includes(user.role);
 
   const chartRef  = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<any>(null);
 
-  // ── Modal state ──
+  // -- Modal state --
   const [showAddBuilding, setShowAddBuilding] = useState(false);
   const [addFloorFor,     setAddFloorFor]     = useState<{ id: string; name: string } | null>(null);
 
-  // ── Fetch site ──
+  // -- Fetch site --
   const { data: site, isLoading, isError, refetch } = useQuery({
     queryKey: ['site', id],
     queryFn:  () => siteApi.getOne(id!).then(r => r.data),
     enabled:  !!id,
   });
 
-  // ── Fetch occupancy rate ──
+  // -- Fetch occupancy rate --
   const { data: occupancy } = useQuery({
     queryKey: ['site-occupancy', id],
     queryFn:  () => siteApi.getOccupancyRate(id!).then(r => r.data),
     enabled:  !!id,
   });
 
-  // ── Draw doughnut chart ──
+  // -- Draw doughnut chart --
   useEffect(() => {
     if (!site || !chartRef.current) return;
     const allSpaces = getAllSpaces(site);
@@ -158,9 +161,9 @@ export default function SiteDetailPage() {
   const occColor       = occRate >= 80 ? '#22c55e' : occRate >= 60 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, minHeight: '100%' }}>
 
-      {/* ── Modals ── */}
+      {/* -- Modals -- */}
       {showAddBuilding && (
         <AddBuildingModal
           siteId={site.id}
@@ -176,7 +179,11 @@ export default function SiteDetailPage() {
         />
       )}
 
-      {/* ── Header ── */}
+      {isAdmin && id && (
+        <GoogleBusinessPanel siteId={id} oauthReturn={gmbReturn} />
+      )}
+
+      {/* -- Header -- */}
       <div style={{ ...CARD, padding: '18px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -202,8 +209,8 @@ export default function SiteDetailPage() {
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <EnvironmentOutlined style={{ fontSize: 11 }} /> {site.city}, {site.country}
                   </span>
-                  <span>🕐 {site.timezone}</span>
-                  <span>💱 {site.currency}</span>
+                  <span>?? {site.timezone}</span>
+                  <span>?? {site.currency}</span>
                 </p>
               </div>
             </div>
@@ -218,7 +225,7 @@ export default function SiteDetailPage() {
                 <button style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <EditOutlined /> Edit Branch
                 </button>
-                {/* ✅ WIRED UP */}
+                {/* ? WIRED UP */}
                 <button
                   onClick={() => setShowAddBuilding(true)}
                   style={{ padding: '9px 18px', background: '#2563eb', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px rgba(37,99,235,0.25)' }}
@@ -247,14 +254,14 @@ export default function SiteDetailPage() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* -- Tabs -- */}
       <div style={CARD}>
         <Tabs
           defaultActiveKey="overview"
           style={{ padding: '0 24px' }}
           items={[
 
-            // ── Overview ──────────────────────────────────────────
+            // -- Overview ------------------------------------------
             {
               key: 'overview',
               label: 'Overview',
@@ -281,7 +288,7 @@ export default function SiteDetailPage() {
 
                         {!site.buildings?.length ? (
                           <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
-                            <div style={{ fontSize: 32, marginBottom: 10 }}>🏗</div>
+                            <div style={{ fontSize: 32, marginBottom: 10 }}>??</div>
                             <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 500 }}>No buildings yet</p>
                             {isAdmin && (
                               <button
@@ -304,15 +311,15 @@ export default function SiteDetailPage() {
                                 <div>
                                   <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{b.name}</div>
                                   <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                                    Code: {b.code} · {b.floors_count} floors · {parseFloat(b.total_area_sqm).toLocaleString()} m²
-                                    {b.year_built && ` · Built ${b.year_built}`}
+                                    Code: {b.code} � {b.floors_count} floors � {parseFloat(b.total_area_sqm).toLocaleString()} m�
+                                    {b.year_built && ` � Built ${b.year_built}`}
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                   <span style={{ background: b.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9', color: b.status === 'ACTIVE' ? '#15803d' : '#475569', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
                                     {b.status}
                                   </span>
-                                  {/* ✅ Add Floor button per building */}
+                                  {/* ? Add Floor button per building */}
                                   {isAdmin && (
                                     <button
                                       onClick={() => setAddFloorFor({ id: b.id, name: b.name })}
@@ -324,19 +331,19 @@ export default function SiteDetailPage() {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-                                <span>🏢 {bSpaces.length} spaces</span>
-                                <span style={{ color: '#15803d' }}>✅ {bAvail} available</span>
-                                <span style={{ color: bOccColor }}>📊 {bOccRate}% occupied</span>
+                                <span>?? {bSpaces.length} spaces</span>
+                                <span style={{ color: '#15803d' }}>? {bAvail} available</span>
+                                <span style={{ color: bOccColor }}>?? {bOccRate}% occupied</span>
                               </div>
                               {/* Floor pills */}
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                                 {b.floors && b.floors.length > 0 ? b.floors.map((f: Floor) => (
                                   <span key={f.id} style={{ background: '#f1f5f9', color: '#374151', fontSize: 11, padding: '3px 8px', borderRadius: 6 }}>
-                                    Floor {f.floor_number} — {f.name} · {f.spaces?.length ?? 0} spaces
+                                    Floor {f.floor_number} � {f.name} � {f.spaces?.length ?? 0} spaces
                                   </span>
                                 )) : (
                                   <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>
-                                    No floors yet — click "Add Floor" to get started
+                                    No floors yet � click "Add Floor" to get started
                                   </span>
                                 )}
                               </div>
@@ -415,7 +422,7 @@ export default function SiteDetailPage() {
               ),
             },
 
-            // ── All Spaces ────────────────────────────────────────
+            // -- All Spaces ----------------------------------------
             {
               key: 'spaces',
               label: <Badge count={allSpaces.length} size="small" color="#2563eb">All Spaces</Badge>,
@@ -446,7 +453,7 @@ export default function SiteDetailPage() {
                             </div>
                             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{SPACE_TYPE_LABEL[space.type]}</div>
                             <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
-                              <span>📐 {parseFloat(space.area_sqm).toFixed(0)} m²</span>
+                              <span>?? {parseFloat(space.area_sqm).toFixed(0)} m�</span>
                               <span><TeamOutlined style={{ marginRight: 3, fontSize: 11 }} />{space.capacity}</span>
                             </div>
                             <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>{formatPrice(space)}</div>
@@ -459,7 +466,7 @@ export default function SiteDetailPage() {
               ),
             },
 
-            // ── Floor Plans ───────────────────────────────────────
+            // -- Floor Plans ---------------------------------------
             {
               key: 'floors',
               label: 'Floor Plans',
@@ -480,7 +487,7 @@ export default function SiteDetailPage() {
                   ) : site.buildings.map((b: Building) => (
                     <div key={b.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '18px 20px', marginBottom: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>🏗 {b.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>?? {b.name}</div>
                         {isAdmin && (
                           <button
                             onClick={() => setAddFloorFor({ id: b.id, name: b.name })}
@@ -499,7 +506,7 @@ export default function SiteDetailPage() {
                               Floor {f.floor_number}
                             </span>
                             <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>{f.name}</span>
-                            <span style={{ fontSize: 12, color: '#94a3b8' }}>{parseFloat(f.area_sqm).toFixed(0)} m²</span>
+                            <span style={{ fontSize: 12, color: '#94a3b8' }}>{parseFloat(f.area_sqm).toFixed(0)} m�</span>
                             <span style={{ fontSize: 12, color: '#64748b' }}>{f.spaces?.length ?? 0} spaces</span>
                           </div>
                           {f.spaces && f.spaces.length > 0 ? (
@@ -513,7 +520,7 @@ export default function SiteDetailPage() {
                                     onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
                                     onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                                     onClick={() => navigate(`/admin/spaces/${space.id}`)}
-                                    title={`${space.name} — ${sm.label}`}
+                                    title={`${space.name} � ${sm.label}`}
                                   >
                                     <div style={{ fontSize: 10, fontWeight: 700, color: sm.color }}>{space.code}</div>
                                     <div style={{ fontSize: 9, color: sm.color, marginTop: 1, opacity: 0.8 }}>{sm.label}</div>

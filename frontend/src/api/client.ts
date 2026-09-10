@@ -1,64 +1,124 @@
 ﻿import axios, { AxiosError } from 'axios';
-import { useAuthStore } from '../store/authStore';
+import type { User } from '../types';
+import { getIsRestoringSession, getRefreshInFlight, setRefreshInFlight } from '../store/authSession';
+import {
+  clearAuthStorage,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  readStoredUser,
+  writeStoredUser,
+  writeTokens,
+} from '../store/authStorage';
+
+/** In dev, use Vite proxy (relative URLs). Override with VITE_API_URL if needed. */
+export const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ??
+  ((import.meta as any).env?.DEV ? '' : 'http://localhost:6001');
+
+export const unwrapApiPayload = (payload: any) => {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'success' in payload &&
+    'data' in payload
+  ) {
+    return payload.data;
+  }
+  return payload;
+};
+
+/** Normalize list endpoints (axios response or bare array). */
+export function listFromApi<T>(res: unknown): T[] {
+  const payload =
+    res && typeof res === 'object' && res !== null && 'data' in res
+      ? (res as { data: unknown }).data
+      : res;
+  return Array.isArray(payload) ? (payload as T[]) : [];
+}
 
 export const api = axios.create({
-  baseURL: 'http://localhost:6001',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 10000,
 });
 
-// â”€â”€ Attach JWT to every request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/** One refresh at a time — parallel 401s must not invalidate the session. */
+async function refreshAccessToken(): Promise<string | null> {
+  const inFlight = getRefreshInFlight();
+  if (inFlight) return inFlight;
+
+  const refresh = getStoredRefreshToken();
+  if (!refresh) return null;
+
+  const promise = (async () => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken: refresh });
+      const payload = unwrapApiPayload(res.data) as {
+        accessToken?: string;
+        refreshToken?: string;
+        user?: User;
+      };
+      const newToken = payload?.accessToken;
+      if (!newToken) return null;
+      writeTokens(newToken, payload.refreshToken ?? refresh);
+      if (payload.user?.id) writeStoredUser(payload.user);
+      return newToken;
+    } catch {
+      return null;
+    } finally {
+      setRefreshInFlight(null);
+    }
+  })();
+
+  setRefreshInFlight(promise);
+  return promise;
+}
+
 api.interceptors.request.use((config) => {
-  // authStore uses access_token (not accessToken)
-  const state = useAuthStore.getState() as any;
-  const token = state.access_token ?? localStorage.getItem('access_token') ?? null;
+  const token = getStoredAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// â”€â”€ Handle errors + auto refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    res.data = unwrapApiPayload(res.data);
+    return res;
+  },
   async (error: AxiosError) => {
     const req = error.config as any;
 
-    // Auto-refresh on 401
-    if (error.response?.status === 401 && !req._retry) {
+    if (error.response?.status === 401 && req && !req._retry) {
       req._retry = true;
-      try {
-        // refreshToken is stored in localStorage by authStore.login()
-        const refresh = localStorage.getItem('refresh_token');
-        if (refresh) {
-          const res = await axios.post(
-            'http://localhost:6001/auth/refresh-token',
-            { refreshToken: refresh },
-          );
-          const newToken = res.data.accessToken;
-          localStorage.setItem('access_token', newToken);
-          // Update store
-          const state = useAuthStore.getState() as any;
-          if (state.setUser && res.data.user) state.setUser(res.data.user);
-          req.headers.Authorization = `Bearer ${newToken}`;
-          return api(req);
-        }
-      } catch {
-        // Refresh failed â†’ logout
-        const state = useAuthStore.getState() as any;
-        if (state.logout) state.logout();
-        window.location.href = '/login';
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        req.headers.Authorization = `Bearer ${newToken}`;
+        return api(req);
+      }
+
+      if (!getIsRestoringSession()) {
+        clearAuthStorage();
+        window.dispatchEvent(new Event('auth:session-expired'));
       }
     }
 
-    // Build readable error message
     let message = 'Something went wrong. Please try again.';
-    const data  = error.response?.data as any;
+    if (!error.response) {
+      const code = (error as AxiosError & { code?: string }).code;
+      if (code === 'ERR_NETWORK' || code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+        message = `Cannot reach the API. Start the backend: cd backend && npm run start:dev`;
+      }
+    }
+    const data = error.response?.data as any;
     if (data) {
-      if (typeof data === 'string' && data.length < 300)  message = data;
+      if (typeof data === 'string' && data.length < 300) message = data;
       else if (data?.message) message = Array.isArray(data.message) ? data.message[0] : String(data.message);
-      else if (data?.error)   message = String(data.error);
+      else if (data?.error) message = String(data.error);
     }
     (error as any).userMessage = message;
 
     return Promise.reject(error);
-  }
+  },
 );
 
+export default api;

@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTheme } from '../../hooks/usePageTheme';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input, Select, Skeleton, Empty } from 'antd';
 import {
@@ -32,18 +33,6 @@ function getSiteStats(site: Site) {
   return { totalSpaces, availableSpaces };
 }
 
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-};
-
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb',
-  borderRadius: 8, fontSize: 13, color: '#0f172a', outline: 'none',
-  background: '#fff', boxSizing: 'border-box',
-};
-
 const TIMEZONES = [
   { value: 'UTC',                  label: 'UTC'                  },
   { value: 'America/New_York',     label: 'New York (EST)'       },
@@ -69,6 +58,8 @@ const CURRENCIES = [
 interface AddSiteModalProps { onClose: () => void; tenantId: string; }
 
 function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
+
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   const qc = useQueryClient();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -120,15 +111,15 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+      <div style={{ background: th.cardBg, borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
 
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${th.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>Add New Branch</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Step {step + 1} of 3 — {steps[step]}</p>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: th.text }}>Add New Branch</h2>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: th.textSub }}>Step {step + 1} of 3 — {steps[step]}</p>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}>
             <CloseOutlined style={{ fontSize: 13 }} />
           </button>
         </div>
@@ -152,21 +143,21 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
           {step === 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>
                   Branch Name <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input style={{ ...INPUT, borderColor: errors.name ? '#ef4444' : '#e5e7eb' }} placeholder="e.g. Manhattan Downtown" value={form.name} onChange={e => setF('name', e.target.value)} />
                 {errors.name && <span style={{ fontSize: 11, color: '#ef4444', marginTop: 3, display: 'block' }}>{errors.name}</span>}
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>
                   Branch Code <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input style={{ ...INPUT, borderColor: errors.code ? '#ef4444' : '#e5e7eb', textTransform: 'uppercase', fontFamily: 'monospace' }} placeholder="e.g. NYC" value={form.code} onChange={e => setF('code', e.target.value)} />
                 {errors.code && <span style={{ fontSize: 11, color: '#ef4444', marginTop: 3, display: 'block' }}>{errors.code}</span>}
               </div>
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Status</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>Status</label>
                 <Select value={form.status} onChange={v => setF('status', v)} style={{ width: '100%' }}
                   options={[{ value: 'ACTIVE', label: '✅ Active' }, { value: 'INACTIVE', label: '⏸ Inactive' }]} />
               </div>
@@ -176,14 +167,14 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
           {step === 1 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>
                   City <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input style={{ ...INPUT, borderColor: errors.city ? '#ef4444' : '#e5e7eb' }} placeholder="e.g. New York" value={form.city} onChange={e => setF('city', e.target.value)} />
                 {errors.city && <span style={{ fontSize: 11, color: '#ef4444', marginTop: 3, display: 'block' }}>{errors.city}</span>}
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>
                   Country <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input style={{ ...INPUT, borderColor: errors.country ? '#ef4444' : '#e5e7eb' }} placeholder="e.g. USA" value={form.country} onChange={e => setF('country', e.target.value)} />
@@ -195,11 +186,11 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
           {step === 2 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Timezone</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>Timezone</label>
                 <Select value={form.timezone} onChange={v => setF('timezone', v)} style={{ width: '100%' }} options={TIMEZONES} />
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Currency</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 4 }}>Currency</label>
                 <Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={CURRENCIES} />
               </div>
             </div>
@@ -207,10 +198,10 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${th.divider}`, display: 'flex', justifyContent: 'space-between' }}>
           <button
             onClick={() => { if (step > 0) setStep(s => s - 1); else onClose(); }}
-            style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}
+            style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: th.text }}
           >
             {step > 0 ? '← Back' : 'Cancel'}
           </button>
@@ -229,6 +220,7 @@ function AddSiteModal({ onClose, tenantId }: AddSiteModalProps) {
 
 // ─── Edit Site Modal ──────────────────────────────────────────────────────────
 function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     name: site.name,
@@ -266,32 +258,32 @@ function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
+      <div style={{ background: th.cardBg, borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Edit Site</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>Update site information</p>
+            <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: th.text }}>Edit Site</h2>
+            <p style={{ margin: 0, fontSize: 13, color: th.textSub }}>Update site information</p>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}>
             <CloseOutlined />
           </button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Site Name *</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Site Name *</label>
             <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.name ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.name} onChange={e => setF('name', e.target.value)} />
             {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>City *</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>City *</label>
               <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.city ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.city} onChange={e => setF('city', e.target.value)} />
               {errors.city && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.city}</div>}
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Country *</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Country *</label>
               <input type="text" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.country ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.country} onChange={e => setF('country', e.target.value)} />
               {errors.country && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.country}</div>}
             </div>
@@ -299,8 +291,8 @@ function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Currency</label>
-              <select style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} value={form.currency} onChange={e => setF('currency', e.target.value)}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Currency</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: `1px solid ${th.cardBorder}`, borderRadius: 8, fontSize: 13 }} value={form.currency} onChange={e => setF('currency', e.target.value)}>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
                 <option value="GBP">GBP</option>
@@ -308,8 +300,8 @@ function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Status</label>
-              <select style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} value={form.status} onChange={e => setF('status', e.target.value)}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Status</label>
+              <select style={{ width: '100%', padding: '9px 12px', border: `1px solid ${th.cardBorder}`, borderRadius: 8, fontSize: 13 }} value={form.status} onChange={e => setF('status', e.target.value)}>
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
               </select>
@@ -318,7 +310,7 @@ function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <button onClick={onClose} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}>Cancel</button>
+          <button onClick={onClose} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: th.text }}>Cancel</button>
           <button onClick={submit} disabled={mutation.isPending} style={{ flex: 1, padding: '9px 20px', borderRadius: 8, background: mutation.isPending ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             {mutation.isPending ? 'Saving...' : 'Save Changes'}
           </button>
@@ -330,6 +322,8 @@ function EditSiteModal({ site, onClose }: { site: Site; onClose: () => void }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SitesPage() {
+
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   const navigate  = useNavigate();
   const qc        = useQueryClient();
   const { user }  = useAuthStore();
@@ -343,7 +337,7 @@ export default function SitesPage() {
 
   const { data: sitesRaw = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['sites', tenantId],
-    queryFn:  () => siteApi.getAll(tenantId || undefined).then(r => r.data),
+    queryFn:  () => siteApi.getAll(tenantId || undefined),
   });
   const sites: Site[] = Array.isArray(sitesRaw) ? sitesRaw : [];
 
@@ -382,7 +376,7 @@ export default function SitesPage() {
   // ── FIX: wrap in a fragment so EditSiteModal is a sibling of the main div ──
   return (
     <>
-      <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+      <div style={{ padding: 24, minHeight: '100%' }}>
 
         {addOpen && <AddSiteModal onClose={() => setAdd(false)} tenantId={tenantId} />}
 
@@ -390,14 +384,14 @@ export default function SitesPage() {
         <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
             <div>
-              <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#0f172a' }}>Branch Overview Dashboard</h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>Monitor occupancy, availability and maintenance across all locations</p>
+              <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: th.text }}>Branch Overview Dashboard</h2>
+              <p style={{ margin: 0, color: th.textSub, fontSize: 14 }}>Monitor occupancy, availability and maintenance across all locations</p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => refetch()} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151' }}>
+              <button onClick={() => refetch()} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: th.text }}>
                 <ReloadOutlined /> Refresh
               </button>
-              <button style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151' }}>
+              <button style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: th.text }}>
                 <DownloadOutlined /> Export
               </button>
               <button onClick={() => setAdd(true)} style={{ padding: '9px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px rgba(37,99,235,0.25)' }}>
@@ -409,11 +403,11 @@ export default function SitesPage() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
             {STATS.map(s => (
-              <div key={s.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px' }}>
+              <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <p style={{ margin: '0 0 3px', fontSize: 11, color: '#64748b', fontWeight: 500 }}>{s.label}</p>
-                    <p style={{ margin: '0 0 3px', fontSize: 26, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
+                    <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub, fontWeight: 500 }}>{s.label}</p>
+                    <p style={{ margin: '0 0 3px', fontSize: 26, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
                     <p style={{ margin: 0, fontSize: 11, color: s.color }}>{s.sub}</p>
                   </div>
                   <div style={{ width: 36, height: 36, borderRadius: 9, background: s.bg }} />
@@ -426,7 +420,7 @@ export default function SitesPage() {
         {/* Toolbar */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           <Input
-            prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+            prefix={<SearchOutlined style={{ color: th.textMuted }} />}
             placeholder="Search by name or city..."
             value={q}
             onChange={e => setQ(e.target.value)}
@@ -443,10 +437,10 @@ export default function SitesPage() {
               { value: 'CLOSED',   label: '🔒 Closed'   },
             ]}
           />
-          <div style={{ marginLeft: 'auto', fontSize: 13, color: '#64748b' }}>
-            Showing <strong style={{ color: '#0f172a' }}>{filtered.length}</strong> of {sites.length} branches
+          <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
+            Showing <strong style={{ color: th.text }}>{filtered.length}</strong> of {sites.length} branches
           </div>
-          <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', border: `1px solid ${th.cardBorder}`, borderRadius: 8, overflow: 'hidden' }}>
             <button onClick={() => setView('card')}  style={{ padding: '7px 12px', background: view === 'card'  ? '#2563eb' : '#fff', color: view === 'card'  ? '#fff' : '#64748b', border: 'none', cursor: 'pointer' }}><AppstoreOutlined /></button>
             <button onClick={() => setView('table')} style={{ padding: '7px 12px', background: view === 'table' ? '#2563eb' : '#fff', color: view === 'table' ? '#fff' : '#64748b', border: 'none', cursor: 'pointer' }}><UnorderedListOutlined /></button>
           </div>
@@ -456,7 +450,7 @@ export default function SitesPage() {
         {isError && (
           <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
-            <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load branches</div>
+            <div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load branches</div>
             <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button>
           </div>
         )}
@@ -509,7 +503,7 @@ export default function SitesPage() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>{site.name}</div>
-                        <div style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontSize: 12, color: th.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <EnvironmentOutlined style={{ fontSize: 10 }} /> {site.city}, {site.country}
                         </div>
                       </div>
@@ -524,7 +518,7 @@ export default function SitesPage() {
                     {totalSpaces > 0 && (
                       <div style={{ marginBottom: 14 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
-                          <span style={{ color: '#64748b' }}>Occupancy</span>
+                          <span style={{ color: th.textSub }}>Occupancy</span>
                           <span style={{ fontWeight: 700, color: occColor }}>{occupancy}%</span>
                         </div>
                         <div style={{ height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
@@ -540,27 +534,27 @@ export default function SitesPage() {
                         { label: 'Spaces',    value: totalSpaces,                  icon: '🏢' },
                         { label: 'Available', value: availableSpaces,              icon: '✅' },
                       ].map(st => (
-                        <div key={st.label} style={{ background: '#f8fafc', borderRadius: 8, padding: 8, textAlign: 'center' }}>
+                        <div key={st.label} style={{ background: th.tableHead, borderRadius: 8, padding: 8, textAlign: 'center' }}>
                           <div style={{ fontSize: 14 }}>{st.icon}</div>
-                          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{st.value}</div>
-                          <div style={{ fontSize: 10, color: '#94a3b8' }}>{st.label}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: th.text, lineHeight: 1.2 }}>{st.value}</div>
+                          <div style={{ fontSize: 10, color: th.textMuted }}>{st.label}</div>
                         </div>
                       ))}
                     </div>
 
                     {/* Manager */}
                     {site.manager && (
-                      <div style={{ padding: '8px 10px', background: '#f8fafc', borderRadius: 8, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <div style={{ padding: '8px 10px', background: th.tableHead, borderRadius: 8, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                           {site.manager.first_name?.[0]}{site.manager.last_name?.[0]}
                         </div>
-                        <span style={{ color: '#374151', fontWeight: 500 }}>{site.manager.first_name} {site.manager.last_name}</span>
-                        <span style={{ color: '#94a3b8', marginLeft: 'auto' }}>Manager</span>
+                        <span style={{ color: th.text, fontWeight: 500 }}>{site.manager.first_name} {site.manager.last_name}</span>
+                        <span style={{ color: th.textMuted, marginLeft: 'auto' }}>Manager</span>
                       </div>
                     )}
 
                     {/* Meta */}
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 14, fontSize: 11, color: '#94a3b8', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 14, fontSize: 11, color: th.textMuted, flexWrap: 'wrap' }}>
                       <span>🕐 {site.timezone}</span>
                       <span>💱 {site.currency}</span>
                       <span>📅 {new Date(site.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
@@ -582,7 +576,7 @@ export default function SitesPage() {
         {/* Table view */}
         {!isLoading && !isError && filtered.length > 0 && view === 'table' && (
           <div style={{ ...CARD, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 0.8fr 1fr', padding: '12px 20px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 0.8fr 1fr', padding: '12px 20px', background: th.tableHead, borderBottom: `1px solid ${th.cardBorder}`, fontSize: 11, fontWeight: 600, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <span>Branch</span><span>City</span><span>Status</span><span>Buildings</span><span>Spaces</span><span>Currency</span><span>Actions</span>
             </div>
             {filtered.map((site, i) => {
@@ -591,24 +585,24 @@ export default function SitesPage() {
               return (
                 <div
                   key={site.id}
-                  style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 0.8fr 1fr', padding: '14px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f8fafc' : 'none', alignItems: 'center', transition: 'background 0.1s', cursor: 'pointer' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                  style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 0.8fr 1fr', padding: '14px 20px', borderBottom: i < filtered.length - 1 ? `1px solid ${th.divider}` : 'none', alignItems: 'center', transition: 'background 0.1s', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = th.hover)}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 8, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: '#fff', flexShrink: 0 }}>{site.code}</div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{site.name}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{site.country}</div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: th.text }}>{site.name}</div>
+                      <div style={{ fontSize: 11, color: th.textMuted }}>{site.country}</div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 13, color: '#374151' }}>{site.city}</span>
+                  <span style={{ fontSize: 13, color: th.text }}>{site.city}</span>
                   <span style={{ background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-block' }}>{sm.label}</span>
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{site.buildings?.length ?? 0}</span>
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{totalSpaces}</span>
-                  <span style={{ fontSize: 13, color: '#64748b' }}>{site.currency}</span>
+                  <span style={{ fontSize: 13, color: th.textSub }}>{site.currency}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => navigate(`/admin/sites/${site.id}`)} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}><EyeOutlined style={{ fontSize: 12 }} /></button>
+                    <button onClick={() => navigate(`/admin/sites/${site.id}`)} style={{ width: 30, height: 30, borderRadius: 6, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}><EyeOutlined style={{ fontSize: 12 }} /></button>
                     <button onClick={() => setEditingSite(site)} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #fbbf24', background: '#fffbeb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><EditOutlined style={{ fontSize: 12, color: '#f59e0b' }} /></button>
                     <button onClick={() => { if (window.confirm(`Delete ${site.name}?`)) deleteMut.mutate(site.id); }} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><DeleteOutlined style={{ fontSize: 12, color: '#dc2626' }} /></button>
                   </div>

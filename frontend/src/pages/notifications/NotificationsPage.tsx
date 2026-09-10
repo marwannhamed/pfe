@@ -1,12 +1,15 @@
 ﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select, Skeleton, Empty, message } from 'antd';
+import { Select, Skeleton, Empty } from 'antd';
+import { message } from '../../utils/feedback';
 import {
   BellOutlined, CheckCircleOutlined, DeleteOutlined,
   ReloadOutlined, CheckOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import { notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import PageShell from '../../components/ui/PageShell';
+import { usePageTheme } from '../../hooks/usePageTheme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -45,6 +48,7 @@ const TYPE_META: Record<string, { icon: string; color: string; bg: string; label
   MAINTENANCE_CREATED: { icon: '🔧', color: '#7c3aed', bg: '#f5f3ff', label: 'Maintenance Ticket'  },
   MAINTENANCE_UPDATED: { icon: '🛠️', color: '#7c3aed', bg: '#f5f3ff', label: 'Maintenance Update'  },
   MAINTENANCE_RESOLVED:{ icon: '✅', color: '#059669', bg: '#f0fdf4', label: 'Issue Resolved'      },
+  LOGIN_SUCCESS:       { icon: '🔐', color: '#2563eb', bg: '#eff6ff', label: 'Login'               },
   SYSTEM:              { icon: '🔔', color: '#64748b', bg: '#f8fafc', label: 'System'              },
   GENERAL:             { icon: '📢', color: '#64748b', bg: '#f8fafc', label: 'General'             },
 };
@@ -122,6 +126,7 @@ function NotifItem({ notif, onRead, onDelete }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
+  const { card, headerCard, btnIcon, tableHead, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const { user } = useAuthStore();
   const userId   = user?.id ?? '';
@@ -137,6 +142,7 @@ export default function NotificationsPage() {
       ...(typeFilt  ? { type:   typeFilt  } : {}),
       ...(readFilt  ? { isRead: readFilt  } : {}),
     }).then(r => r.data),
+    enabled:  !!userId,
     refetchInterval: 30000, // auto-refresh every 30s
   });
 
@@ -149,17 +155,26 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notif-count'] });
     },
-    onError: () => message.error('Failed'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to mark as read';
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg);
+    },
   });
 
   const readAllMut = useMutation({
-    mutationFn: () => notificationApi.markAllRead(userId),
+    mutationFn: () => {
+      if (!userId) return Promise.reject(new Error('Not signed in'));
+      return notificationApi.markAllRead(userId);
+    },
     onSuccess:  () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notif-count'] });
       message.success('All notifications marked as read');
     },
-    onError: () => message.error('Failed'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to mark all as read';
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg);
+    },
   });
 
   const deleteMut = useMutation({
@@ -168,7 +183,10 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notif-count'] });
     },
-    onError: () => message.error('Failed to delete'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to delete';
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg);
+    },
   });
 
   // ── Stats ──────────────────────────────────────────────────────────────────
@@ -193,35 +211,33 @@ export default function NotificationsPage() {
 
   const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'This Month', 'Older'];
 
-  const CARD: React.CSSProperties = { background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' };
-
   // All unique types for filter
   const allTypes = Array.from(new Set(notifs.map(n => n.type))).filter(Boolean);
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <PageShell>
 
       {/* Header */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '20px 24px', marginBottom: 20 }}>
+      <div style={headerCard}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: th.text, display: 'flex', alignItems: 'center', gap: 10 }}>
               <BellOutlined />
               Notifications
               {unread > 0 && (
                 <span style={{ background: '#ef4444', color: '#fff', fontSize: 12, fontWeight: 800, padding: '2px 10px', borderRadius: 20, lineHeight: 1.4 }}>{unread} new</span>
               )}
             </h2>
-            <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>Stay updated on bookings, contracts, invoices and more</p>
+            <p style={{ margin: 0, color: th.textSub, fontSize: 14 }}>Stay updated on bookings, contracts, invoices and more</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => refetch()} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
+            <button onClick={() => refetch()} style={{ ...btnIcon, padding: '8px 12px' }}>
               <ReloadOutlined />
             </button>
             {unread > 0 && (
               <button
                 onClick={() => readAllMut.mutate()}
-                disabled={readAllMut.isPending}
+                disabled={readAllMut.isPending || !userId}
                 style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #bbf7d0', background: '#f0fdf4', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#15803d', display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <CheckCircleOutlined /> Mark all as read
@@ -238,7 +254,7 @@ export default function NotificationsPage() {
             { label: 'Read',     value: total - unread,      color: '#059669', bg: '#f0fdf4', icon: '✅' },
             { label: 'Today',    value: (grouped['Today'] ?? []).length, color: '#7c3aed', bg: '#f5f3ff', icon: '📅' },
           ].map(s => (
-            <div key={s.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{s.label}</div>
@@ -270,14 +286,14 @@ export default function NotificationsPage() {
             ...allTypes.map(t => ({ value: t, label: `${getTypeMeta(t).icon} ${getTypeMeta(t).label}` })),
           ]}
         />
-        <div style={{ marginLeft: 'auto', fontSize: 13, color: '#64748b' }}>
-          <strong style={{ color: '#0f172a' }}>{total}</strong> notifications · <strong style={{ color: '#dc2626' }}>{unread}</strong> unread
+        <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
+          <strong style={{ color: th.text }}>{total}</strong> notifications · <strong style={{ color: '#dc2626' }}>{unread}</strong> unread
         </div>
       </div>
 
       {/* Error */}
       {isError && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '40px', textAlign: 'center' }}>
+        <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
           <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load notifications</div>
           <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
@@ -286,7 +302,7 @@ export default function NotificationsPage() {
 
       {/* Loading */}
       {isLoading && (
-        <div style={CARD}>
+        <div style={{ ...card, overflow: 'hidden' }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} style={{ padding: '16px 20px', borderBottom: i < 4 ? '1px solid #f8fafc' : 'none' }}>
               <Skeleton avatar active paragraph={{ rows: 1 }} />
@@ -297,10 +313,10 @@ export default function NotificationsPage() {
 
       {/* Empty */}
       {!isLoading && !isError && total === 0 && (
-        <div style={{ ...CARD, padding: '60px', textAlign: 'center' }}>
+        <div style={{ ...card, padding: '60px', textAlign: 'center' }}>
           <div style={{ fontSize: 56, marginBottom: 16 }}>🔔</div>
-          <div style={{ fontWeight: 700, fontSize: 16, color: '#0f172a', marginBottom: 8 }}>All caught up!</div>
-          <div style={{ color: '#64748b', fontSize: 14 }}>No notifications yet. We'll alert you when something important happens.</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: th.text, marginBottom: 8 }}>All caught up!</div>
+          <div style={{ color: th.textSub, fontSize: 14 }}>No notifications yet. We'll alert you when something important happens.</div>
         </div>
       )}
 
@@ -311,13 +327,13 @@ export default function NotificationsPage() {
             <div key={group}>
               {/* Group header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{group}</span>
-                <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: th.textSub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{group}</span>
+                <div style={{ flex: 1, height: 1, background: th.cardBorder }} />
                 <span style={{ fontSize: 11, color: '#94a3b8' }}>{grouped[group].length}</span>
               </div>
 
               {/* Items */}
-              <div style={CARD}>
+              <div style={{ ...card, overflow: 'hidden' }}>
                 {grouped[group].map((notif: any) => (
                   <NotifItem
                     key={notif.id}
@@ -331,6 +347,6 @@ export default function NotificationsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

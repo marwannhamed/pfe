@@ -1,18 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input, Select, Skeleton, Empty, message } from 'antd';
+import { Input, Select, Skeleton, Empty, Spin } from 'antd';
+import { message } from '../../utils/feedback';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { floorApi, buildingApi, siteApi } from '../../api/services';
+import { floorApi, buildingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Floor, Building, Site } from '../../types';
+import type { Floor, Building } from '../../types';
 import AddFloorModal from '../sites/AddFloorModal';
-
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-};
+import AddBuildingModal from '../sites/AddBuildingModal';
+import PageShell from '../../components/ui/PageShell';
+import { usePageTheme } from '../../hooks/usePageTheme';
+import { isClientOperatorRole, visibleClientBuildings } from '../../utils/propertyScope';
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   ACTIVE:           { bg: '#dcfce7', color: '#15803d' },
@@ -21,36 +20,37 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
 };
 
 export default function FloorsPage() {
+  const { card, headerCard, btnIcon, btnPrimary, t: th } = usePageTheme();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const isAdmin  = user?.role && ['SUPER_ADMIN', 'SITE_MANAGER'].includes(user.role);
+  const isAdmin  = user?.role && ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER'].includes(user.role);
 
   const [q,              setQ]           = useState('');
   const [buildingFilter, setBuildingFilter] = useState('');
   const [statusFilter,   setStatus]      = useState('');
   const [view,           setView]        = useState<'card' | 'list'>('card');
-  const [showAdd,        setShowAdd]     = useState(false);
-  const [addForBuilding, setAddForBuilding] = useState<{ id: string; name: string } | null>(null);
+  const [showAddFloor,     setShowAddFloor]     = useState(false);
+  const [showAddBuilding, setShowAddBuilding] = useState(false);
   const [editingFloor, setEditingFloor] = useState<Floor | null>(null);
 
-  // Fetch sites for context labels
-  const { data: sitesRaw } = useQuery({
-    queryKey: ['sites-for-floors'],
-    queryFn:  () => siteApi.getAll().then(r => r.data),
-  });
-  const sites: Site[] = Array.isArray(sitesRaw) ? sitesRaw : [];
+  const isClientOps = isClientOperatorRole(user?.role);
+  const tenantId = user?.tenant_id;
 
-  // Fetch buildings for filter dropdown
-  const { data: buildingsRaw } = useQuery({
-    queryKey: ['buildings-for-floors'],
-    queryFn:  () => buildingApi.getAll().then(r => r.data),
+  // Fetch buildings for filter dropdown + add-floor picker
+  const { data: buildingsRaw = [], isLoading: buildingsLoading, refetch: refetchBuildings } = useQuery({
+    queryKey: ['buildings-for-floors', isClientOps ? tenantId : 'all'],
+    queryFn:  () => buildingApi.getAll(isClientOps ? tenantId : undefined),
+    enabled:  !!user,
   });
-  const buildings: Building[] = Array.isArray(buildingsRaw) ? buildingsRaw : [];
+  const buildings: Building[] = useMemo(
+    () => visibleClientBuildings(Array.isArray(buildingsRaw) ? buildingsRaw : []),
+    [buildingsRaw],
+  );
 
   // Fetch floors
   const { data: floorsRaw, isLoading, isError, refetch } = useQuery({
     queryKey: ['floors-page', buildingFilter],
-    queryFn:  () => floorApi.getAll(buildingFilter || undefined).then(r => r.data),
+    queryFn:  () => floorApi.getAll(buildingFilter || undefined),
   });
   const floors: Floor[] = Array.isArray(floorsRaw) ? floorsRaw : [];
 
@@ -62,6 +62,7 @@ export default function FloorsPage() {
     onSuccess: () => {
       message.success('Floor deleted successfully');
       qc.invalidateQueries({ queryKey: ['floors-page'] });
+      qc.invalidateQueries({ queryKey: ['spaces'] });
     },
     onError: (err: unknown) => {
       const msg = (err as any)?.response?.data?.message ?? 'Failed to delete floor';
@@ -89,18 +90,40 @@ export default function FloorsPage() {
     totalSpaces: floors.reduce((acc, f) => acc + (f.spaces?.length ?? 0), 0),
   };
 
-  // ✅ FIXED: always go through PickBuildingModal
-  const openAdd = () => setShowAdd(true);
+  const openAdd = () => {
+    if (buildingsLoading) {
+      message.info('Loading your buildings…');
+      return;
+    }
+    if (buildings.length === 0) {
+      setShowAddBuilding(true);
+      return;
+    }
+    setShowAddFloor(true);
+  };
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <PageShell>
 
-      {/* ✅ Only render AddFloorModal when we have a valid buildingId */}
-      {addForBuilding?.id && (
+      {showAddBuilding && (
+        <AddBuildingModal
+          onClose={async () => {
+            setShowAddBuilding(false);
+            const { data: refreshed } = await refetchBuildings();
+            const list = visibleClientBuildings(Array.isArray(refreshed) ? refreshed : []);
+            if (list.length > 0) {
+              setShowAddFloor(true);
+            }
+          }}
+        />
+      )}
+
+      {showAddFloor && (
         <AddFloorModal
-          buildingId={addForBuilding.id}
-          buildingName={addForBuilding.name}
-          onClose={() => { setAddForBuilding(null); refetch(); }}
+          buildings={buildings}
+          defaultBuildingId={buildingFilter || undefined}
+          onClose={() => { setShowAddFloor(false); refetch(); }}
+          onAddBuilding={() => { setShowAddFloor(false); setShowAddBuilding(true); }}
         />
       )}
 
@@ -112,33 +135,23 @@ export default function FloorsPage() {
         />
       )}
 
-      {/* ✅ PickBuildingModal — always go here first, hide once building picked */}
-      {showAdd && !addForBuilding && (
-        <PickBuildingModal
-          buildings={buildings}
-          sites={sites}
-          onPick={b => { setShowAdd(false); setAddForBuilding({ id: b.id, name: b.name }); }}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
-
       {/* Header */}
-      <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>
+      <div style={headerCard}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#0f172a' }}>Floors</h2>
-            <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>
-              {isLoading ? 'Loading...' : `${floors.length} floors across all buildings`}
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: th.text }}>Floors</h2>
+            <p style={{ margin: 0, color: th.textSub, fontSize: 14 }}>
+              {isLoading ? 'Loading...' : `${floors.length} floor${floors.length === 1 ? '' : 's'} you manage`}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => refetch()} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151' }}>
+            <button onClick={() => refetch()} style={{ ...btnIcon }}>
               <ReloadOutlined /> Refresh
             </button>
             {isAdmin && (
               <button
                 onClick={openAdd}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.25)' }}
+                style={btnPrimary}
               >
                 <PlusOutlined /> Add Floor
               </button>
@@ -155,11 +168,11 @@ export default function FloorsPage() {
             { label: 'Renovation',    value: counts.renovation,  color: '#d97706', bg: '#fffbeb', icon: '🔨' },
             { label: 'Total Spaces',  value: counts.totalSpaces, color: '#7c3aed', bg: '#f5f3ff', icon: '🏠' },
           ].map(s => (
-            <div key={s.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px' }}>
+            <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <p style={{ margin: '0 0 3px', fontSize: 11, color: '#64748b', fontWeight: 500 }}>{s.label}</p>
-                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
+                  <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub, fontWeight: 500 }}>{s.label}</p>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: th.text, lineHeight: 1 }}>
                     {isLoading ? '—' : s.value}
                   </p>
                 </div>
@@ -195,25 +208,25 @@ export default function FloorsPage() {
             { value: 'UNDER_RENOVATION',label: '🔨 Renovation'  },
           ]}
         />
-        <div style={{ marginLeft: 'auto', fontSize: 13, color: '#64748b' }}>
-          Showing <strong style={{ color: '#0f172a' }}>{filtered.length}</strong> of {floors.length}
+        <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
+          Showing <strong style={{ color: th.text }}>{filtered.length}</strong> of {floors.length}
         </div>
-        <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-          <button onClick={() => setView('card')} style={{ padding: '7px 12px', background: view === 'card' ? '#2563eb' : '#fff', color: view === 'card' ? '#fff' : '#64748b', border: 'none', cursor: 'pointer' }}><AppstoreOutlined /></button>
-          <button onClick={() => setView('list')} style={{ padding: '7px 12px', background: view === 'list' ? '#2563eb' : '#fff', color: view === 'list' ? '#fff' : '#64748b', border: 'none', cursor: 'pointer' }}><UnorderedListOutlined /></button>
+        <div style={{ display: 'flex', border: `1px solid ${th.cardBorder}`, borderRadius: 8, overflow: 'hidden' }}>
+          <button onClick={() => setView('card')} style={{ padding: '7px 12px', background: view === 'card' ? '#2563eb' : th.cardBg, color: view === 'card' ? '#fff' : th.textSub, border: 'none', cursor: 'pointer' }}><AppstoreOutlined /></button>
+          <button onClick={() => setView('list')} style={{ padding: '7px 12px', background: view === 'list' ? '#2563eb' : th.cardBg, color: view === 'list' ? '#fff' : th.textSub, border: 'none', cursor: 'pointer' }}><UnorderedListOutlined /></button>
         </div>
       </div>
 
       {isLoading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ ...CARD, padding: 20 }}><Skeleton active paragraph={{ rows: 3 }} /></div>
+            <div key={i} style={{ ...card, padding: 20 }}><Skeleton active paragraph={{ rows: 3 }} /></div>
           ))}
         </div>
       )}
 
       {isError && (
-        <div style={{ ...CARD, padding: 32, textAlign: 'center' }}>
+        <div style={{ ...card, padding: 32, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load floors</div>
           <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Try Again</button>
@@ -221,7 +234,7 @@ export default function FloorsPage() {
       )}
 
       {!isLoading && !isError && filtered.length === 0 && (
-        <div style={{ ...CARD, padding: 60, textAlign: 'center' }}>
+        <div style={{ ...card, padding: 60, textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🏢</div>
           <Empty description={floors.length === 0 ? 'No floors yet — add your first floor' : 'No floors match your filters'} />
           {isAdmin && floors.length === 0 && (
@@ -234,29 +247,29 @@ export default function FloorsPage() {
 
       {!isLoading && !isError && filtered.length > 0 && view === 'card' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {filtered.map(f => <FloorCard key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
+          {filtered.map(f => <FloorCard key={f.id} floor={f} buildings={buildings} onNavigate={() => navigate(`/admin/spaces?floorId=${f.id}`)} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
         </div>
       )}
 
       {!isLoading && !isError && filtered.length > 0 && view === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(f => <FloorRow key={f.id} floor={f} buildings={buildings} sites={sites} onNavigate={() => { const b = buildings.find(b => b.id === f.building_id); if (b) navigate(`/admin/sites/${b.site_id}`); }} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
+          {filtered.map(f => <FloorRow key={f.id} floor={f} buildings={buildings} onNavigate={() => navigate(`/admin/spaces?floorId=${f.id}`)} onEdit={() => setEditingFloor(f)} onDelete={() => handleDelete(f.id, f.name)} />)}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 
 // ─── Floor Card ───────────────────────────────────────────────────────────────
-function FloorCard({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
+function FloorCard({ floor: f, buildings, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { card, t: th } = usePageTheme();
   const ss       = STATUS_STYLE[f.status] ?? STATUS_STYLE.INACTIVE;
   const building = buildings.find(b => b.id === f.building_id);
-  const site     = building ? sites.find(s => s.id === building.site_id) : undefined;
   const spaceCount = f.spaces?.length ?? 0;
 
   return (
     <div
-      style={{ ...CARD, padding: 20, cursor: 'pointer', transition: 'all 0.2s' }}
+      style={{ ...card, padding: 20, cursor: 'pointer', transition: 'all 0.2s' }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
       onClick={onNavigate}
@@ -270,15 +283,14 @@ function FloorCard({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }:
         </span>
       </div>
 
-      <h3 style={{ margin: '0 0 3px', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{f.name}</h3>
-      <p style={{ margin: '0 0 6px', fontSize: 12, color: '#64748b' }}>Floor {f.floor_number}</p>
-      {building && <p style={{ margin: '0 0 3px', fontSize: 12, color: '#7c3aed', fontWeight: 500 }}>🏗 {building.name}</p>}
-      {site     && <p style={{ margin: '0 0 12px', fontSize: 12, color: '#2563eb', fontWeight: 500 }}>📍 {site.name}</p>}
+      <h3 style={{ margin: '0 0 3px', fontSize: 16, fontWeight: 700, color: th.text }}>{f.name}</h3>
+      <p style={{ margin: '0 0 6px', fontSize: 12, color: th.textSub }}>Floor {f.floor_number}</p>
+      {building && <p style={{ margin: '0 0 12px', fontSize: 12, color: '#7c3aed', fontWeight: 500 }}>🏗 {building.name}</p>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
         <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}>
           <div style={{ fontSize: 10, color: '#94a3b8' }}>Area</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{parseFloat(f.area_sqm).toFixed(0)} m²</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{parseFloat(String(f.area_sqm ?? 0)).toFixed(0)} m²</div>
         </div>
         <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}>
           <div style={{ fontSize: 10, color: '#94a3b8' }}>Spaces</div>
@@ -317,7 +329,7 @@ function FloorCard({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }:
           style={{ flex: 1, padding: '9px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); onNavigate(); }}
         >
-          View in Site →
+          View spaces →
         </button>
         <button
           style={{ padding: '9px', borderRadius: 8, background: '#f59e0b', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
@@ -339,14 +351,14 @@ function FloorCard({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }:
 }
 
 // ─── Floor Row ────────────────────────────────────────────────────────────────
-function FloorRow({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; sites: Site[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
+function FloorRow({ floor: f, buildings, onNavigate, onEdit, onDelete }: { floor: Floor; buildings: Building[]; onNavigate: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { card, t: th } = usePageTheme();
   const ss       = STATUS_STYLE[f.status] ?? STATUS_STYLE.INACTIVE;
   const building = buildings.find(b => b.id === f.building_id);
-  const site     = building ? sites.find(s => s.id === building.site_id) : undefined;
 
   return (
     <div
-      style={{ ...CARD, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+      style={{ ...card, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
       onClick={onNavigate}
@@ -356,17 +368,16 @@ function FloorRow({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: 
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{f.name}</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: th.text }}>{f.name}</span>
           <span style={{ fontSize: 11, color: '#94a3b8' }}>Floor {f.floor_number}</span>
           <span style={{ background: ss.bg, color: ss.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{f.status.replace('_', ' ')}</span>
         </div>
-        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12, color: th.textSub, marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {building && <span style={{ color: '#7c3aed', fontWeight: 500 }}>🏗 {building.name}</span>}
-          {site     && <span style={{ color: '#2563eb', fontWeight: 500 }}>📍 {site.name}</span>}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 20, fontSize: 13, color: '#64748b', flexShrink: 0 }}>
-        <span>📐 {parseFloat(f.area_sqm).toFixed(0)} m²</span>
+      <div style={{ display: 'flex', gap: 20, fontSize: 13, color: th.textSub, flexShrink: 0 }}>
+        <span>📐 {parseFloat(String(f.area_sqm ?? 0)).toFixed(0)} m²</span>
         <span>🏠 {f.spaces?.length ?? 0} spaces</span>
       </div>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -379,36 +390,6 @@ function FloorRow({ floor: f, buildings, sites, onNavigate, onEdit, onDelete }: 
         <button onClick={e => { e.stopPropagation(); onNavigate(); }} style={{ padding: '7px 16px', borderRadius: 7, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           View →
         </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Pick Building Modal ──────────────────────────────────────────────────────
-function PickBuildingModal({ buildings, sites, onPick, onClose }: { buildings: Building[]; sites: Site[]; onPick: (b: Building) => void; onClose: () => void }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', padding: 24 }}>
-        <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 800, color: '#0f172a' }}>Select a Building</h2>
-        <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>Which building will this floor belong to?</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
-          {buildings.map(b => {
-            const site = sites.find(s => s.id === b.site_id);
-            return (
-              <button key={b.id} onClick={() => onPick(b)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#93c5fd'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e5e7eb'; }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🏗</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{b.name}</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>{site ? `📍 ${site.name}` : b.code} · {b.floors_count} floors</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <button onClick={onClose} style={{ width: '100%', marginTop: 14, padding: '9px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151' }}>Cancel</button>
       </div>
     </div>
   );

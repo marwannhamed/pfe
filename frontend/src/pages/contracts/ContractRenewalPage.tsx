@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import { message } from '../../utils/feedback';
 import {
   FileTextOutlined, CloseOutlined, LoadingOutlined,
   ReloadOutlined, WarningOutlined, CheckCircleOutlined,
@@ -359,7 +359,7 @@ export default function ContractRenewalPage() {
     .reduce((s, c) => s + parseFloat(c.monthly_rent || 0), 0);
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, minHeight: '100%' }}>
       <style>{`
         @keyframes pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }

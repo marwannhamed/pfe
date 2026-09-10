@@ -243,7 +243,7 @@ export default function TenantReportsPage() {
   const recentBookings = [...bookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, minHeight: '100%' }}>
 
       {/* Header */}
       <div style={{ ...CARD, padding: '20px 24px', marginBottom: 20 }}>

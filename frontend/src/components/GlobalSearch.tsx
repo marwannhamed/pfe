@@ -92,9 +92,9 @@ export default function GlobalSearch() {
   const wrapRef  = useRef<HTMLDivElement>(null);
   const listRef  = useRef<HTMLDivElement>(null);
 
-  const isBackOffice  = ['SUPER_ADMIN','SITE_MANAGER','FINANCE','MAINTENANCE'].includes(user?.role ?? '');
+  const isBackOffice  = ['SUPER_ADMIN','MANAGER','FINANCE','MAINTENANCE'].includes(user?.role ?? '');
   const isSuperAdmin  = user?.role === 'SUPER_ADMIN';
-  const isSiteManager = user?.role === 'SITE_MANAGER';
+  const isSiteManager = user?.role === 'MANAGER';
   const isFinance     = user?.role === 'FINANCE';
   const tenantId      = (user as any)?.tenant_id ?? '';
   const basePath      = isBackOffice ? '/admin' : '/portal';
@@ -145,7 +145,7 @@ export default function GlobalSearch() {
   const { data: tenantsRaw,     isFetching: ft } = useQuery({
     queryKey: ['gs-tenants',     query],
     queryFn:  () => tenantApi.getAll().then(r => r.data),
-    enabled:  enabled && canSeeAll,
+    enabled:  enabled && (isSuperAdmin || isFinance),
     staleTime: 0,
   });
   const { data: invoicesRaw,    isFetching: fi } = useQuery({
@@ -156,7 +156,7 @@ export default function GlobalSearch() {
   });
   const { data: spacesRaw,      isFetching: fs } = useQuery({
     queryKey: ['gs-spaces',      query],
-    queryFn:  () => spaceApi.getAll().then(r => r.data),
+    queryFn:  () => spaceApi.getAll(),
     enabled:  enabled && isBackOffice,
     staleTime: 0,
   });

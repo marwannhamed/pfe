@@ -11,10 +11,15 @@ import {
   CreditCardOutlined, FileTextOutlined, ReloadOutlined,
   ArrowRightOutlined, WarningOutlined, CheckCircleOutlined,
   ClockCircleOutlined, RiseOutlined, FallOutlined,
+  DollarOutlined, ExportOutlined, FundOutlined, BarChartOutlined,
 } from '@ant-design/icons';
 import { billingApi, contractApi, tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthReady } from '../../hooks/useAuthReady';
+import PageShell from '../../components/ui/PageShell';
+import PageHeader from '../../components/ui/PageHeader';
+import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -104,10 +109,11 @@ const INV_STATUS_COLORS: Record<string, string> = {
 export default function FinanceDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const authReady = useAuthReady();
   const { t }    = useThemeStore();
   const [refreshKey, setRefreshKey] = useState(0);
   const [revenueRange, setRevenueRange] = useState<6 | 12>(6);
-  const opts = (k: string) => ({ queryKey: [k, refreshKey] });
+  const opts = (k: string) => ({ queryKey: [k, refreshKey], enabled: authReady });
 
   const CARD: React.CSSProperties = {
     background: t.cardBg, borderRadius: 14,
@@ -171,8 +177,9 @@ export default function FinanceDashboard() {
     const counts: Record<string, number> = {};
     const amounts: Record<string, number> = {};
     completedPays.forEach(p => {
-      counts[p.payment_method]  = (counts[p.payment_method]  || 0) + 1;
-      amounts[p.payment_method] = (amounts[p.payment_method] || 0) + parseFloat(p.amount || 0);
+      const key = p.payment_method ?? p.method ?? 'OTHER';
+      counts[key]  = (counts[key]  || 0) + 1;
+      amounts[key] = (amounts[key] || 0) + parseFloat(p.amount || 0);
     });
     return Object.entries(counts).map(([method, count]) => ({
       method,
@@ -214,27 +221,63 @@ export default function FinanceDashboard() {
     .slice(0, 5);
 
   return (
-    <div style={{ padding: 24, background: t.pageBg, minHeight: '100%' }}>
+    <PageShell>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>
-            💰 Finance Dashboard
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
-            Welcome, <strong style={{ color: t.text }}>{user?.first_name}</strong> · Revenue, invoices & payments overview
-          </p>
+      <PageHeader
+        title="Finance Dashboard"
+        subtitle={`Welcome, ${user?.first_name ?? 'Finance'} · Revenue, invoices & payments overview`}
+        actions={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => navigate('/admin/billing')}
+              style={{ padding: '9px 16px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: t.text }}>
+              Billing →
+            </button>
+            <button onClick={() => setRefreshKey(k => k + 1)}
+              style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ReloadOutlined spin={isLoading} /> Refresh
+            </button>
+          </div>
+        }
+      />
+
+      <RoleDashboardHero role={user?.role} userName={user?.first_name} />
+
+      {/* Quick actions — finance daily workflow */}
+      <div style={{ ...CARD, padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+          Quick actions
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => navigate('/admin/billing')}
-            style={{ padding: '9px 16px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: t.text }}>
-            Billing →
-          </button>
-          <button onClick={() => setRefreshKey(k => k + 1)}
-            style={{ padding: '9px 14px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ReloadOutlined spin={isLoading} />
-          </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {[
+            { label: 'Record payment', icon: <DollarOutlined />, path: '/admin/payments', color: '#059669', bg: '#f0fdf4' },
+            { label: 'Manage invoices', icon: <CreditCardOutlined />, path: '/admin/billing', color: '#2563eb', bg: '#eff6ff' },
+            { label: 'Contract renewals', icon: <FileTextOutlined />, path: '/admin/contracts/renewals', color: '#7c3aed', bg: '#f5f3ff' },
+            { label: 'Revenue forecast', icon: <FundOutlined />, path: '/admin/revenue-forecast', color: '#0891b2', bg: '#f0f9ff' },
+            { label: 'Financial reports', icon: <BarChartOutlined />, path: '/admin/embedded-reports', color: '#d97706', bg: '#fffbeb' },
+            { label: 'Export data', icon: <ExportOutlined />, path: '/admin/export', color: '#475569', bg: '#f1f5f9' },
+          ].map((action) => (
+            <button
+              key={action.path}
+              type="button"
+              onClick={() => navigate(action.path)}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: action.bg,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                color: action.color,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {action.icon}
+              {action.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -505,7 +548,8 @@ export default function FinanceDashboard() {
             : recentPayments.length === 0
             ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No payments yet</div>
             : recentPayments.map((p: any, i: number) => {
-              const mm = PAYMENT_METHOD_META[p.payment_method] ?? { icon: '💰', label: p.payment_method, color: '#94a3b8' };
+              const payMethod = p.payment_method ?? p.method;
+              const mm = PAYMENT_METHOD_META[payMethod] ?? { icon: '💰', label: payMethod, color: '#94a3b8' };
               return (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentPayments.length - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
@@ -564,6 +608,6 @@ export default function FinanceDashboard() {
             })}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

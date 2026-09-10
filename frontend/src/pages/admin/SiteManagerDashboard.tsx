@@ -11,14 +11,21 @@ import {
   BankOutlined, AppstoreOutlined, CalendarOutlined,
   ToolOutlined, ReloadOutlined, ArrowRightOutlined,
   CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
-  EnvironmentOutlined,
+  EnvironmentOutlined, TeamOutlined, CreditCardOutlined,
 } from '@ant-design/icons';
 import {
   siteApi, spaceApi, bookingApi,
-  maintenanceApi, buildingApi,
+  maintenanceApi, buildingApi, userApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthReady } from '../../hooks/useAuthReady';
+import { getRoleDashboardMeta } from '../../constants/dashboards';
+import PageShell from '../../components/ui/PageShell';
+import PageHeader from '../../components/ui/PageHeader';
+import ClientOnboardingChecklist from '../../components/ClientOnboardingChecklist';
+import RoleDashboardHero from '../../components/RoleDashboardHero';
+import { isClientTeamRole } from '../../constants/team';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -87,9 +94,13 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading, alert }: {
 export default function SiteManagerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const authReady = useAuthReady();
   const { t }    = useThemeStore();
+  const isClientAdmin = user?.role === 'CLIENT_ADMIN';
+  const isManager = user?.role === 'MANAGER';
+  const dashboardMeta = getRoleDashboardMeta(user?.role);
   const [refreshKey, setRefreshKey] = useState(0);
-  const opts = (k: string) => ({ queryKey: [k, refreshKey] });
+  const opts = (k: string) => ({ queryKey: [k, refreshKey], enabled: authReady });
 
   const CARD: React.CSSProperties = {
     background: t.cardBg, borderRadius: 14,
@@ -97,12 +108,17 @@ export default function SiteManagerDashboard() {
     boxShadow: t.cardShadow,
   };
 
-  const { data: sitesRaw,    isLoading: l1 } = useQuery({ ...opts('sm-sites'),    queryFn: () => siteApi.getAll().then(r => r.data) });
-  const { data: spacesRaw,   isLoading: l2 } = useQuery({ ...opts('sm-spaces'),   queryFn: () => spaceApi.getAll().then(r => r.data) });
+  const { data: sitesRaw,    isLoading: l1 } = useQuery({ ...opts('sm-sites'),    queryFn: () => siteApi.getAll() });
+  const { data: spacesRaw,   isLoading: l2 } = useQuery({ ...opts('sm-spaces'),   queryFn: () => spaceApi.getAll() });
   const { data: bookingsRaw, isLoading: l3 } = useQuery({ ...opts('sm-bookings'), queryFn: () => bookingApi.getAll().then(r => r.data) });
   const { data: mxRaw,       isLoading: l4 } = useQuery({ ...opts('sm-mx'),       queryFn: () => maintenanceApi.getAll().then(r => r.data) });
   const { data: mxStats,     isLoading: l5 } = useQuery({ ...opts('sm-mxstats'),  queryFn: () => maintenanceApi.getStats().then(r => r.data) });
-  const { data: buildingsRaw }               = useQuery({ ...opts('sm-buildings'), queryFn: () => buildingApi.getAll().then(r => r.data) });
+  const { data: buildingsRaw }               = useQuery({ ...opts('sm-buildings'), queryFn: () => buildingApi.getAll() });
+  const { data: teamRaw }                    = useQuery({
+    ...opts('sm-team'),
+    queryFn: () => userApi.getAll(user!.tenant_id).then(r => r.data),
+    enabled: authReady && isClientAdmin && !!user?.tenant_id,
+  });
 
   const isLoading = l1 || l2 || l3 || l4 || l5;
 
@@ -111,6 +127,9 @@ export default function SiteManagerDashboard() {
   const bookings  = toArray<any>(bookingsRaw);
   const tickets   = toArray<any>(mxRaw);
   const buildings = toArray<any>(buildingsRaw);
+  const teamMembers = toArray<any>(teamRaw).filter(
+    (u) => u.id !== user?.id && isClientTeamRole(u.role),
+  );
 
   const available   = spaces.filter(s => s.status === 'AVAILABLE').length;
   const occupied    = spaces.filter(s => s.status === 'OCCUPIED').length;
@@ -192,23 +211,26 @@ export default function SiteManagerDashboard() {
   };
 
   return (
-    <div style={{ padding: 24, background: t.pageBg, minHeight: '100%' }}>
+    <PageShell>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>
-            🏗️ Site Manager Dashboard
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
-            Welcome, <strong style={{ color: t.text }}>{user?.first_name}</strong> · Spaces, bookings & maintenance overview
-          </p>
-        </div>
-        <button onClick={() => setRefreshKey(k => k + 1)}
-          style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <ReloadOutlined spin={isLoading} /> Refresh
-        </button>
-      </div>
+      <PageHeader
+        title={dashboardMeta?.title ?? 'Site Dashboard'}
+        subtitle={
+          user?.role === 'MANAGER'
+            ? `Welcome, ${user?.first_name ?? 'Manager'} · Bookings, spaces & maintenance at a glance`
+            : `Welcome, ${user?.first_name ?? 'Admin'} · Spaces, bookings & maintenance overview`
+        }
+        actions={
+          <button onClick={() => setRefreshKey(k => k + 1)}
+            style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ReloadOutlined spin={isLoading} /> Refresh
+          </button>
+        }
+      />
+
+      <RoleDashboardHero role={user?.role} userName={user?.first_name} />
+
+      {isClientAdmin && <ClientOnboardingChecklist />}
 
       {/* Alert banners */}
       {pendingBook > 0 && (
@@ -232,13 +254,26 @@ export default function SiteManagerDashboard() {
         </div>
       )}
 
-      {/* KPI Row */}
+      {/* KPI Row — differs by role */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-        <KpiCard label="Total Sites"    value={sites.length}    sub={`${sites.filter(s => s.status === 'ACTIVE').length} active`}          color="#2563eb" bg="#eff6ff" icon={<BankOutlined />}        path="/admin/sites"       loading={isLoading} />
+        <KpiCard label="Published Listings" value={spaces.filter((s: any) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
         <KpiCard label="Total Spaces"   value={spaces.length}   sub={`${occRate}% occupied · ${available} available`}                        color="#059669" bg="#f0fdf4" icon={<AppstoreOutlined />}   path="/admin/spaces"      loading={isLoading} />
         <KpiCard label="This Week"      value={thisWeekBookings.length} sub={`${confirmedBook} confirmed · ${pendingBook} pending`}          color="#d97706" bg="#fffbeb" icon={<CalendarOutlined />}   path="/admin/bookings"    loading={isLoading} />
-        <KpiCard label="Open Tickets"   value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`}    color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}       path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
+        {isClientAdmin ? (
+          <KpiCard label="Team Members" value={teamMembers.length} sub="Managers, finance, maintenance, reception" color="#7c3aed" bg="#f5f3ff" icon={<TeamOutlined />} path="/admin/users" loading={isLoading} />
+        ) : isManager ? (
+          <KpiCard label="Applications" value={bookings.filter((b: any) => b.status === 'PENDING_APPROVAL').length} sub="Pending booking applications" color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />} path="/admin/booking-applications" loading={isLoading} />
+        ) : (
+          <KpiCard label="Open Tickets"   value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`}    color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}       path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
+        )}
       </div>
+
+      {isClientAdmin && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 20 }}>
+          <KpiCard label="Open Tickets" value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`} color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />} path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
+          <KpiCard label="Billing hub" value="Open" sub="Invoices & payments for your organization" color="#0891b2" bg="#f0f9ff" icon={<CreditCardOutlined />} path="/admin/billing" loading={false} />
+        </div>
+      )}
 
       {/* Row 2 — Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 300px', gap: 16, marginBottom: 16 }}>
@@ -278,7 +313,7 @@ export default function SiteManagerDashboard() {
               <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>📍 Occupancy by Site</div>
               <div style={{ fontSize: 12, color: t.textSub }}>Current occupancy rate %</div>
             </div>
-            <button onClick={() => navigate('/admin/sites')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View sites →</button>
+            <button onClick={() => navigate('/admin/spaces')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View spaces →</button>
           </div>
           {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : siteOcc.length === 0 ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}>
@@ -356,7 +391,7 @@ export default function SiteManagerDashboard() {
               <BarChart data={mxByCategory} layout="vertical" barSize={12} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.divider} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: t.textMuted }} allowDecimals={false} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: t.textSub, textTransform: 'capitalize' }} width={90} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: t.textSub }} width={90} />
                 <Tooltip />
                 <Bar dataKey="value" name="Tickets" fill="#f59e0b" radius={[0,6,6,0]} />
               </BarChart>
@@ -456,7 +491,7 @@ export default function SiteManagerDashboard() {
         <div style={CARD}>
           <div style={{ padding: '14px 20px', borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>📍 My Sites</div>
-            <button onClick={() => navigate('/admin/sites')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Manage →</button>
+            <button onClick={() => navigate('/admin/spaces')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Manage →</button>
           </div>
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
             : sites.length === 0
@@ -468,7 +503,7 @@ export default function SiteManagerDashboard() {
               const rateColor = rate >= 80 ? '#3b82f6' : rate >= 50 ? '#10b981' : '#f59e0b';
               return (
                 <div key={site.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < sites.length - 1 ? `1px solid ${t.divider}` : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
-                  onClick={() => navigate(`/admin/sites/${site.id}`)}
+                  onClick={() => navigate('/admin/spaces')}
                   onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}>
                   <div style={{ width: 36, height: 36, borderRadius: 9, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 11, color: '#fff', flexShrink: 0 }}>
@@ -492,6 +527,6 @@ export default function SiteManagerDashboard() {
             })}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

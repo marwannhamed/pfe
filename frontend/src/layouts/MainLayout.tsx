@@ -7,76 +7,149 @@ import {
   BankOutlined, TeamOutlined, BarChartOutlined,
   SafetyOutlined, TagOutlined, MenuFoldOutlined,
   MenuUnfoldOutlined, ApartmentOutlined, BuildOutlined,
+  MailOutlined, GlobalOutlined, LineChartOutlined, ExportOutlined,
+  PieChartOutlined, HeatMapOutlined, ThunderboltOutlined,
+  CustomerServiceOutlined,
+  SolutionOutlined,
+  DollarOutlined,
+  FundOutlined,
+  PhoneOutlined,
+  ProfileOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import NotificationBell from '../components/NotificationBell';
+import { canAccessPath } from '../permissions/can';
+import NotificationBell from '../components/Notificationbell';
 import GlobalSearch from '../components/GlobalSearch';
+import { TenantAiChatFab } from '../components/TenantAiChatFab';
+import { CrispTenantChat } from '../components/CrispTenantChat';
+import { openCrispChat } from '../lib/crisp';
+import UserAvatar from '../components/UserAvatar';
+import { formatUserName } from '../utils/user';
+import { ADMIN_MAP_PATH, PORTAL_MAP_PATH } from '../constants/routes';
+import { isDashboardPath } from '../constants/dashboards';
 
 // ─── Sidebar menu per role ─────────────────────────────────────────────────────
 function getSidebarItems(role: string) {
   if (role === 'SUPER_ADMIN') return [
+    // Overview
     { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/dashboard'    },
-    { icon: <BankOutlined />,        label: 'Sites',        path: '/admin/sites'        },
-    { icon: <AppstoreOutlined />,    label: 'Spaces',       path: '/admin/spaces'       },
-    { icon: <TeamOutlined />,        label: 'Tenants',      path: '/admin/tenants'      },
-    { icon: <UserOutlined />,        label: 'Users',        path: '/admin/users'        },
-    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'     },
-    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
-    { icon: <CreditCardOutlined />,  label: 'Billing',      path: '/admin/billing'      },
-    { icon: <CreditCardOutlined />,  label: 'Payments',     path: '/admin/payments'     },
-    { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'  },
-    { icon: <TagOutlined />,         label: 'Price Plans',  path: '/admin/price-plans'  },
-    { icon: <BarChartOutlined />,    label: 'Reports',      path: '/admin/reports'      },
-    { icon: <SafetyOutlined />,      label: 'Audit Logs',   path: '/admin/audit'        },
-    { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'},
-    { icon: <ApartmentOutlined />,   label: 'Buildings',    path: '/admin/buildings'    },
+    { icon: <AppstoreOutlined />,    label: 'All Spaces',   path: '/admin/spaces'       },
+    { icon: <BankOutlined />,        label: 'Buildings',    path: '/admin/buildings'    },
     { icon: <BuildOutlined />,       label: 'Floors',       path: '/admin/floors'       },
+    { icon: <GlobalOutlined />,      label: 'Map',          path: ADMIN_MAP_PATH        },
+    // People & applications
+    { icon: <TeamOutlined />,        label: 'Clients',      path: '/admin/tenants'      },
+    { icon: <UserOutlined />,        label: 'Users',        path: '/admin/users'        },
+    { icon: <SolutionOutlined />,    label: 'Tenant Applications', path: '/admin/applications' },
+    { icon: <SolutionOutlined />,    label: 'Booking Applications', path: '/admin/booking-applications' },
+    // Operations
+    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'     },
+    { icon: <PhoneOutlined />,       label: 'Reception',    path: '/admin/reception'    },
+    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
+    { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'  },
+    { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    // Analytics & reporting (platform owner — not tenant billing)
+    { icon: <LineChartOutlined />,    label: 'Analytics',    path: '/admin/analytics'    },
+    { icon: <ExportOutlined />,       label: 'Export',       path: '/admin/export'       },
+    { icon: <PieChartOutlined />,      label: 'Owner reports', path: '/admin/embedded-reports' },
+    { icon: <HeatMapOutlined />,      label: 'Occupancy heat', path: '/admin/occupancy-heatmap' },
+    { icon: <LineChartOutlined />,    label: 'Rev. forecast', path: '/admin/revenue-forecast' },
+    { icon: <ThunderboltOutlined />,   label: 'Predictive MT', path: '/admin/predictive-maintenance' },
+    // System
+    { icon: <SafetyOutlined />,      label: 'Audit Logs',   path: '/admin/audit'        },
+    { icon: <MailOutlined />,        label: 'Email',        path: '/admin/email'         },
+    { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'},
   ];
 
-  if (role === 'SITE_MANAGER') return [
+  if (role === 'RECEPTIONIST') return [
+    { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/reception'    },
+    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'     },
+    { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'},
+  ];
+
+  if (role === 'CLIENT_ADMIN') return [
     { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/site-dashboard' },
-    { icon: <BankOutlined />,        label: 'Sites',        path: '/admin/sites'          },
-    { icon: <AppstoreOutlined />,    label: 'Spaces',       path: '/admin/spaces'         },
-    { icon: <ApartmentOutlined />,   label: 'Buildings',    path: '/admin/buildings'      },
-    { icon: <BuildOutlined />,       label: 'Floors',       path: '/admin/floors'         },
+    { icon: <TeamOutlined />,        label: 'Team',         path: '/admin/users'        },
+    { icon: <BankOutlined />,        label: 'Company',      path: '/admin/company-profile' },
+    { icon: <AppstoreOutlined />,    label: 'My Spaces',       path: '/admin/spaces'         },
+    { icon: <BankOutlined />,        label: 'Buildings',    path: '/admin/buildings'    },
+    { icon: <BuildOutlined />,       label: 'Floors',       path: '/admin/floors'       },
+    { icon: <GlobalOutlined />,      label: 'Map',          path: ADMIN_MAP_PATH          },
+    { icon: <SolutionOutlined />,    label: 'Booking Applications', path: '/admin/booking-applications' },
+    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'         },
+    { icon: <PhoneOutlined />,       label: 'Reception',    path: '/admin/reception'      },
+    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'    },
-    { icon: <TagOutlined />,         label: 'Price Plans',  path: '/admin/price-plans'    },
-    { icon: <BarChartOutlined />,    label: 'Reports',      path: '/admin/reports'        },
+    { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    { icon: <CreditCardOutlined />,  label: 'Billing & Payments', path: '/admin/billing' },
+    { icon: <HeatMapOutlined />,      label: 'Occupancy', path: '/admin/occupancy-heatmap' },
+    { icon: <FundOutlined />,        label: 'Revenue forecast', path: '/admin/revenue-forecast' },
+    { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'  },
+  ];
+
+  if (role === 'MANAGER') return [
+    // Overview
+    { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/site-dashboard' },
+    { icon: <BankOutlined />,        label: 'Company',      path: '/admin/company-profile' },
+    // Spaces (products)
+    { icon: <AppstoreOutlined />,    label: 'My Spaces',       path: '/admin/spaces'         },
+    { icon: <BankOutlined />,        label: 'Buildings',    path: '/admin/buildings'    },
+    { icon: <BuildOutlined />,       label: 'Floors',       path: '/admin/floors'       },
+    { icon: <GlobalOutlined />,      label: 'Map',          path: ADMIN_MAP_PATH          },
+    // Operations
+    { icon: <SolutionOutlined />,    label: 'Booking Applications', path: '/admin/booking-applications' },
+    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/admin/bookings'         },
+    { icon: <PhoneOutlined />,       label: 'Reception',    path: '/admin/reception'      },
+    { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
+    { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'    },
+    { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    { icon: <CreditCardOutlined />,  label: 'Billing & Payments', path: '/admin/billing' },
+    { icon: <TeamOutlined />,        label: 'Team',         path: '/admin/users'        },
+    { icon: <HeatMapOutlined />,      label: 'Occupancy', path: '/admin/occupancy-heatmap' },
+    { icon: <FundOutlined />,        label: 'Revenue forecast', path: '/admin/revenue-forecast' },
     { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'  },
   ];
 
   if (role === 'FINANCE') return [
-    { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/finance-dashboard' },
-    { icon: <CreditCardOutlined />,  label: 'Billing',      path: '/admin/billing'           },
-    { icon: <CreditCardOutlined />,  label: 'Payments',     path: '/admin/payments'          },
-    { icon: <BarChartOutlined />,    label: 'Reports',      path: '/admin/reports'           },
-    { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'     },
+    { icon: <HomeOutlined />,        label: 'Dashboard', path: '/admin/finance-dashboard' },
+    { icon: <CreditCardOutlined />,  label: 'Billing & invoices', path: '/admin/billing' },
+    { icon: <DollarOutlined />,      label: 'Payments', path: '/admin/payments' },
+    { icon: <FileTextOutlined />,   label: 'Contract renewals', path: '/admin/contracts/renewals' },
+    { icon: <FundOutlined />,        label: 'Revenue forecast', path: '/admin/revenue-forecast' },
+    { icon: <LineChartOutlined />,   label: 'Financial analytics', path: '/admin/analytics' },
+    { icon: <ExportOutlined />,      label: 'Export (CSV/Excel)', path: '/admin/export' },
+    { icon: <PieChartOutlined />,    label: 'BI dashboards', path: '/admin/embedded-reports' },
+    { icon: <BellOutlined />,        label: 'Notifications', path: '/admin/notifications' },
   ];
 
   if (role === 'MAINTENANCE') return [
     { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/admin/maintenance-dashboard' },
-    { icon: <ToolOutlined />,        label: 'All Tickets',  path: '/admin/maintenance'           },
+    { icon: <ToolOutlined />,        label: 'My Tickets',   path: '/admin/maintenance'           },
+    { icon: <ThunderboltOutlined />,   label: 'Risk scoring', path: '/admin/predictive-maintenance' },
     { icon: <BellOutlined />,        label: 'Notifications',path: '/admin/notifications'         },
   ];
 
   if (role === 'TENANT_ADMIN') return [
     { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/portal/dashboard'    },
-    { icon: <AppstoreOutlined />,    label: 'Browse Spaces',path: '/portal/spaces'       },
+    { icon: <GlobalOutlined />,      label: 'Map',          path: PORTAL_MAP_PATH                 },
     { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/portal/bookings'     },
+    { icon: <TagOutlined />,         label: 'Add-on Services', path: '/portal/addon-services' },
     { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/portal/contracts'    },
     { icon: <CreditCardOutlined />,  label: 'Billing',      path: '/portal/billing'      },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/portal/maintenance'  },
     { icon: <UserOutlined />,        label: 'My Team',      path: '/portal/users'        },
-    { icon: <BarChartOutlined />,    label: 'Reports',      path: '/portal/reports'      }, // ✅ NEW
+    { icon: <PieChartOutlined />,     label: 'Owner reports', path: '/portal/owner-reports' },
     { icon: <BellOutlined />,        label: 'Notifications',path: '/portal/notifications'},
   ];
 
   // EMPLOYEE
   return [
     { icon: <HomeOutlined />,        label: 'Dashboard',    path: '/portal/dashboard'    },
-    { icon: <AppstoreOutlined />,    label: 'Browse Spaces',path: '/portal/spaces'       },
-    { icon: <CalendarOutlined />,    label: 'Bookings',     path: '/portal/bookings'     },
+    { icon: <GlobalOutlined />,      label: 'Map',          path: PORTAL_MAP_PATH                 },
+    { icon: <CalendarOutlined />,    label: 'My Bookings',  path: '/portal/bookings'     },
+    { icon: <TagOutlined />,         label: 'Add-on Services', path: '/portal/addon-services' },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/portal/maintenance'  },
     { icon: <BellOutlined />,        label: 'Notifications',path: '/portal/notifications'},
   ];
@@ -84,12 +157,14 @@ function getSidebarItems(role: string) {
 
 function getRoleLabel(role: string): { label: string; bg: string; color: string } {
   const MAP: Record<string, { label: string; bg: string; color: string }> = {
-    SUPER_ADMIN:  { label: 'Super Admin',  bg: '#fee2e2', color: '#b91c1c' },
-    SITE_MANAGER: { label: 'Site Manager', bg: '#dbeafe', color: '#1d4ed8' },
-    FINANCE:      { label: 'Finance',      bg: '#f0fdf4', color: '#15803d' },
-    MAINTENANCE:  { label: 'Maintenance',  bg: '#fef3c7', color: '#92400e' },
-    TENANT_ADMIN: { label: 'Tenant Admin', bg: '#ede9fe', color: '#6d28d9' },
-    EMPLOYEE:     { label: 'Employee',     bg: '#f1f5f9', color: '#475569' },
+    SUPER_ADMIN:     { label: 'Super Admin',    bg: '#fee2e2', color: '#b91c1c' },
+    CLIENT_ADMIN:    { label: 'Client Admin',   bg: '#dbeafe', color: '#1d4ed8' },
+    MANAGER:         { label: 'Manager',        bg: '#e0f2fe', color: '#0369a1' },
+    FINANCE:         { label: 'Finance',        bg: '#f0fdf4', color: '#15803d' },
+    MAINTENANCE:     { label: 'Maintenance',    bg: '#fef3c7', color: '#92400e' },
+    RECEPTIONIST:    { label: 'Reception',      bg: '#e0f2fe', color: '#0369a1' },
+    TENANT_ADMIN:    { label: 'Tenant Admin',   bg: '#ede9fe', color: '#6d28d9' },
+    TENANT_EMPLOYEE: { label: 'Employee',       bg: '#f1f5f9', color: '#475569' },
   };
   return MAP[role] ?? { label: role, bg: '#f1f5f9', color: '#475569' };
 }
@@ -102,16 +177,30 @@ export default function MainLayout() {
   const { isDark, t, toggle } = useThemeStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  const role      = user?.role ?? 'EMPLOYEE';
-  const items     = getSidebarItems(role);
+  const role      = user?.role ?? 'TENANT_EMPLOYEE';
+  const isBackOffice = ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER', 'FINANCE', 'MAINTENANCE', 'RECEPTIONIST'].includes(role);
+  const basePath     = isBackOffice ? '/admin' : '/portal';
+  const crispWebsiteId = import.meta.env.VITE_CRISP_WEBSITE_ID as string | undefined;
+  const supportNav =
+    !isBackOffice && (role === 'TENANT_ADMIN' || role === 'TENANT_EMPLOYEE') && crispWebsiteId
+      ? [{ icon: <CustomerServiceOutlined />, label: 'Support', path: '__crisp__' as const }]
+      : [];
+  const profileNav = {
+    icon: <ProfileOutlined />,
+    label: 'My Profile',
+    path: `${basePath}/profile`,
+  };
+  const settingsNav = {
+    icon: <SettingOutlined />,
+    label: 'Settings',
+    path: `${basePath}/settings`,
+  };
+  const items = [...getSidebarItems(role), settingsNav, profileNav, ...supportNav].filter((item) => canAccessPath(role, item.path));
   const roleMeta  = getRoleLabel(role);
   const sideWidth = collapsed ? 64 : 220;
 
-  const isBackOffice = ['SUPER_ADMIN', 'SITE_MANAGER', 'FINANCE', 'MAINTENANCE'].includes(role);
-  const basePath     = isBackOffice ? '/admin' : '/portal';
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login', { replace: true });
   };
 
@@ -144,11 +233,15 @@ export default function MainLayout() {
         {!collapsed && user && (
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#fff', flexShrink: 0 }}>
-                {user.first_name?.[0]}{user.last_name?.[0]}
-              </div>
+              <UserAvatar
+                avatarUrl={(user as any).avatar_url}
+                firstName={user.first_name}
+                lastName={user.last_name}
+                email={user.email}
+                size={32}
+              />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.first_name} {user.last_name}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatUserName(user.first_name, user.last_name, user.email)}</div>
                 <span style={{ fontSize: 10, fontWeight: 600, background: roleMeta.bg, color: roleMeta.color, padding: '1px 6px', borderRadius: 10 }}>{roleMeta.label}</span>
               </div>
             </div>
@@ -158,20 +251,22 @@ export default function MainLayout() {
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
           {items.map(item => {
-            const isDashboard = [
-              '/admin/dashboard', '/portal/dashboard',
-              '/admin/site-dashboard', '/admin/finance-dashboard',
-              '/admin/maintenance-dashboard',
-            ].includes(item.path);
-
-            const active = isDashboard
+            const active = item.path === '__crisp__'
+              ? false
+              : isDashboardPath(item.path)
               ? pathname === item.path
               : pathname === item.path || pathname.startsWith(item.path + '/');
 
             return (
               <button
                 key={item.label + item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  if (item.path === '__crisp__') {
+                    openCrispChat();
+                    return;
+                  }
+                  navigate(item.path);
+                }}
                 title={collapsed ? item.label : undefined}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center',
@@ -266,11 +361,15 @@ export default function MainLayout() {
                 onMouseEnter={e => (e.currentTarget.style.background = t.hover)}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#fff' }}>
-                  {user.first_name?.[0]}{user.last_name?.[0]}
-                </div>
+                <UserAvatar
+                  avatarUrl={(user as any).avatar_url}
+                  firstName={user.first_name}
+                  lastName={user.last_name}
+                  email={user.email}
+                  size={32}
+                />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{user.first_name} {user.last_name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{formatUserName(user.first_name, user.last_name, user.email)}</span>
                   <span style={{ fontSize: 10, color: t.textMuted }}>{roleMeta.label}</span>
                 </div>
               </div>
@@ -282,6 +381,8 @@ export default function MainLayout() {
         <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: t.pageBg }}>
           <Outlet />
         </main>
+        {pathname.startsWith('/portal') && <CrispTenantChat />}
+        {pathname.startsWith('/portal') && <TenantAiChatFab />}
       </div>
     </div>
   );

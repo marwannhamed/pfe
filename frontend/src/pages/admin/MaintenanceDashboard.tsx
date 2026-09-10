@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Skeleton, message } from 'antd';
+import { Skeleton } from 'antd';
+import { message } from '../../utils/feedback';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,8 +14,16 @@ import {
   LoadingOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { maintenanceApi, userApi } from '../../api/services';
+
+function getAssignee(ticket: any) {
+  return ticket?.assignedTo ?? ticket?.assignee ?? null;
+}
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthReady } from '../../hooks/useAuthReady';
+import PageShell from '../../components/ui/PageShell';
+import PageHeader from '../../components/ui/PageHeader';
+import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -106,6 +115,12 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading, alert }: {
 // ─── Quick Action Button ───────────────────────────────────────────────────────
 function QuickAction({ ticket, onAction, loading }: { ticket: any; onAction: (action: string, id: string) => void; loading: boolean }) {
   const s = ticket.status;
+  if (s === 'OPEN' && !getAssignee(ticket)) return (
+    <button onClick={() => onAction('accept', ticket.id)} disabled={loading}
+      style={{ padding: '5px 10px', borderRadius: 7, background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: 11, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+      {loading ? <LoadingOutlined /> : '✓'} Accept
+    </button>
+  );
   if (s === 'OPEN' || s === 'ASSIGNED') return (
     <button onClick={() => onAction('start', ticket.id)} disabled={loading}
       style={{ padding: '5px 10px', borderRadius: 7, background: '#ede9fe', border: '1px solid #c4b5fd', color: '#7c3aed', fontSize: 11, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -131,11 +146,12 @@ function QuickAction({ ticket, onAction, loading }: { ticket: any; onAction: (ac
 export default function MaintenanceDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const authReady = useAuthReady();
   const { t }    = useThemeStore();
   const qc = useQueryClient();
   const [refreshKey, setRefreshKey] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const opts = (k: string) => ({ queryKey: [k, refreshKey] });
+  const opts = (k: string) => ({ queryKey: [k, refreshKey], enabled: authReady });
 
   const CARD: React.CSSProperties = {
     background: t.cardBg, borderRadius: 14,
@@ -152,6 +168,7 @@ export default function MaintenanceDashboard() {
   const users     = toArray<any>(usersRaw);
   const stats     = statsRaw as any;
 
+  const acceptMut  = useMutation({ mutationFn: (id: string) => maintenanceApi.accept(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket accepted!'); } });
   const startMut   = useMutation({ mutationFn: (id: string) => maintenanceApi.start(id),   onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket started!');  } });
   const resolveMut = useMutation({ mutationFn: (id: string) => maintenanceApi.resolve(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket resolved! ✅'); } });
   const closeMut   = useMutation({ mutationFn: (id: string) => maintenanceApi.close(id),   onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket closed.'); } });
@@ -159,6 +176,7 @@ export default function MaintenanceDashboard() {
   const handleAction = async (action: string, id: string) => {
     setActionLoading(id);
     try {
+      if (action === 'accept')  await acceptMut.mutateAsync(id);
       if (action === 'start')   await startMut.mutateAsync(id);
       if (action === 'resolve') await resolveMut.mutateAsync(id);
       if (action === 'close')   await closeMut.mutateAsync(id);
@@ -236,29 +254,26 @@ export default function MaintenanceDashboard() {
     .slice(0, 5);
 
   return (
-    <div style={{ padding: 24, background: t.pageBg, minHeight: '100%' }}>
+    <PageShell>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>
-            🔧 Maintenance Dashboard
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
-            Welcome, <strong style={{ color: t.text }}>{user?.first_name}</strong> · Tickets, workload & resolution tracking
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => navigate('/admin/maintenance')}
-            style={{ padding: '9px 16px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: t.text }}>
-            All Tickets →
-          </button>
-          <button onClick={() => setRefreshKey(k => k + 1)}
-            style={{ padding: '9px 14px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ReloadOutlined spin={isLoading} />
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Maintenance Dashboard"
+        subtitle={`Welcome, ${user?.first_name ?? 'Technician'} · Tickets, workload & resolution tracking`}
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => navigate('/admin/maintenance')}
+              style={{ padding: '9px 16px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: t.text }}>
+              All Tickets →
+            </button>
+            <button onClick={() => setRefreshKey(k => k + 1)}
+              style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ReloadOutlined spin={isLoading} /> Refresh
+            </button>
+          </div>
+        }
+      />
+
+      <RoleDashboardHero role={user?.role} userName={user?.first_name} />
 
       {/* Alert banners */}
       {emergency > 0 && (
@@ -605,6 +620,6 @@ export default function MaintenanceDashboard() {
             })}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

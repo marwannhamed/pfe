@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Select, message } from 'antd';
+import { Select } from 'antd';
+import { message } from '../../utils/feedback';
 import { CloseOutlined, PlusOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
-import { spaceApi, siteApi, buildingApi, floorApi } from '../../api/services';
-import type { Site, Building, Floor } from '../../types';
+import { spaceApi, buildingApi, floorApi, uploadApi } from '../../api/services';
+import type { Building, Floor } from '../../types';
+import SpaceLocationFields, { type SpaceLocationValues } from '../../components/spaces/SpaceLocationFields';
+import SpaceMediaFields, { type SpaceMediaValues } from '../../components/spaces/SpaceMediaFields';
+import SpaceAddonPicker, { type SelectedAddon } from '../../components/spaces/SpaceAddonPicker';
+import { validatePublishLocation } from '../../utils/spacePublish';
 
 const SPACE_TYPES = [
   { value: 'DEDICATED_OFFICE', label: '🏢 Dedicated Office' },
@@ -48,15 +53,28 @@ interface Props { onClose: () => void }
 
 export default function AddSpaceModal({ onClose }: Props) {
   const qc = useQueryClient();
-  const [selectedSiteId,     setSelectedSiteId]     = useState('');
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [selectedFloorId,    setSelectedFloorId]    = useState('');
   const [form, setForm] = useState({
     name: '', code: '', type: 'DEDICATED_OFFICE', capacity: '1', area_sqm: '',
+    description: '', featuresText: '',
     price_per_hour: '', price_per_day: '', price_per_month: '',
-    currency: 'USD', requires_approval: false,
+    currency: 'QAR', requires_approval: false, is_listed: false,
   });
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [location, setLocation] = useState<SpaceLocationValues>({
+    is_published: false,
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: '',
+    map_lat: '',
+    map_lng: '',
+    transportation_notes: '',
+  });
+  const [media, setMedia] = useState<SpaceMediaValues>({ photoFiles: [], virtual_tour_url: '' });
 
   const set = (k: string, v: string | boolean) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -64,16 +82,9 @@ export default function AddSpaceModal({ onClose }: Props) {
   };
 
   // ── Cascading queries — always fresh ──────────────────────────────────────
-  const { data: sitesRaw } = useQuery({
-    queryKey: ['sites-modal'],
-    queryFn: () => siteApi.getAll().then(r => r.data),
-    staleTime: 0,
-  });
-
   const { data: buildingsRaw, isLoading: loadingBuildings } = useQuery({
-    queryKey: ['buildings-modal', selectedSiteId],
-    queryFn: () => buildingApi.getAll(selectedSiteId).then(r => r.data),
-    enabled: !!selectedSiteId,
+    queryKey: ['buildings-modal'],
+    queryFn: () => buildingApi.getAll(),
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
@@ -86,7 +97,7 @@ export default function AddSpaceModal({ onClose }: Props) {
     isFetching: fetchingFloors,
   } = useQuery({
     queryKey: ['floors-modal', selectedBuildingId],
-    queryFn: () => floorApi.getAll(selectedBuildingId).then(r => r.data),
+    queryFn: () => floorApi.getAll(selectedBuildingId),
     enabled: !!selectedBuildingId,
     staleTime: 0,
     gcTime: 0,
@@ -95,11 +106,9 @@ export default function AddSpaceModal({ onClose }: Props) {
   });
 
   // ── Safely extract arrays regardless of API response shape ────────────────
-  const sites:     Site[]     = toArray<Site>(sitesRaw);
   const buildings: Building[] = toArray<Building>(buildingsRaw);
   const floors:    Floor[]    = toArray<Floor>(floorsRaw);
 
-  const selectedSite     = sites.find(s => s.id === selectedSiteId);
   const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
   const selectedFloor    = floors.find(f => f.id === selectedFloorId);
 
@@ -111,15 +120,25 @@ export default function AddSpaceModal({ onClose }: Props) {
     if (!form.code.trim())         e.code     = 'Code is required';
     if (!form.area_sqm)            e.area_sqm = 'Area is required';
     if (Number(form.capacity) < 1) e.capacity = 'Capacity must be ≥ 1';
+    Object.assign(e, validatePublishLocation(location));
     return e;
   };
 
   const mutation = useMutation({
-    mutationFn: (payload: unknown) => spaceApi.create(payload as any),
+    mutationFn: async (payload: { body: Record<string, unknown>; photoFiles: File[] }) => {
+      const created = await spaceApi.create(payload.body) as { id?: string; data?: { id?: string } };
+      const spaceId = created?.id ?? created?.data?.id;
+      if (spaceId && payload.photoFiles.length > 0) {
+        await uploadApi.uploadSpacePhotos(spaceId, payload.photoFiles);
+      }
+      return created;
+    },
     onSuccess: () => {
       message.success('Space created successfully!');
       qc.invalidateQueries({ queryKey: ['spaces'] });
-      qc.invalidateQueries({ queryKey: ['site'] });
+      qc.invalidateQueries({ queryKey: ['client-onboarding-spaces'] });
+      qc.invalidateQueries({ queryKey: ['buildings'] });
+      qc.invalidateQueries({ queryKey: ['public-map-spaces'] });
       onClose();
     },
     onError: (err: unknown) => {
@@ -132,17 +151,42 @@ export default function AddSpaceModal({ onClose }: Props) {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     mutation.mutate({
-      floor_id:          selectedFloorId,
-      name:              form.name.trim(),
-      code:              form.code.trim().toUpperCase(),
-      type:              form.type,
-      capacity:          Number(form.capacity),
-      area_sqm:          parseFloat(form.area_sqm),
-      currency:          form.currency,
-      requires_approval: form.requires_approval,
-      ...(form.price_per_hour  && { price_per_hour:  parseFloat(form.price_per_hour)  }),
-      ...(form.price_per_day   && { price_per_day:   parseFloat(form.price_per_day)   }),
-      ...(form.price_per_month && { price_per_month: parseFloat(form.price_per_month) }),
+      body: {
+        floor_id:          selectedFloorId,
+        name:              form.name.trim(),
+        code:              form.code.trim().toUpperCase(),
+        type:              form.type,
+        capacity:          Number(form.capacity),
+        area_sqm:          parseFloat(form.area_sqm),
+        currency:          form.currency,
+        requires_approval: form.requires_approval,
+        is_listed: form.is_listed,
+        ...(form.price_per_hour  && { price_per_hour:  parseFloat(form.price_per_hour)  }),
+        ...(form.price_per_day   && { price_per_day:   parseFloat(form.price_per_day)   }),
+        ...(form.price_per_month && { price_per_month: parseFloat(form.price_per_month) }),
+        is_published: location.is_published ?? false,
+        address: location.address || undefined,
+        city: location.city || undefined,
+        state: location.state || undefined,
+        zip: location.zip || undefined,
+        country: location.country || undefined,
+        map_lat: location.map_lat ? parseFloat(location.map_lat) : undefined,
+        map_lng: location.map_lng ? parseFloat(location.map_lng) : undefined,
+        transportation_notes: location.transportation_notes || undefined,
+        ...(media.virtual_tour_url.trim() && { virtual_tour_url: media.virtual_tour_url.trim() }),
+        ...(form.description.trim() && { description: form.description.trim() }),
+        ...(form.featuresText.trim() && {
+          features: form.featuresText
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .map((name) => ({ name })),
+        }),
+        ...(selectedAddons.length && {
+          addon_service_ids: selectedAddons.map((a) => a.addon_service_id),
+        }),
+      },
+      photoFiles: media.photoFiles,
     });
   };
 
@@ -156,14 +200,13 @@ export default function AddSpaceModal({ onClose }: Props) {
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1, borderRadius: '16px 16px 0 0' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Add New Space</h2>
-            {selectedSite ? (
+            {selectedBuilding ? (
               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: '#2563eb', fontWeight: 500 }}>{selectedSite.name}</span>
-                {selectedBuilding && <><span style={{ color: '#cbd5e1' }}>›</span><span style={{ color: '#7c3aed', fontWeight: 500 }}>{selectedBuilding.name}</span></>}
-                {selectedFloor    && <><span style={{ color: '#cbd5e1' }}>›</span><span style={{ color: '#059669', fontWeight: 500 }}>Floor {selectedFloor.floor_number} — {selectedFloor.name}</span></>}
+                <span style={{ color: '#7c3aed', fontWeight: 500 }}>{selectedBuilding.name}</span>
+                {selectedFloor && <><span style={{ color: '#cbd5e1' }}>›</span><span style={{ color: '#059669', fontWeight: 500 }}>Floor {selectedFloor.floor_number} — {selectedFloor.name}</span></>}
               </p>
             ) : (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Select a location then fill in the space details</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Select a building and floor, then fill in the space details</p>
             )}
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
@@ -175,29 +218,18 @@ export default function AddSpaceModal({ onClose }: Props) {
 
           {/* ── Location ── */}
           <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 18px' }}>
-            <SectionTitle>📍 Location — Site → Building → Floor</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-
-              <Field label="Site" required>
-                <Select
-                  value={selectedSiteId || undefined}
-                  onChange={v => { setSelectedSiteId(v); setSelectedBuildingId(''); setSelectedFloorId(''); }}
-                  placeholder="Select site..."
-                  style={{ width: '100%' }}
-                  options={sites.map(s => ({ value: s.id, label: `${s.name} (${s.city})` }))}
-                />
-              </Field>
+            <SectionTitle>📍 Location — Building → Floor</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
               <Field label="Building" required>
                 <Select
                   loading={loadingBuildings}
                   value={selectedBuildingId || undefined}
                   onChange={v => { setSelectedBuildingId(v); setSelectedFloorId(''); }}
-                  placeholder={selectedSiteId ? 'Select building...' : 'Select site first'}
-                  disabled={!selectedSiteId}
+                  placeholder="Select building..."
                   style={{ width: '100%' }}
                   options={buildings.map(b => ({ value: b.id, label: b.name }))}
-                  notFoundContent={selectedSiteId ? 'No buildings — add in Sites' : null}
+                  notFoundContent="No buildings — add one in Buildings"
                 />
               </Field>
 
@@ -248,7 +280,23 @@ export default function AddSpaceModal({ onClose }: Props) {
           {/* ── Basic Info ── */}
           <div>
             <SectionTitle>Basic Information</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Field label="Description">
+              <textarea
+                style={{ ...INPUT, minHeight: 72, resize: 'vertical' }}
+                placeholder="Describe the space — layout, natural light, fit-out, neighborhood…"
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+              />
+            </Field>
+            <Field label="Features & amenities" >
+              <textarea
+                style={{ ...INPUT, minHeight: 64, resize: 'vertical', marginTop: 5 }}
+                placeholder={'One per line, e.g.\nHigh-speed WiFi\n24/7 access\nParking nearby'}
+                value={form.featuresText}
+                onChange={(e) => set('featuresText', e.target.value)}
+              />
+            </Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
               <Field label="Space Name" required error={errors.name}>
                 <input style={{ ...INPUT, borderColor: errors.name ? '#ef4444' : '#e5e7eb' }} placeholder="e.g. Executive Suite A" value={form.name} onChange={e => set('name', e.target.value)} />
               </Field>
@@ -286,6 +334,28 @@ export default function AddSpaceModal({ onClose }: Props) {
             </div>
           </div>
 
+          <SpaceLocationFields
+            values={location}
+            onChange={(patch) => setLocation((prev) => ({ ...prev, ...patch }))}
+          />
+
+          <SpaceMediaFields
+            values={media}
+            onChange={(patch) => setMedia((prev) => ({ ...prev, ...patch }))}
+          />
+
+          <div>
+            <SectionTitle>Add-on services for this space</SectionTitle>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 12px' }}>
+              Guests can optionally add these when applying — billed together with the space lease.
+            </p>
+            <SpaceAddonPicker
+              tenantId={selectedBuilding?.tenant_id}
+              value={selectedAddons}
+              onChange={setSelectedAddons}
+            />
+          </div>
+
           {/* ── Settings ── */}
           <div>
             <SectionTitle>Settings</SectionTitle>
@@ -294,6 +364,13 @@ export default function AddSpaceModal({ onClose }: Props) {
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Requires Approval</div>
                 <div style={{ fontSize: 11, color: '#64748b' }}>Bookings will need admin approval before confirmation</div>
+              </div>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginTop: 10, padding: '10px 14px', background: form.is_listed ? '#dbeafe' : '#f8fafc', borderRadius: 8, border: `1px solid ${form.is_listed ? '#93c5fd' : '#e5e7eb'}` }}>
+              <input type="checkbox" checked={form.is_listed} onChange={e => set('is_listed', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#2563eb' }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>List on marketplaces</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>Coworker / LiquidSpace when AVAILABLE</div>
               </div>
             </label>
           </div>

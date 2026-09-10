@@ -1,26 +1,33 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { HomeOutlined } from '@ant-design/icons';
+import { useThemeStore } from '../store/themeStore';
+import { useAuthStore } from '../store/authStore';
+import { hasValidSession } from '../store/authStore';
+import { resolveMapPathForRole } from '../utils/mapRoutes';
 
 export default function PublicLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isDark, t, toggle } = useThemeStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const loggedIn = isAuthenticated && hasValidSession();
+  const mapPath = loggedIn ? resolveMapPathForRole(user?.role) : '/map';
 
   const NAV = [
-    { label: 'Browse Spaces', path: '/spaces'  },
+    { label: 'Find Spaces', path: mapPath },
     { label: 'Pricing',       path: '/pricing' },
     { label: 'About',         path: '/about'   },
   ];
 
   return (
-    // The KEY fix: position relative, no max-width, no overflow-x on wrapper
-    <div style={{ minHeight: '100vh', background: '#f8fafc', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', background: t.pageBg, position: 'relative', color: t.text }}>
 
       {/* ── Sticky navbar ── */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: '#fff',
-        borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        background: t.topbar,
+        borderBottom: `1px solid ${t.cardBorder}`,
+        boxShadow: isDark ? '0 1px 3px rgba(0,0,0,0.35)' : '0 1px 3px rgba(0,0,0,0.06)',
       }}>
         {/* inner container centered with max-width */}
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 40px', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -30,21 +37,26 @@ export default function PublicLayout() {
               <HomeOutlined style={{ color: '#fff', fontSize: 18 }} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: '#0f172a', lineHeight: 1.1 }}>LeaseManager</div>
-              <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>Property Management Platform</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: t.text, lineHeight: 1.1 }}>LeaseManager</div>
+              <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 500 }}>Property Management Platform</div>
             </div>
           </div>
 
           {/* Nav links */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {NAV.map(item => {
-              const active = pathname === item.path;
+              const active = pathname === item.path || (item.path !== '/map' && pathname.startsWith(item.path));
               return (
                 <button
                   key={item.label}
                   onClick={() => navigate(item.path)}
-                  style={{ border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8, transition: 'all 0.15s', background: active ? '#eff6ff' : 'transparent', color: active ? '#2563eb' : '#374151' }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
+                  style={{
+                    border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8,
+                    transition: 'all 0.15s',
+                    background: active ? (isDark ? 'rgba(37,99,235,0.25)' : '#eff6ff') : 'transparent',
+                    color: active ? '#60a5fa' : t.textSub,
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = t.hover; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
                   {item.label}
@@ -53,14 +65,37 @@ export default function PublicLayout() {
             })}
           </nav>
 
-          {/* Auth */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => navigate('/login')} style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#374151' }}>
-              Sign In
+          {/* Theme + Auth */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={toggle}
+              title={isDark ? 'Light mode' : 'Dark mode'}
+              style={{
+                width: 38, height: 38, borderRadius: 9, cursor: 'pointer', fontSize: 17,
+                border: `1px solid ${t.cardBorder}`, background: t.cardBg, color: t.text,
+              }}
+            >
+              {isDark ? '☀️' : '🌙'}
             </button>
-            <button onClick={() => navigate('/register')} style={{ padding: '8px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-              Register Company
-            </button>
+            {loggedIn ? (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                style={{ padding: '8px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}
+              >
+                Go to Dashboard
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={() => navigate('/login')} style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: t.text }}>
+                  Sign In
+                </button>
+                <button type="button" onClick={() => navigate('/register')} style={{ padding: '8px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
+                  Register Company
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -86,17 +121,23 @@ export default function PublicLayout() {
               </p>
             </div>
             {[
-              { title: 'Product',  links: ['Browse Spaces', 'Pricing', 'Features', 'Security'] },
-              { title: 'Company',  links: ['About', 'Blog', 'Careers', 'Contact']              },
-              { title: 'Legal',    links: ['Privacy Policy', 'Terms', 'Cookies']               },
+              { title: 'Product',  links: [{ label: 'Find Spaces (Map)', path: mapPath }, { label: 'Pricing', path: '/pricing' }] },
+              { title: 'Company',  links: [{ label: 'About', path: '/about' }] },
+              { title: 'Legal',    links: [{ label: 'Privacy Policy', path: '#' }, { label: 'Terms', path: '#' }] },
             ].map(col => (
               <div key={col.title}>
                 <div style={{ color: '#fff', fontWeight: 600, fontSize: 13, marginBottom: 14 }}>{col.title}</div>
                 {col.links.map(l => (
-                  <div key={l} style={{ color: '#475569', fontSize: 13, marginBottom: 9, cursor: 'pointer' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
-                  >{l}</div>
+                  <div
+                    key={l.label}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => l.path !== '#' && navigate(l.path)}
+                    onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && l.path !== '#') navigate(l.path); }}
+                    style={{ color: '#475569', fontSize: 13, marginBottom: 9, cursor: l.path === '#' ? 'default' : 'pointer' }}
+                    onMouseEnter={e => { if (l.path !== '#') e.currentTarget.style.color = '#94a3b8'; }}
+                    onMouseLeave={e => { if (l.path !== '#') e.currentTarget.style.color = '#475569'; }}
+                  >{l.label}</div>
                 ))}
               </div>
             ))}

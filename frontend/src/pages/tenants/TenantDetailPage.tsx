@@ -1,6 +1,7 @@
 ﻿import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Tabs, Skeleton, Badge, message } from 'antd';
+import { Tabs, Skeleton, Badge } from 'antd';
+import { message } from '../../utils/feedback';
 import {
   ArrowLeftOutlined, EditOutlined, StopOutlined,
   CheckCircleOutlined, ReloadOutlined,
@@ -9,6 +10,10 @@ import {
 } from '@ant-design/icons';
 import { tenantApi, userApi, contractApi, billingApi, bookingApi } from '../../api/services';
 import type { User, LeaseContract, Invoice, TenantStatus } from '../../types';
+import UserAvatar from '../../components/UserAvatar';
+import { formatUserName } from '../../utils/user';
+import { usePageTheme } from '../../hooks/usePageTheme';
+import PageShell from '../../components/ui/PageShell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<TenantStatus, { label: string; bg: string; color: string }> = {
@@ -58,14 +63,9 @@ function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-};
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TenantDetailPage() {
+  const { card: CARD, headerCard, btnSecondary, t: th } = usePageTheme();
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc       = useQueryClient();
@@ -115,19 +115,21 @@ export default function TenantDetailPage() {
 
   // ── Loading ──
   if (isLoading) return (
-    <div style={{ padding: 24 }}>
+    <PageShell>
       <Skeleton active paragraph={{ rows: 3 }} style={{ marginBottom: 20 }} />
       <Skeleton active paragraph={{ rows: 6 }} />
-    </div>
+    </PageShell>
   );
 
   // ── Error ──
   if (isError || !tenant) return (
-    <div style={{ padding: 24, textAlign: 'center' }}>
-      <WarningOutlined style={{ fontSize: 40, color: '#d97706', display: 'block', margin: '0 auto 12px' }} />
-      <div style={{ fontWeight: 600, color: '#374151', marginBottom: 8 }}>Failed to load tenant</div>
-      <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
-    </div>
+    <PageShell>
+      <div style={{ textAlign: 'center' }}>
+        <WarningOutlined style={{ fontSize: 40, color: '#d97706', display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load tenant</div>
+        <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
+      </div>
+    </PageShell>
   );
 
   const sm = STATUS_META[tenant.status as TenantStatus] ?? STATUS_META.CLOSED;
@@ -141,13 +143,13 @@ export default function TenantDetailPage() {
     .reduce((acc: number, inv: Invoice) => acc + parseFloat(inv.total_amount), 0);
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <PageShell>
 
       {/* ── Header ── */}
-      <div style={{ ...CARD, padding: '18px 24px', marginBottom: 20 }}>
+      <div style={headerCard}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <button onClick={() => navigate('/admin/tenants')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 10 }}>
+            <button onClick={() => navigate('/admin/tenants')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: th.textSub, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 10 }}>
               <ArrowLeftOutlined /> Back to Tenants
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -156,11 +158,11 @@ export default function TenantDetailPage() {
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{tenant.name}</h2>
+                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: th.text }}>{tenant.name}</h2>
                   <span style={{ background: sm.bg, color: sm.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{sm.label}</span>
                   <span style={{ background: '#f1f5f9', color: '#475569', fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, textTransform: 'capitalize' }}>{tenant.subscription_plan} Plan</span>
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: th.textSub, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MailOutlined style={{ fontSize: 11 }} />{tenant.contact_email}</span>
                   <span>· /{tenant.slug}</span>
                   <span>· Joined {formatDate(tenant.created_at)}</span>
@@ -170,10 +172,10 @@ export default function TenantDetailPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => refetch()} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
+            <button onClick={() => refetch()} style={{ ...btnSecondary, padding: '8px 12px', color: th.textSub }}>
               <ReloadOutlined />
             </button>
-            <button style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button style={{ ...btnSecondary, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
               <EditOutlined /> Edit
             </button>
             {tenant.status === 'SUSPENDED' ? (
@@ -197,9 +199,9 @@ export default function TenantDetailPage() {
             { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, sub: 'Paid invoices',  color: '#7c3aed', bg: '#f5f3ff' },
             { label: 'Overdue',       value: `$${overdueAmount.toLocaleString()}`, sub: 'Needs attention', color: '#dc2626', bg: '#fef2f2' },
           ].map(k => (
-            <div key={k.label} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px' }}>
-              <p style={{ margin: '0 0 3px', fontSize: 11, color: '#64748b' }}>{k.label}</p>
-              <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{k.value}</p>
+            <div key={k.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
+              <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub }}>{k.label}</p>
+              <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800, color: th.text, lineHeight: 1 }}>{k.value}</p>
               <p style={{ margin: 0, fontSize: 11, color: k.color }}>{k.sub}</p>
             </div>
           ))}
@@ -277,11 +279,15 @@ export default function TenantDetailPage() {
                         const rs = ROLE_STYLE[u.role]         ?? { bg: '#f1f5f9', color: '#475569' };
                         return (
                           <div key={u.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff', flexShrink: 0 }}>
-                              {u.first_name[0]}{u.last_name[0]}
-                            </div>
+                            <UserAvatar
+                              avatarUrl={u.avatar_url}
+                              firstName={u.first_name}
+                              lastName={u.last_name}
+                              email={u.email}
+                              size={38}
+                            />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{u.first_name} {u.last_name}</div>
+                              <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{formatUserName(u.first_name, u.last_name, u.email)}</div>
                               <div style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <MailOutlined style={{ fontSize: 11 }} /> {u.email}
                               </div>
@@ -414,6 +420,6 @@ export default function TenantDetailPage() {
           ]}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

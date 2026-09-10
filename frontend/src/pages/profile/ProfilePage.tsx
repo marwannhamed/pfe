@@ -1,15 +1,19 @@
 import { useState } from 'react';
+import PageShell from '../../components/ui/PageShell';
+import { usePageTheme } from '../../hooks/usePageTheme';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import { message } from '../../utils/feedback';
+import AvatarUpload from '../../components/AvatarUpload';
+import { unwrapApiPayload } from '../../api/client';
 import {
   UserOutlined, MailOutlined, LockOutlined,
   EditOutlined, SaveOutlined, CloseOutlined,
   CheckCircleOutlined, EyeOutlined, EyeInvisibleOutlined,
   CalendarOutlined, FileTextOutlined, CreditCardOutlined,
-  BellOutlined, LoadingOutlined, CameraOutlined,
-} from '@ant-design/icons';
+  BellOutlined, LoadingOutlined, } from '@ant-design/icons';
 import { userApi, bookingApi, contractApi, billingApi, notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import { PHONE_E164_PATTERN, PHONE_PLACEHOLDER } from '../../constants/team';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -29,30 +33,14 @@ function timeAgo(d: string) {
   return formatDate(d);
 }
 
-const CARD: React.CSSProperties = {
-  background: '#fff', borderRadius: 14,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-};
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '10px 12px',
-  border: '1px solid #e5e7eb', borderRadius: 9,
-  fontSize: 14, color: '#0f172a', outline: 'none',
-  background: '#fff', boxSizing: 'border-box',
-  transition: 'border-color 0.15s',
-};
-const LABEL: React.CSSProperties = {
-  fontSize: 12, fontWeight: 600, color: '#374151',
-  display: 'block', marginBottom: 6,
-};
-
 const ROLE_META: Record<string, { label: string; bg: string; color: string; icon: string }> = {
   SUPER_ADMIN:  { label: 'Super Admin',  bg: '#fee2e2', color: '#b91c1c', icon: '👑' },
-  SITE_MANAGER: { label: 'Site Manager', bg: '#dbeafe', color: '#1d4ed8', icon: '🏗️' },
+  MANAGER: { label: 'Site Manager', bg: '#dbeafe', color: '#1d4ed8', icon: '🏗️' },
   FINANCE:      { label: 'Finance',      bg: '#f0fdf4', color: '#15803d', icon: '💰' },
   MAINTENANCE:  { label: 'Maintenance',  bg: '#fef3c7', color: '#92400e', icon: '🔧' },
   TENANT_ADMIN: { label: 'Tenant Admin', bg: '#ede9fe', color: '#6d28d9', icon: '🏢' },
-  EMPLOYEE:     { label: 'Employee',     bg: '#f1f5f9', color: '#475569', icon: '👤' },
+  EMPLOYEE:     { label: 'TENANT_EMPLOYEE',     bg: '#f1f5f9', color: '#475569', icon: '👤' },
+  RECEPTIONIST: { label: 'Reception',    bg: '#e0f2fe', color: '#0369a1', icon: '📞' },
 };
 
 // ─── Password input with show/hide ────────────────────────────────────────────
@@ -60,6 +48,7 @@ function PasswordInput({ value, onChange, placeholder, error }: {
   value: string; onChange: (v: string) => void;
   placeholder?: string; error?: string;
 }) {
+  const { input: INPUT, t: th } = usePageTheme();
   const [show, setShow] = useState(false);
   return (
     <div>
@@ -74,7 +63,7 @@ function PasswordInput({ value, onChange, placeholder, error }: {
         <button
           type="button"
           onClick={() => setShow(s => !s)}
-          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16, display: 'flex', alignItems: 'center' }}
+          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: th.textMuted, fontSize: 16, display: 'flex', alignItems: 'center' }}
         >
           {show ? <EyeInvisibleOutlined /> : <EyeOutlined />}
         </button>
@@ -86,6 +75,8 @@ function PasswordInput({ value, onChange, placeholder, error }: {
 
 // ─── Password strength meter ──────────────────────────────────────────────────
 function PasswordStrength({ password }: { password: string }) {
+
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   if (!password) return null;
   const checks = [
     { label: '8+ chars',    ok: password.length >= 8       },
@@ -119,12 +110,14 @@ function PasswordStrength({ password }: { password: string }) {
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, color, bg }: { icon: React.ReactNode; label: string; value: string | number; color: string; bg: string }) {
+
+  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   return (
     <div style={{ ...CARD, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 40, height: 40, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color, flexShrink: 0 }}>{icon}</div>
       <div>
-        <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: 10, color: th.textMuted, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: th.text, lineHeight: 1.1 }}>{value}</div>
       </div>
     </div>
   );
@@ -132,20 +125,22 @@ function StatCard({ icon, label, value, color, bg }: { icon: React.ReactNode; la
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
+  const { card: CARD, headerCard, input: INPUT, t: th } = usePageTheme();
+  const LABEL: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: th.textSub, display: 'block', marginBottom: 5 };
   const qc       = useQueryClient();
   const { user, setUser } = useAuthStore() as any;
   const userId   = user?.id ?? '';
   const tenantId = (user as any)?.tenant_id ?? '';
   const roleMeta = ROLE_META[user?.role ?? ''] ?? ROLE_META.EMPLOYEE;
-  const isTenant = ['TENANT_ADMIN', 'EMPLOYEE'].includes(user?.role ?? '');
+  const isTenant = ['TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user?.role ?? '');
 
   // ── Edit profile state ──────────────────────────────────────────────────────
   const [editing, setEditing]   = useState(false);
-  const [profileForm, setProfile] = useState({
+  const [profileForm, setProfileForm] = useState({
     first_name: user?.first_name ?? '',
     last_name:  user?.last_name  ?? '',
     email:      user?.email      ?? '',
-    phone:      (user as any)?.phone ?? '',
+    phone_number: (user as any)?.phone_number ?? '',
   });
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
 
@@ -171,7 +166,10 @@ export default function ProfilePage() {
     mutationFn: (data: any) => userApi.update(userId, data),
     onSuccess: (res) => {
       message.success('Profile updated successfully!');
-      if (setUser) setUser({ ...user, ...res.data });
+      const updated = unwrapApiPayload(res.data) ?? res.data;
+      if (setUser && updated) {
+        setUser({ ...user, ...updated });
+      }
       qc.invalidateQueries({ queryKey: ['auth-me'] });
       setEditing(false);
     },
@@ -184,8 +182,14 @@ export default function ProfilePage() {
   // ── Change password mutation ────────────────────────────────────────────────
   const pwMut = useMutation({
     mutationFn: (data: any) => userApi.changePassword(userId, data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       message.success('Password changed successfully!');
+      const updated = unwrapApiPayload(res.data) ?? res.data;
+      if (setUser && updated) {
+        setUser({ ...user, ...updated, must_change_password: false });
+      } else if (setUser) {
+        setUser({ ...user, must_change_password: false });
+      }
       setPwForm({ current: '', next: '', confirm: '' });
       setPwErrors({});
       setPwSuccess(true);
@@ -208,17 +212,31 @@ export default function ProfilePage() {
     if (!profileForm.last_name.trim())  e.last_name  = 'Required';
     if (!profileForm.email.trim())      e.email      = 'Required';
     if (profileForm.email && !/\S+@\S+\.\S+/.test(profileForm.email)) e.email = 'Invalid email';
+    if (!profileForm.phone_number?.trim()) e.phone_number = 'Required';
+    else if (!PHONE_E164_PATTERN.test(profileForm.phone_number.trim())) {
+      e.phone_number = `Use international format e.g. ${PHONE_PLACEHOLDER}`;
+    }
     return e;
   };
 
   const handleSaveProfile = () => {
     const e = validateProfile();
     if (Object.keys(e).length) { setProfileErrors(e); return; }
-    updateMut.mutate(profileForm);
+    updateMut.mutate({
+      first_name: profileForm.first_name.trim(),
+      last_name: profileForm.last_name.trim(),
+      email: profileForm.email.trim(),
+      phone_number: profileForm.phone_number.trim(),
+    });
+  };
+
+  const handleAvatarUpdate = (url: string) => {
+    if (setUser) setUser({ ...user, avatar_url: url });
+    qc.invalidateQueries({ queryKey: ['users'] });
   };
 
   const handleCancelEdit = () => {
-    setProfileForm({ first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', phone: (user as any)?.phone ?? '' });
+    setProfileForm({ first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', phone_number: (user as any)?.phone_number ?? '' });
     setProfileErrors({});
     setEditing(false);
   };
@@ -240,45 +258,37 @@ export default function ProfilePage() {
     pwMut.mutate({ currentPassword: pwForm.current, newPassword: pwForm.next });
   };
 
-  const initials = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase();
   const joinDate = (user as any)?.created_at ? formatDate((user as any).created_at) : '—';
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%', maxWidth: 1000, margin: '0 auto' }}>
+    <PageShell maxWidth={1000}>
 
       {/* ── Profile Hero ── */}
-      <div style={{ ...CARD, padding: '28px 32px', marginBottom: 20 }}>
+      <div style={{ ...headerCard, padding: '28px 32px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
 
-          {/* Avatar */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{
-              width: 90, height: 90, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 32, fontWeight: 800, color: '#fff',
-              boxShadow: '0 4px 16px rgba(37,99,235,0.3)',
-            }}>
-              {initials || <UserOutlined />}
-            </div>
-            <div style={{ position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: '50%', background: '#fff', border: '2px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <CameraOutlined style={{ fontSize: 12, color: '#64748b' }} />
-            </div>
-          </div>
+          <AvatarUpload
+            userId={userId}
+            currentAvatarUrl={(user as any)?.avatar_url}
+            firstName={user?.first_name ?? ''}
+            lastName={user?.last_name ?? ''}
+            size={90}
+            onUpdate={handleAvatarUpdate}
+          />
 
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: th.text }}>
                 {user?.first_name} {user?.last_name}
               </h2>
               <span style={{ background: roleMeta.bg, color: roleMeta.color, fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20 }}>
                 {roleMeta.icon} {roleMeta.label}
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: '#64748b' }}>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: th.textSub }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MailOutlined /> {user?.email}</span>
-              {(user as any)?.phone && <span>📞 {(user as any).phone}</span>}
+              {(user as any)?.phone_number && <span>📞 {(user as any).phone_number}</span>}
               <span>📅 Joined {joinDate}</span>
               {(user as any)?.tenant?.name && <span>🏢 {(user as any).tenant.name}</span>}
             </div>
@@ -287,7 +297,7 @@ export default function ProfilePage() {
           {/* Edit button */}
           {!editing && (
             <button onClick={() => setEditing(true)}
-              style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: th.text, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <EditOutlined /> Edit Profile
             </button>
           )}
@@ -306,9 +316,9 @@ export default function ProfilePage() {
 
         {/* ── Edit Profile Form ── */}
         <div style={CARD}>
-          <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${th.divider}`, display: 'flex', alignItems: 'center', gap: 10 }}>
             <UserOutlined style={{ color: '#2563eb', fontSize: 16 }} />
-            <span style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>Personal Information</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: th.text }}>Personal Information</span>
           </div>
 
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -340,7 +350,7 @@ export default function ProfilePage() {
                 <div>
                   <label style={LABEL}>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
                   <div style={{ position: 'relative' }}>
-                    <MailOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 14 }} />
+                    <MailOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: th.textMuted, fontSize: 14 }} />
                     <input
                       style={{ ...INPUT, borderColor: profileErrors.email ? '#ef4444' : '#e5e7eb', paddingLeft: 36 }}
                       type="email"
@@ -352,18 +362,19 @@ export default function ProfilePage() {
                   {profileErrors.email && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{profileErrors.email}</div>}
                 </div>
                 <div>
-                  <label style={LABEL}>Phone Number <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span></label>
+                  <label style={LABEL}>Phone Number <span style={{ color: '#ef4444' }}>*</span></label>
                   <input
-                    style={INPUT}
-                    value={profileForm.phone}
-                    onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))}
-                    placeholder="+1 234 567 890"
+                    style={{ ...INPUT, borderColor: profileErrors.phone_number ? '#ef4444' : '#e5e7eb' }}
+                    value={profileForm.phone_number}
+                    onChange={e => { setProfileForm(f => ({ ...f, phone_number: e.target.value })); setProfileErrors(er => { const n = { ...er }; delete n.phone_number; return n; }); }}
+                    placeholder={PHONE_PLACEHOLDER}
                   />
+                  {profileErrors.phone_number && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{profileErrors.phone_number}</div>}
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button onClick={handleCancelEdit} disabled={updateMut.isPending}
-                    style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: th.text, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <CloseOutlined /> Cancel
                   </button>
                   <button onClick={handleSaveProfile} disabled={updateMut.isPending}
@@ -379,20 +390,20 @@ export default function ProfilePage() {
                   { label: 'First Name',  value: user?.first_name ?? '—',           icon: <UserOutlined /> },
                   { label: 'Last Name',   value: user?.last_name  ?? '—',           icon: <UserOutlined /> },
                   { label: 'Email',       value: user?.email      ?? '—',           icon: <MailOutlined /> },
-                  { label: 'Phone',       value: (user as any)?.phone ?? 'Not set', icon: '📞' },
+                  { label: 'Phone',       value: user?.phone_number ?? 'Not set', icon: '📞' },
                   { label: 'Role',        value: `${roleMeta.icon} ${roleMeta.label}`, icon: '🎭' },
                   { label: 'Member Since',value: joinDate,                           icon: '📅' },
                 ].map((row, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f8fafc' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b' }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${th.divider}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: th.textSub }}>
                       <span style={{ width: 18, textAlign: 'center' }}>{row.icon}</span>
                       {row.label}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', maxWidth: '60%', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.value}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: th.text, maxWidth: '60%', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.value}</span>
                   </div>
                 ))}
                 <button onClick={() => setEditing(true)}
-                  style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 9, border: '1px solid #e5e7eb', background: '#f8fafc', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 9, border: `1px solid ${th.cardBorder}`, background: th.tableHead, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: th.text, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <EditOutlined /> Edit Profile
                 </button>
               </>
@@ -402,9 +413,9 @@ export default function ProfilePage() {
 
         {/* ── Change Password ── */}
         <div style={CARD}>
-          <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${th.divider}`, display: 'flex', alignItems: 'center', gap: 10 }}>
             <LockOutlined style={{ color: '#7c3aed', fontSize: 16 }} />
-            <span style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>Change Password</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: th.text }}>Change Password</span>
           </div>
 
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -462,8 +473,8 @@ export default function ProfilePage() {
               {pwMut.isPending ? <><LoadingOutlined /> Updating...</> : <><LockOutlined /> Change Password</>}
             </button>
 
-            <div style={{ background: '#f8fafc', borderRadius: 9, padding: '12px 14px', fontSize: 12, color: '#64748b' }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: '#374151' }}>💡 Password tips:</div>
+            <div style={{ background: th.tableHead, borderRadius: 9, padding: '12px 14px', fontSize: 12, color: th.textSub }}>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: th.text }}>💡 Password tips:</div>
               <div>• Use at least 8 characters</div>
               <div>• Mix uppercase, numbers & symbols</div>
               <div>• Avoid using your name or email</div>
@@ -475,7 +486,7 @@ export default function ProfilePage() {
       {/* ── Recent activity ── */}
       {bookings.length > 0 && (
         <div style={{ ...CARD, marginTop: 20 }}>
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
+          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${th.divider}`, fontWeight: 700, fontSize: 15, color: th.text }}>
             🕐 Recent Activity
           </div>
           <div style={{ padding: '8px 0' }}>
@@ -492,22 +503,22 @@ export default function ProfilePage() {
                 };
                 const sm = statusColors[b.status] ?? { bg: '#f1f5f9', color: '#475569' };
                 return (
-                  <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 24px', borderBottom: i < 4 ? '1px solid #f8fafc' : 'none' }}>
+                  <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 24px', borderBottom: i < 4 ? `1px solid ${th.divider}` : 'none' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: sm.color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 500 }}>
+                      <span style={{ fontSize: 13, color: th.text, fontWeight: 500 }}>
                         Booking <span style={{ fontFamily: 'monospace', color: '#2563eb' }}>{b.booking_number}</span>
                       </span>
-                      <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>— {b.space?.name ?? 'Space'}</span>
+                      <span style={{ fontSize: 12, color: th.textMuted, marginLeft: 8 }}>— {b.space?.name ?? 'Space'}</span>
                     </div>
                     <span style={{ background: sm.bg, color: sm.color, fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20 }}>{b.status.replace(/_/g,' ')}</span>
-                    <span style={{ fontSize: 12, color: '#94a3b8', flexShrink: 0 }}>{timeAgo(b.created_at)}</span>
+                    <span style={{ fontSize: 12, color: th.textMuted, flexShrink: 0 }}>{timeAgo(b.created_at)}</span>
                   </div>
                 );
               })}
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

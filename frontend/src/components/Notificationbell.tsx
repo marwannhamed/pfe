@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { BellOutlined, CheckOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { notificationApi } from '../api/services';
+
 import { useAuthStore } from '../store/authStore';
+import { notificationApi } from '../api/services'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -38,6 +39,7 @@ const TYPE_META: Record<string, { icon: string; color: string; bg: string }> = {
   PAYMENT_RECEIVED:    { icon: '💳', color: '#059669', bg: '#f0fdf4' },
   MAINTENANCE_CREATED: { icon: '🔧', color: '#7c3aed', bg: '#f5f3ff' },
   MAINTENANCE_RESOLVED:{ icon: '✅', color: '#059669', bg: '#f0fdf4' },
+  LOGIN_SUCCESS:       { icon: '🔐', color: '#2563eb', bg: '#eff6ff' },
   SYSTEM:              { icon: '🔔', color: '#64748b', bg: '#f8fafc' },
   GENERAL:             { icon: '📢', color: '#64748b', bg: '#f8fafc' },
 };
@@ -72,7 +74,10 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
     enabled:  !!userId,
     refetchInterval: 30000,
   });
-  const unreadCount = typeof countRaw === 'number' ? countRaw : (countRaw?.count ?? 0);
+  const unreadCount =
+    typeof countRaw === 'number'
+      ? countRaw
+      : (countRaw?.unread_count ?? countRaw?.count ?? 0);
 
   // ── Latest 8 notifications for dropdown ────────────────────────────────────
   const { data: notifsRaw = [] } = useQuery({

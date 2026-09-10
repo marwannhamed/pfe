@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PORTAL_MAP_PATH } from '../../constants/routes';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from 'antd';
 import {
   CalendarOutlined, ToolOutlined, TeamOutlined,
   FileTextOutlined, CreditCardOutlined, AppstoreOutlined,
   BellOutlined, ArrowRightOutlined, CheckCircleOutlined,
-  ClockCircleOutlined, WarningOutlined, PlusOutlined,
+  ClockCircleOutlined, WarningOutlined, PlusOutlined, ReloadOutlined,
 } from '@ant-design/icons';
 import {
   bookingApi, maintenanceApi, userApi,
   contractApi, billingApi, notificationApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import { useThemeStore } from '../../store/themeStore';
+import { usePageTheme } from '../../hooks/usePageTheme';
+import { useAuthReady } from '../../hooks/useAuthReady';
+import PageShell from '../../components/ui/PageShell';
+import PageHeader from '../../components/ui/PageHeader';
+import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -93,19 +98,20 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading, t }: any) 
 export default function TenantDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore() as any;
-  const { t }    = useThemeStore();
+  const authReady = useAuthReady();
+  const { t, card: CARD } = usePageTheme();
   const tenantId = user?.tenant_id;
   const isAdmin  = user?.role === 'TENANT_ADMIN';
   const [refreshKey, setRefreshKey] = useState(0);
-  const opts = (k: string) => ({ queryKey: [k, tenantId, refreshKey], enabled: !!tenantId });
+  const opts = (k: string) => ({ queryKey: [k, tenantId, refreshKey], enabled: authReady && !!tenantId });
 
   // Queries
   const { data: bookingsRaw,  isLoading: l1 } = useQuery({ ...opts('td-bookings'),  queryFn: () => bookingApi.getAll({ tenantId }).then(r => r.data) });
   const { data: ticketsRaw,   isLoading: l2 } = useQuery({ ...opts('td-tickets'),   queryFn: () => maintenanceApi.getAll().then(r => r.data) });
-  const { data: usersRaw,     isLoading: l3 } = useQuery({ ...opts('td-users'),     queryFn: () => userApi.getAll(tenantId).then(r => r.data), enabled: !!tenantId && isAdmin });
-  const { data: contractsRaw, isLoading: l4 } = useQuery({ ...opts('td-contracts'), queryFn: () => contractApi.getAll({ tenantId }).then(r => r.data), enabled: !!tenantId && isAdmin });
-  const { data: invoicesRaw,  isLoading: l5 } = useQuery({ ...opts('td-invoices'),  queryFn: () => billingApi.getInvoices({ tenantId }).then(r => r.data), enabled: !!tenantId && isAdmin });
-  const { data: notifsRaw,    isLoading: l6 } = useQuery({ ...opts('td-notifs'),    queryFn: () => notificationApi.getAll({ userId: user?.id }).then(r => r.data), enabled: !!user?.id });
+  const { data: usersRaw,     isLoading: l3 } = useQuery({ ...opts('td-users'),     queryFn: () => userApi.getAll(tenantId).then(r => r.data), enabled: authReady && !!tenantId && isAdmin });
+  const { data: contractsRaw, isLoading: l4 } = useQuery({ ...opts('td-contracts'), queryFn: () => contractApi.getAll({ tenantId }).then(r => r.data), enabled: authReady && !!tenantId && isAdmin });
+  const { data: invoicesRaw,  isLoading: l5 } = useQuery({ ...opts('td-invoices'),  queryFn: () => billingApi.getInvoices({ tenantId }).then(r => r.data), enabled: authReady && !!tenantId && isAdmin });
+  const { data: notifsRaw,    isLoading: l6 } = useQuery({ ...opts('td-notifs'),    queryFn: () => notificationApi.getAll({ userId: user?.id }).then(r => r.data), enabled: authReady && !!user?.id });
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
 
@@ -117,8 +123,8 @@ export default function TenantDashboard() {
   const notifs    = toArray<any>(notifsRaw);
 
   // Derived
-  const myBookings       = user?.role === 'EMPLOYEE' ? bookings.filter((b: any) => b.created_by_user_id === user?.id) : bookings;
-  const myTickets        = user?.role === 'EMPLOYEE' ? tickets.filter((t: any) => t.created_by_user_id === user?.id) : tickets;
+  const myBookings       = user?.role === 'TENANT_EMPLOYEE' ? bookings.filter((b: any) => b.created_by_user_id === user?.id) : bookings;
+  const myTickets        = user?.role === 'TENANT_EMPLOYEE' ? tickets.filter((t: any) => t.created_by_user_id === user?.id) : tickets;
   const confirmedBooks   = myBookings.filter((b: any) => b.status === 'CONFIRMED').length;
   const pendingBooks     = myBookings.filter((b: any) => b.status === 'PENDING_APPROVAL').length;
   const openTickets      = myTickets.filter((t: any) => !['CLOSED','CANCELLED'].includes(t.status)).length;
@@ -145,11 +151,6 @@ export default function TenantDashboard() {
     .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 6);
 
-  const CARD: React.CSSProperties = {
-    background: t.cardBg, borderRadius: 14,
-    border: `1px solid ${t.cardBorder}`, boxShadow: t.cardShadow,
-  };
-
   const NOTIF_TYPE_ICON: Record<string, { icon: string; color: string; bg: string }> = {
     BOOKING:      { icon: '📅', color: '#2563eb', bg: '#eff6ff' },
     INVOICE:      { icon: '🧾', color: '#d97706', bg: '#fffbeb' },
@@ -161,33 +162,37 @@ export default function TenantDashboard() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100%', background: t.pageBg }}>
+    <PageShell>
+      <div style={{ display: 'flex', minHeight: '100%' }}>
 
       {/* ── Main Content ── */}
-      <div style={{ flex: 1, padding: 24, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: t.text }}>
-              Welcome back, {user?.first_name}! 👋
-            </h2>
-            <p style={{ margin: 0, fontSize: 14, color: t.textSub }}>
-              {isAdmin ? 'Tenant Admin' : 'Employee'} Portal
-              {user?.tenant?.name && <> · <strong style={{ color: t.text }}>{user.tenant.name}</strong></>}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => navigate('/portal/bookings/calendar')}
-              style={{ padding: '9px 16px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <PlusOutlined /> New Booking
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title={isAdmin ? `Welcome back, ${user?.first_name ?? 'there'}!` : `Hi, ${user?.first_name ?? 'there'}!`}
+          subtitle={
+            isAdmin
+              ? `Tenant Admin Portal${user?.tenant?.name ? ` · ${user.tenant.name}` : ''}`
+              : `Your bookings & requests${user?.tenant?.name ? ` · ${user.tenant.name}` : ''}`
+          }
+          actions={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => navigate('/portal/bookings/calendar')}
+                style={{ padding: '9px 16px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <PlusOutlined /> New Booking
+              </button>
+              <button onClick={() => setRefreshKey(k => k + 1)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: t.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ReloadOutlined spin={isLoading} /> Refresh
+              </button>
+            </div>
+          }
+        />
 
-        {/* Onboarding banner */}
+        <RoleDashboardHero role={user?.role} userName={user?.first_name} />
+
         {isAdmin && contracts.length === 0 && !onboardingDone && (
           <div style={{ background: 'linear-gradient(135deg,#1d4ed8,#2563eb)', borderRadius: 14, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div>
@@ -195,7 +200,7 @@ export default function TenantDashboard() {
               <div style={{ fontSize: 13, color: '#bfdbfe' }}>Set up your workspace, add spaces and invite your team to get started.</div>
             </div>
             <button
-              onClick={() => navigate('/portal/onboarding')}
+              onClick={() => navigate(PORTAL_MAP_PATH)}
               style={{ padding: '10px 20px', borderRadius: 10, background: '#fff', border: 'none', color: '#1d4ed8', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               Start Setup →
@@ -275,9 +280,9 @@ export default function TenantDashboard() {
                     <CalendarOutlined style={{ fontSize: 32, color: t.textMuted, display: 'block', margin: '0 auto 10px' }} />
                     <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>No bookings yet</div>
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, marginBottom: 16 }}>Browse available spaces to get started</div>
-                    <button onClick={() => navigate('/portal/spaces')}
+                    <button onClick={() => navigate(PORTAL_MAP_PATH)}
                       style={{ padding: '8px 18px', borderRadius: 9, background: '#2563eb', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                      Browse Spaces →
+                      Browse on map →
                     </button>
                   </div>
                 )
@@ -475,7 +480,7 @@ export default function TenantDashboard() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                           <span style={{ background: rm.bg, color: rm.color, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
-                            {m.role === 'TENANT_ADMIN' ? 'Admin' : 'Employee'}
+                            {m.role === 'TENANT_ADMIN' ? 'Admin' : 'TENANT_EMPLOYEE'}
                           </span>
                           <div style={{ width: 7, height: 7, borderRadius: '50%', background: m.status === 'ACTIVE' ? '#22c55e' : '#94a3b8' }} title={m.status} />
                         </div>
@@ -555,9 +560,9 @@ export default function TenantDashboard() {
         <div style={{ padding: '0 16px', marginTop: 'auto' }}>
           <div style={{ background: 'linear-gradient(135deg,#1e293b,#0f172a)', borderRadius: 12, padding: '16px', textAlign: 'center' }}>
             <AppstoreOutlined style={{ fontSize: 26, color: '#60a5fa', display: 'block', marginBottom: 8 }} />
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Browse Spaces</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Find a space</div>
             <div style={{ fontSize: 10, color: '#64748b', marginBottom: 12 }}>Find and book the perfect workspace</div>
-            <button onClick={() => navigate('/portal/spaces')}
+            <button onClick={() => navigate(PORTAL_MAP_PATH)}
               style={{ width: '100%', padding: '8px', borderRadius: 8, background: '#2563eb', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
               Explore →
             </button>
@@ -565,5 +570,6 @@ export default function TenantDashboard() {
         </div>
       </aside>
     </div>
+    </PageShell>
   );
 }
