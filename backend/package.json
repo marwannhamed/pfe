@@ -56,10 +56,12 @@
     "cache-manager": "^7.2.8",
     "cache-manager-redis-store": "^3.0.1",
     "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "cron": "^4.4.0",
+    "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express-rate-limit": "^8.3.2",
     "google-auth-library": "^9.15.1",
@@ -75,7 +77,8 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
     "swagger-typescript-api": "^13.0.3",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "uuid": "^13.0.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
