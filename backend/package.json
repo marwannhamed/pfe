@@ -117,7 +117,8 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "auth/auth.service.ts"
+      "auth/auth.service.ts",
+      "promotion-code/promotion-code.service.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",

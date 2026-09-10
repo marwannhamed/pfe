@@ -13,7 +13,7 @@ import {
   CalendarOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
-import { promotionCodeApi, siteApi } from '../../api/services';
+import { promotionCodeApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -60,7 +60,7 @@ export default function PromotionCodesPage() {
     form.setFieldsValue({
       ...record,
       valid_from: record.valid_from ? dayjs(record.valid_from) : null,
-      valid_to: record.valid_to ? dayjs(record.valid_to) : null,
+      valid_until: record.valid_until ? dayjs(record.valid_until) : null,
     });
     setModalVisible(true);
   };
@@ -70,7 +70,7 @@ export default function PromotionCodesPage() {
       const payload = {
         ...values,
         valid_from: values.valid_from?.toISOString(),
-        valid_to: values.valid_to?.toISOString(),
+        valid_until: values.valid_until?.toISOString(),
       };
 
       if (editingCode) {
@@ -115,26 +115,26 @@ export default function PromotionCodesPage() {
   };
 
   const getDiscountDisplay = (record: any) => {
-    if ((record as any).discount_type === 'PERCENTAGE') {
-      return `${(record as any).discount_value}%`;
+    if (record.type === 'PERCENTAGE') {
+      return `${record.discount}%`;
     } else {
-      return `$${(record as any).discount_value}`;
+      return `$${record.discount}`;
     }
   };
 
   const getStatusColor = (record: any) => {
     if (!record.is_active) return 'default';
-    if (record.valid_to && dayjs().isAfter(record.valid_to)) return 'error';
+    if (record.valid_until && dayjs().isAfter(record.valid_until)) return 'error';
     if (record.valid_from && dayjs().isBefore(record.valid_from)) return 'warning';
-    if (record.max_uses && record.uses_count >= record.max_uses) return 'error';
+    if (record.max_uses && record.used_count >= record.max_uses) return 'error';
     return 'success';
   };
 
   const getStatusText = (record: any) => {
     if (!record.is_active) return 'Inactive';
-    if (record.valid_to && dayjs().isAfter(record.valid_to)) return 'Expired';
+    if (record.valid_until && dayjs().isAfter(record.valid_until)) return 'Expired';
     if (record.valid_from && dayjs().isBefore(record.valid_from)) return 'Upcoming';
-    if (record.max_uses && record.uses_count >= record.max_uses) return 'Fully Used';
+    if (record.max_uses && record.used_count >= record.max_uses) return 'Fully Used';
     return 'Active';
   };
 
@@ -168,7 +168,7 @@ export default function PromotionCodesPage() {
       key: 'discount',
       render: (record: any) => (
         <Space>
-          {(record as any).discount_type === 'PERCENTAGE' ? 
+          {record.type === 'PERCENTAGE' ? 
             <PercentageOutlined /> : <DollarOutlined />}
           <Text strong>{getDiscountDisplay(record)}</Text>
         </Space>
@@ -179,7 +179,7 @@ export default function PromotionCodesPage() {
       key: 'usage',
       render: (record: any) => (
         <Text>
-          {record.uses_count || 0} / {record.max_uses || '∞'}
+          {record.used_count || 0} / {record.max_uses || '∞'}
         </Text>
       ),
     },
@@ -193,9 +193,9 @@ export default function PromotionCodesPage() {
               From: {dayjs(record.valid_from).format('YYYY-MM-DD')}
             </Text>
           )}
-          {record.valid_to && (
+          {record.valid_until && (
             <Text type="secondary" style={{ fontSize: '12px' }}>
-              To: {dayjs(record.valid_to).format('YYYY-MM-DD')}
+              To: {dayjs(record.valid_until).format('YYYY-MM-DD')}
             </Text>
           )}
         </Space>
@@ -257,15 +257,15 @@ export default function PromotionCodesPage() {
 
   const activeCodes = promotionCodes.filter(code => 
     code.is_active && 
-    (!code.valid_to || dayjs().isBefore(code.valid_to)) &&
+    (!code.valid_until || dayjs().isBefore(code.valid_until)) &&
     (!code.valid_from || dayjs().isAfter(code.valid_from))
   );
 
   const expiredCodes = promotionCodes.filter(code => 
-    code.valid_to && dayjs().isAfter(code.valid_to)
+    code.valid_until && dayjs().isAfter(code.valid_until)
   );
 
-  const totalUsage = promotionCodes.reduce((sum, code) => sum + (code.uses_count || 0), 0);
+  const totalUsage = promotionCodes.reduce((sum, code) => sum + (code.used_count || 0), 0);
 
   return (
     <div style={{ padding: 24 }}>
@@ -386,7 +386,7 @@ export default function PromotionCodesPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="discountType"
+                name="type"
                 label="Discount Type"
                 rules={[{ required: true, message: 'Please select discount type' }]}
               >
@@ -402,7 +402,7 @@ export default function PromotionCodesPage() {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="discount_value"
+                name="discount"
                 label="Discount Value"
                 rules={[{ required: true, message: 'Please enter discount value' }]}
               >
@@ -436,7 +436,7 @@ export default function PromotionCodesPage() {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="valid_to"
+                name="valid_until"
                 label="Valid To"
               >
                 <DatePicker

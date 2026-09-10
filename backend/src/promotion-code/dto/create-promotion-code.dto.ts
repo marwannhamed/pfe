@@ -8,44 +8,46 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 
 export class CreatePromotionCodeDto {
-  @ApiPropertyOptional({ example: 'uuid-du-site' })
-  @IsUUID()
-  @IsOptional()
-  site_id?: string;
-
-  @ApiProperty({ example: 'PROMO2026' })
+  @ApiProperty({ example: 'SUMMER2026' })
   @IsString()
   code: string;
 
-  @ApiProperty({ example: 'PERCENTAGE' })
+  @ApiPropertyOptional({ example: 'Summer campaign — 20% off desks' })
   @IsString()
-  discount_type: string;
+  @IsOptional()
+  description?: string;
 
-  @ApiProperty({ example: 20.0 })
+  @ApiProperty({ enum: DISCOUNT_TYPE, example: DISCOUNT_TYPE.PERCENTAGE })
+  @IsEnum(DISCOUNT_TYPE)
+  type: string;
+
+  /** Percent (0-100) when type is PERCENTAGE, otherwise an amount in the invoice currency. */
+  @ApiProperty({ example: 20 })
   @IsNumber()
   @Min(0)
-  discount_value: number;
+  discount: number;
 
-  @ApiPropertyOptional({ example: 100 })
+  @ApiPropertyOptional({ example: 100, description: 'Unlimited when omitted' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   max_uses?: number;
 
-  @ApiProperty({ example: '2026-01-01T00:00:00Z' })
-  @IsDateString()
-  valid_from: string;
-
-  @ApiPropertyOptional({ example: '2026-12-31T23:59:59Z' })
+  @ApiPropertyOptional({ example: '2026-06-01T00:00:00Z' })
   @IsDateString()
   @IsOptional()
-  valid_to?: string;
+  valid_from?: string;
 
-  @ApiPropertyOptional({ example: true })
+  @ApiPropertyOptional({ example: '2026-08-31T23:59:59Z' })
+  @IsDateString()
+  @IsOptional()
+  valid_until?: string;
+
+  @ApiPropertyOptional({ example: true, default: true })
   @IsBoolean()
   @IsOptional()
   is_active?: boolean;

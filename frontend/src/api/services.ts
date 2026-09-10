@@ -584,7 +584,6 @@ export const bookingAddOnApi = {
 // ─── PROMOTION CODES ──────────────────────────────────────────────────────────
 export const promotionCodeApi = {
   getAll: (params?: {
-    siteId?: string;
     isActive?: boolean;
     page?: number;
     limit?: number;
@@ -594,8 +593,9 @@ export const promotionCodeApi = {
   create: (data: any) => api.post('/promotion-codes', data),
   update: (id: string, data: any) => api.patch(`/promotion-codes/${id}`, data),
   remove: (id: string) => api.delete(`/promotion-codes/${id}`),
-  validate: (code: string, siteId?: string) =>
-    api.post('/promotion-codes/validate', { code, siteId }),
-  apply: (code: string, data: any) =>
-    api.post(`/promotion-codes/apply/${code}`, data),
+  /** Read-only check that a code is usable right now. */
+  validate: (code: string) => api.get(`/promotion-codes/validate/${code}`),
+  /** Consumes one use of the code — POST because it mutates the counter. */
+  apply: (code: string, amount: number) =>
+    api.post(`/promotion-codes/apply/${code}`, { amount }),
 };

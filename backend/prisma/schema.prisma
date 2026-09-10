@@ -38,6 +38,7 @@ model Tenant {
   notifications     Notification[]
   maintenanceTickets MaintenanceTicket[]
   addOnServices     AddOnService[]
+  promotionCodes    PromotionCode[]
   onboardingSequence TenantOnboardingSequence?
   /// Applications submitted to this landlord org (property manager inbox).
   tenantApplicationsReviewed TenantApplication[] @relation("LandlordApplications")
@@ -424,7 +425,9 @@ model InvoiceLine {
 
 model PromotionCode {
   id          String    @id @default(uuid())
-  code        String    @unique
+  /// Owning client org. Codes never cross tenants.
+  tenant_id   String
+  code        String
   description String?
   discount    Float     @default(0)
   type        String    @default("PERCENTAGE")
@@ -435,8 +438,12 @@ model PromotionCode {
   is_active   Boolean   @default(true)
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   invoices    Invoice[]
 
+  /// Unique per tenant, not globally: two clients may each run "SUMMER2026".
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
   @@map("promotion_codes")
 }
 

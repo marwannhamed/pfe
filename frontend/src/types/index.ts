@@ -466,19 +466,21 @@ export interface AddOnService {
 
 export interface PromotionCode {
   id:             string;
-  site_id?:       string;
+  /** Owning client organisation — codes never cross tenants. */
+  tenant_id:      string;
   code:           string;
-  discount_type:  DiscountType;
-  discount_value: string;
-  max_uses?:      number;
-  uses_count:     number;
-  valid_from:     string;
-  valid_to?:      string;
+  description?:   string | null;
+  type:           DiscountType;
+  /** Percent (0-100) when type is PERCENTAGE, otherwise an amount. */
+  discount:       number;
+  max_uses?:      number | null;
+  used_count:     number;
+  valid_from?:    string | null;
+  valid_until?:   string | null;
   is_active:      boolean;
   created_at:     string;
+  updated_at:     string;
   // relations
-  site?:          Site;
-  bookings?:      Booking[];
   invoices?:      Invoice[];
 }
 
