@@ -22,6 +22,7 @@ import {
   ApiConsumes,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
 } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { FileUploadTypeSchema, editFileName } from './utils/upload-file.helper';
@@ -29,6 +30,10 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { ResponseDto } from './utils/response.dto';
 
 const UPLOADED_FILES_PATH = './uploadedFiles';
+
+/** Subdirectories of uploadedFiles/ that may be served without auth. */
+const PUBLIC_UPLOAD_KINDS = ['avatars', 'spaces', 'floors'] as const;
+type PublicUploadKind = (typeof PUBLIC_UPLOAD_KINDS)[number];
 @Controller()
 @ApiOkResponse({
   description: 'response',
@@ -81,15 +86,28 @@ export class AppController {
     return res.sendFile(file, { root: UPLOADED_FILES_PATH });
   }
 
-  /** Public avatar images (no auth — used in img src). */
-  @Get('public/avatars/:filename')
-  @ApiOperation({ summary: 'Serve user avatar image' })
-  seePublicAvatar(@Param('filename') filename: string, @Res() res) {
+  /**
+   * Locally stored images (no auth — these are used directly in img src).
+   *
+   * Only used when Cloudinary is not configured; UploadService writes here as
+   * its fallback. `kind` is whitelisted and the filename is stripped of
+   * anything but [A-Za-z0-9._-], so neither can escape uploadedFiles/.
+   */
+  @Get('public/:kind/:filename')
+  @ApiOperation({ summary: 'Serve a locally stored upload' })
+  @ApiParam({ name: 'kind', enum: PUBLIC_UPLOAD_KINDS })
+  servePublicUpload(
+    @Param('kind') kind: string,
+    @Param('filename') filename: string,
+    @Res() res,
+  ) {
+    if (!PUBLIC_UPLOAD_KINDS.includes(kind as PublicUploadKind)) {
+      throw new NotFoundException('Not found');
+    }
     const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '');
-    const root = join(process.cwd(), 'uploadedFiles', 'avatars');
-    const filePath = join(root, safe);
-    if (!existsSync(filePath)) {
-      throw new NotFoundException('Avatar not found');
+    const root = join(process.cwd(), 'uploadedFiles', kind);
+    if (!safe || !existsSync(join(root, safe))) {
+      throw new NotFoundException('File not found');
     }
     return res.sendFile(safe, { root });
   }

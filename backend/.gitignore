@@ -3,10 +3,11 @@
 /node_modules
 .env
 
-/uploadedFiles/*.png
-/uploadedFiles/*.jpg
-/uploadedFiles/*.jpeg
-/uploadedFiles/*.pdf
+# Everything users upload, at any depth — avatars/, spaces/, floors/ are
+# created at runtime when Cloudinary is not configured. Keep the directory
+# itself so the path exists on a fresh clone.
+/uploadedFiles/**
+!/uploadedFiles/.gitkeep
 
 /generatedFiles/*.png
 /generatedFiles/*.jpg

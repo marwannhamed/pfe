@@ -40,6 +40,73 @@ export class UploadService {
     return process.env.APP_PUBLIC_URL || 'http://localhost:6001';
   }
 
+  private extensionFor(mimetype: string): string {
+    switch (mimetype) {
+      case 'image/png':
+        return 'png';
+      case 'image/webp':
+        return 'webp';
+      case 'image/svg+xml':
+        return 'svg';
+      default:
+        return 'jpg';
+    }
+  }
+
+  /**
+   * Write a file under uploadedFiles/<kind>/ and return the URL that
+   * AppController's /public/:kind/:filename route will serve it from.
+   *
+   * Filenames are `<ownerId>_<timestamp><random>.<ext>` so repeated uploads
+   * for the same owner never collide, and they contain only characters the
+   * serving route's sanitiser preserves.
+   */
+  private async storeLocally(
+    file: Express.Multer.File,
+    kind: 'spaces' | 'floors',
+    ownerId: string,
+  ): Promise<UploadResult> {
+    const ext = this.extensionFor(file.mimetype);
+    const unique = `${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    const safeOwner = ownerId.replace(/[^a-zA-Z0-9-]/g, '');
+    const filename = `${safeOwner}_${unique}.${ext}`;
+    const dir = join(process.cwd(), 'uploadedFiles', kind);
+
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, filename), file.buffer);
+
+    return {
+      url: `${this.publicBaseUrl()}/public/${kind}/${filename}`,
+      public_id: filename,
+      format: ext,
+      bytes: file.size,
+    };
+  }
+
+  /**
+   * Upload to Cloudinary when it is configured, otherwise fall back to local
+   * disk. Without this the app needs Cloudinary credentials just to accept a
+   * photo, which makes a local run or a demo fail with a 500.
+   */
+  private async uploadOrStore(
+    file: Express.Multer.File,
+    kind: 'spaces' | 'floors',
+    ownerId: string,
+    options: Record<string, any>,
+  ): Promise<UploadResult> {
+    if (this.cloudinaryConfigured()) {
+      try {
+        const result = await this.uploadFromBuffer(file.buffer, options);
+        return this.formatResult(result);
+      } catch (err: any) {
+        this.logger.warn(
+          `Cloudinary upload failed for ${kind}/${ownerId}, using local storage: ${err?.message}`,
+        );
+      }
+    }
+    return this.storeLocally(file, kind, ownerId);
+  }
+
   // ─── Generic upload from buffer ───────────────────────────────
   private uploadFromBuffer(
     buffer: Buffer,
@@ -88,14 +155,13 @@ export class UploadService {
     spaceId: string,
   ): Promise<UploadResult> {
     this.validateImage(file);
-    const result = await this.uploadFromBuffer(file.buffer, {
+    return this.uploadOrStore(file, 'spaces', spaceId, {
       folder: `leasemgr/spaces/${spaceId}`,
       resource_type: 'image',
       quality: 'auto',
       fetch_format: 'auto',
       transformation: [{ width: 1200, height: 800, crop: 'limit' }],
     });
-    return this.formatResult(result);
   }
 
   async uploadSpacePhotos(
@@ -121,14 +187,13 @@ export class UploadService {
       'image/svg+xml',
       'image/webp',
     ]);
-    const result = await this.uploadFromBuffer(file.buffer, {
+    return this.uploadOrStore(file, 'floors', floorId, {
       folder: `leasemgr/floors/${floorId}`,
       resource_type: 'image',
       quality: 'auto',
       fetch_format: 'auto',
       // No crop — keep floor plan proportions intact
     });
-    return this.formatResult(result);
   }
 
   // ══════════════════════════════════════════════════════════════
