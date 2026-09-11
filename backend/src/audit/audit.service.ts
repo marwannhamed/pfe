@@ -48,8 +48,12 @@ export class AuditService {
         action,
         resource_type: resourceType,
         resource_id: resourceId,
-        old_values: options?.oldValues ? JSON.stringify(options.oldValues) : null,
-        new_values: options?.newValues ? JSON.stringify(options.newValues) : null,
+        old_values: options?.oldValues
+          ? JSON.stringify(options.oldValues)
+          : null,
+        new_values: options?.newValues
+          ? JSON.stringify(options.newValues)
+          : null,
         ip_address: options?.ipAddress,
         user_agent: options?.userAgent,
         severity: options?.severity ?? AUDIT_SEVERITY.INFO,
@@ -138,8 +142,14 @@ export class AuditService {
 
     if (log.old_values && log.new_values) {
       // Deserialize from string (SQLite stores JSON as text)
-      const oldVals = JSON.parse(log.old_values as string) as Record<string, any>;
-      const newVals = JSON.parse(log.new_values as string) as Record<string, any>;
+      const oldVals = JSON.parse(log.old_values as string) as Record<
+        string,
+        any
+      >;
+      const newVals = JSON.parse(log.new_values as string) as Record<
+        string,
+        any
+      >;
 
       for (const key of Object.keys(newVals)) {
         if (oldVals[key] !== newVals[key]) {
@@ -164,10 +174,18 @@ export class AuditService {
 
     const [total, creates, updates, deletes, logins] = await Promise.all([
       this.prisma.auditLog.count({ where }),
-      this.prisma.auditLog.count({ where: { ...where, action: AUDIT_ACTION.CREATE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AUDIT_ACTION.UPDATE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AUDIT_ACTION.DELETE } }),
-      this.prisma.auditLog.count({ where: { ...where, action: AUDIT_ACTION.LOGIN } }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AUDIT_ACTION.CREATE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AUDIT_ACTION.UPDATE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AUDIT_ACTION.DELETE },
+      }),
+      this.prisma.auditLog.count({
+        where: { ...where, action: AUDIT_ACTION.LOGIN },
+      }),
     ]);
 
     return { total, creates, updates, deletes, logins };

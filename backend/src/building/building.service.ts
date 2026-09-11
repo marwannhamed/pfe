@@ -14,15 +14,20 @@ export class BuildingService {
   ) {}
 
   private toSlug(value: string): string {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || `building-${Date.now()}`;
+    return (
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || `building-${Date.now()}`
+    );
   }
 
-  private async buildUniqueSlug(seed: string, excludeId?: string): Promise<string> {
+  private async buildUniqueSlug(
+    seed: string,
+    excludeId?: string,
+  ): Promise<string> {
     const baseSlug = this.toSlug(seed);
     let slug = baseSlug;
     let i = 2;
@@ -43,12 +48,16 @@ export class BuildingService {
     const floors = Array.isArray(building?.floors) ? building.floors : [];
     return {
       ...building,
-      code: (building?.slug || '').toUpperCase().replace(/-/g, '').slice(0, 10) || 'BLDG',
+      code:
+        (building?.slug || '').toUpperCase().replace(/-/g, '').slice(0, 10) ||
+        'BLDG',
       /** Floors this client actually manages (records they added). */
       floors_count: floors.length,
       total_floors_in_building: building?.total_floors_in_building ?? null,
       total_area_sqm:
-        building?.total_area_sqm != null ? String(building.total_area_sqm) : '0',
+        building?.total_area_sqm != null
+          ? String(building.total_area_sqm)
+          : '0',
       year_built: building?.year_built ?? null,
       status: building?.status ?? 'ACTIVE',
     };
@@ -126,11 +135,16 @@ export class BuildingService {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(nextSlug ? { slug: nextSlug } : {}),
         ...(dto.address !== undefined ? { address: dto.address } : {}),
-        ...(dto.total_area_sqm !== undefined ? { total_area_sqm: dto.total_area_sqm } : {}),
+        ...(dto.total_area_sqm !== undefined
+          ? { total_area_sqm: dto.total_area_sqm }
+          : {}),
         ...(dto.total_floors_in_building !== undefined
           ? { total_floors_in_building: dto.total_floors_in_building }
           : dto.floors_count !== undefined
-            ? { total_floors_in_building: dto.floors_count > 0 ? dto.floors_count : null }
+            ? {
+                total_floors_in_building:
+                  dto.floors_count > 0 ? dto.floors_count : null,
+              }
             : {}),
         ...(dto.year_built !== undefined ? { year_built: dto.year_built } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),

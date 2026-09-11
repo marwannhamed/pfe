@@ -54,7 +54,9 @@ export class TypeformWebhookService {
     if (!signatureHeader?.startsWith('sha256=')) {
       throw new UnauthorizedException('Invalid signature header');
     }
-    const digest = createHmac('sha256', secret).update(rawBody).digest('base64');
+    const digest = createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('base64');
     const expected = `sha256=${digest}`;
     try {
       const a = Buffer.from(signatureHeader);
@@ -69,7 +71,12 @@ export class TypeformWebhookService {
 
   private parseAnswers(answers: TypeformAnswer[]) {
     const profile: Record<string, unknown> = {};
-    const documents: { kind: string; ref: string; title?: string; url: string }[] = [];
+    const documents: {
+      kind: string;
+      ref: string;
+      title?: string;
+      url: string;
+    }[] = [];
     let contactEmail: string | null = null;
     let companyName: string | null = null;
 
@@ -86,10 +93,16 @@ export class TypeformWebhookService {
         case 'text': {
           const t = a.text ?? '';
           profile[ref] = t;
-          if (!companyName && /company|organisation|organization|business|legal name/i.test(title)) {
+          if (
+            !companyName &&
+            /company|organisation|organization|business|legal name/i.test(title)
+          ) {
             companyName = t;
           }
-          if (!companyName && /^(company_name|company|business_name)$/i.test(ref)) {
+          if (
+            !companyName &&
+            /^(company_name|company|business_name)$/i.test(ref)
+          ) {
             companyName = t;
           }
           if (/commercial registration|\bcr\b|cr number/i.test(title)) {
@@ -133,9 +146,20 @@ export class TypeformWebhookService {
         case 'file_url':
           if (a.file_url) {
             let kind = 'OTHER';
-            if (/\bid\b|passport|identity|national|qid/i.test(title)) kind = 'ID';
-            if (/registration|incorporation|certificate|kbis|rcs|commercial registration|\bcr\b/i.test(title)) kind = 'REGISTRATION';
-            documents.push({ kind, ref, title: a.field?.title, url: a.file_url });
+            if (/\bid\b|passport|identity|national|qid/i.test(title))
+              kind = 'ID';
+            if (
+              /registration|incorporation|certificate|kbis|rcs|commercial registration|\bcr\b/i.test(
+                title,
+              )
+            )
+              kind = 'REGISTRATION';
+            documents.push({
+              kind,
+              ref,
+              title: a.field?.title,
+              url: a.file_url,
+            });
             profile[`${ref}_file_url`] = a.file_url;
           }
           break;
@@ -225,11 +249,17 @@ export class TypeformWebhookService {
     );
     const email = contactEmail || (profile.contact_email as string) || null;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new BadRequestException('Could not resolve applicant contact email from form');
+      throw new BadRequestException(
+        'Could not resolve applicant contact email from form',
+      );
     }
 
-    const displayName = companyName || (profile.company_name as string) || email.split('@')[0] || 'Applicant';
-    let baseSlug = this.slugify(displayName);
+    const displayName =
+      companyName ||
+      (profile.company_name as string) ||
+      email.split('@')[0] ||
+      'Applicant';
+    const baseSlug = this.slugify(displayName);
     let slug = baseSlug;
     let i = 2;
     while (await this.prisma.tenant.findUnique({ where: { slug } })) {
@@ -259,14 +289,19 @@ export class TypeformWebhookService {
       },
     });
 
-    const spaceLabel = application.space_id ? `Space ${application.space_id}` : '';
+    const spaceLabel = application.space_id
+      ? `Space ${application.space_id}`
+      : '';
     const summary = `${displayName} (${email}) applied. ${spaceLabel}`.trim();
 
     const managers = await this.prisma.user.findMany({
       where: {
         status: 'ACTIVE',
         OR: [
-          { tenant_id: application.landlord_tenant_id, role: USER_ROLE.MANAGER },
+          {
+            tenant_id: application.landlord_tenant_id,
+            role: USER_ROLE.MANAGER,
+          },
           { role: USER_ROLE.SUPER_ADMIN },
         ],
       },

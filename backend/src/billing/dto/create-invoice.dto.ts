@@ -43,7 +43,10 @@ export class CreateInvoiceDto {
   @Min(0)
   subtotal: number;
 
-  @ApiPropertyOptional({ example: 0, description: 'Tax rate in percent (Qatar default 0%)' })
+  @ApiPropertyOptional({
+    example: 0,
+    description: 'Tax rate in percent (Qatar default 0%)',
+  })
   @IsNumber()
   @IsOptional()
   @Min(0)

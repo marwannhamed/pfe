@@ -32,7 +32,9 @@ export class ConfigurationService {
   get jwtSecret(): string {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret === 'secret') {
-      throw new Error('JWT_SECRET environment variable must be set and not be "secret"');
+      throw new Error(
+        'JWT_SECRET environment variable must be set and not be "secret"',
+      );
     }
     return secret;
   }
@@ -40,7 +42,9 @@ export class ConfigurationService {
   get jwtRefreshSecret(): string {
     const secret = process.env.JWT_REFRESH_SECRET;
     if (!secret || secret === 'secret2') {
-      throw new Error('JWT_REFRESH_SECRET environment variable must be set and not be "secret2"');
+      throw new Error(
+        'JWT_REFRESH_SECRET environment variable must be set and not be "secret2"',
+      );
     }
     return secret;
   }
@@ -183,13 +187,15 @@ export class ConfigurationService {
       'SESSION_SECRET',
     ];
 
-    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    const missingVars = requiredVars.filter((varName) => !process.env[varName]);
 
     if (missingVars.length > 0) {
       console.warn(`Missing environment variables: ${missingVars.join(', ')}`);
       // For development, allow missing vars but warn
       if (process.env.NODE_ENV === 'production') {
-        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+        throw new Error(
+          `Missing required environment variables: ${missingVars.join(', ')}`,
+        );
       }
     }
 
@@ -201,7 +207,9 @@ export class ConfigurationService {
 
     for (const [key, defaultValue] of Object.entries(defaultSecrets)) {
       if (process.env[key] === defaultValue) {
-        throw new Error(`${key} cannot be set to default value "${defaultValue}" in production`);
+        throw new Error(
+          `${key} cannot be set to default value "${defaultValue}" in production`,
+        );
       }
     }
   }

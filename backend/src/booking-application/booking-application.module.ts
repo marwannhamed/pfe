@@ -8,7 +8,13 @@ import { BookingApplicationService } from './booking-application.service';
 import { BookingApplicationController } from './booking-application.controller';
 
 @Module({
-  imports: [PrismaModule, MailModule, NotificationModule, AuthModule, BillingModule],
+  imports: [
+    PrismaModule,
+    MailModule,
+    NotificationModule,
+    AuthModule,
+    BillingModule,
+  ],
   controllers: [BookingApplicationController],
   providers: [BookingApplicationService],
   exports: [BookingApplicationService],

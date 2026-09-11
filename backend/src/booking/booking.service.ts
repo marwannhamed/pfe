@@ -44,7 +44,11 @@ export class BookingService {
     user?: { email?: string | null } | null;
     tenant?: { contact_email?: string | null } | null;
   }): string | null {
-    return booking.user?.email?.trim() || booking.tenant?.contact_email?.trim() || null;
+    return (
+      booking.user?.email?.trim() ||
+      booking.tenant?.contact_email?.trim() ||
+      null
+    );
   }
 
   private readonly bookingInclude = {
@@ -53,7 +57,10 @@ export class BookingService {
     tenant: true,
     receptionist: true,
     addOns: { include: { addonService: true } },
-    documents: { include: { uploadedBy: true }, orderBy: { uploaded_at: 'desc' as const } },
+    documents: {
+      include: { uploadedBy: true },
+      orderBy: { uploaded_at: 'desc' as const },
+    },
     application: true,
   };
 
@@ -66,7 +73,9 @@ export class BookingService {
     );
   }
 
-  private async pickReceptionist(landlordTenantId: string): Promise<string | null> {
+  private async pickReceptionist(
+    landlordTenantId: string,
+  ): Promise<string | null> {
     const receptionist = await this.prisma.user.findFirst({
       where: {
         tenant_id: landlordTenantId,
@@ -84,7 +93,9 @@ export class BookingService {
     city?: string | null;
     state?: string | null;
     country?: string | null;
-    floor?: { building?: { address?: string | null; name?: string } | null } | null;
+    floor?: {
+      building?: { address?: string | null; name?: string } | null;
+    } | null;
   }) {
     const parts = [
       space.address,
@@ -129,7 +140,9 @@ export class BookingService {
 
     const space = await this.prisma.space.findUnique({
       where: { id: spaceId },
-      include: { floor: { include: { building: { select: { tenant_id: true } } } } },
+      include: {
+        floor: { include: { building: { select: { tenant_id: true } } } },
+      },
     });
     if (!space) throw new BadRequestException('Space not found');
     const landlordTenantId = space.floor.building.tenant_id;
@@ -154,11 +167,17 @@ export class BookingService {
       if (!byId.has(svc.id)) byId.set(svc.id, svc);
     }
 
-    const resolved: { addon_service_id: string; quantity: number; unit_price: number }[] = [];
+    const resolved: {
+      addon_service_id: string;
+      quantity: number;
+      unit_price: number;
+    }[] = [];
     for (const item of addons) {
       const svc = byId.get(item.addon_service_id);
       if (!svc || !svc.is_active) {
-        throw new BadRequestException('Add-on service is not available for this space');
+        throw new BadRequestException(
+          'Add-on service is not available for this space',
+        );
       }
       resolved.push({
         addon_service_id: item.addon_service_id,
@@ -179,7 +198,8 @@ export class BookingService {
       select: { invoice_id: true },
     });
     if (existing?.invoice_id) return existing.invoice_id;
-    const invoice = await this.billingService.generateInvoiceFromBooking(bookingId);
+    const invoice =
+      await this.billingService.generateInvoiceFromBooking(bookingId);
     await this.prisma.booking.update({
       where: { id: bookingId },
       data: { invoice_id: invoice.id },
@@ -220,7 +240,9 @@ export class BookingService {
   }
 
   private isPortalBooker(role: string) {
-    return role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE;
+    return (
+      role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE
+    );
   }
 
   private async notifyUsers(
@@ -243,16 +265,28 @@ export class BookingService {
     );
   }
 
-  private async notifyApprovers(booking: { id: string; tenant_id: string; booking_number: string; space?: { name?: string } }) {
+  private async notifyApprovers(booking: {
+    id: string;
+    tenant_id: string;
+    booking_number: string;
+    space?: { name?: string };
+  }) {
     const approvers = await this.prisma.user.findMany({
-      where: { role: { in: [USER_ROLE.MANAGER, USER_ROLE.SUPER_ADMIN] }, status: 'ACTIVE' },
+      where: {
+        role: { in: [USER_ROLE.MANAGER, USER_ROLE.SUPER_ADMIN] },
+        status: 'ACTIVE',
+      },
       select: { id: true },
     });
-    await this.notifyUsers(booking.tenant_id, approvers.map((u) => u.id), {
-      type: 'BOOKING_REMINDER',
-      title: 'Booking pending approval',
-      message: `Booking ${booking.booking_number} for ${booking.space?.name ?? 'a space'} needs your review.`,
-    });
+    await this.notifyUsers(
+      booking.tenant_id,
+      approvers.map((u) => u.id),
+      {
+        type: 'BOOKING_REMINDER',
+        title: 'Booking pending approval',
+        message: `Booking ${booking.booking_number} for ${booking.space?.name ?? 'a space'} needs your review.`,
+      },
+    );
   }
 
   private async notifyTenantAdmins(
@@ -260,10 +294,18 @@ export class BookingService {
     payload: { type: string; title: string; message: string },
   ) {
     const admins = await this.prisma.user.findMany({
-      where: { tenant_id: tenantId, role: USER_ROLE.TENANT_ADMIN, status: 'ACTIVE' },
+      where: {
+        tenant_id: tenantId,
+        role: USER_ROLE.TENANT_ADMIN,
+        status: 'ACTIVE',
+      },
       select: { id: true },
     });
-    await this.notifyUsers(tenantId, admins.map((a) => a.id), payload);
+    await this.notifyUsers(
+      tenantId,
+      admins.map((a) => a.id),
+      payload,
+    );
   }
 
   // ─── Helper: get tenant email safely ──────────────────────────
@@ -278,11 +320,19 @@ export class BookingService {
 
   // ─── CREATE ───────────────────────────────────────────────────
   async create(dto: CreateBookingDto, user: AuthUser) {
-    if (user.role !== USER_ROLE.SUPER_ADMIN && user.role !== USER_ROLE.FINANCE) {
+    if (
+      user.role !== USER_ROLE.SUPER_ADMIN &&
+      user.role !== USER_ROLE.FINANCE
+    ) {
       if (dto.tenant_id !== user.tenant_id) {
-        throw new ForbiddenException('Cannot create booking for another tenant');
+        throw new ForbiddenException(
+          'Cannot create booking for another tenant',
+        );
       }
-      if (user.role === USER_ROLE.TENANT_EMPLOYEE && dto.created_by_user_id !== user.id) {
+      if (
+        user.role === USER_ROLE.TENANT_EMPLOYEE &&
+        dto.created_by_user_id !== user.id
+      ) {
         throw new ForbiddenException('Employees can only book as themselves');
       }
     }
@@ -291,7 +341,8 @@ export class BookingService {
       where: { id: dto.space_id },
       include: { floor: { include: { building: true } } },
     });
-    if (!space) throw new NotFoundException(`Espace #${dto.space_id} introuvable`);
+    if (!space)
+      throw new NotFoundException(`Espace #${dto.space_id} introuvable`);
 
     const startRaw = (dto as any).start_time ?? dto.start_datetime;
     const endRaw = (dto as any).end_time ?? dto.end_datetime;
@@ -301,7 +352,11 @@ export class BookingService {
     await this.checkAvailability(dto.space_id, startRaw, endRaw);
 
     const durationMonths = this.durationMonths(startDate, endDate);
-    const addonRows = await this.resolveBookingAddons(dto.space_id, durationMonths, dto.addons);
+    const addonRows = await this.resolveBookingAddons(
+      dto.space_id,
+      durationMonths,
+      dto.addons,
+    );
     const addonsTotal = addonRows.reduce(
       (sum, a) => sum + a.quantity * a.unit_price,
       0,
@@ -363,8 +418,14 @@ export class BookingService {
         tenantName: booking.tenant.name,
         spaceName: booking.space.name,
         bookingNumber: booking.booking_number,
-        startDatetime: new Date(booking.start_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
-        endDatetime: new Date(booking.end_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        startDatetime: new Date(booking.start_time).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
+        endDatetime: new Date(booking.end_time).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
         totalPrice: Number(booking.total_amount ?? 0).toFixed(2),
       });
     }
@@ -375,15 +436,26 @@ export class BookingService {
   // ─── FIND ALL (scoped) ────────────────────────────────────────
   async findAllForUser(
     user: AuthUser,
-    opts: { tenantId?: string; spaceId?: string; status?: string; createdBy?: string } = {},
+    opts: {
+      tenantId?: string;
+      spaceId?: string;
+      status?: string;
+      createdBy?: string;
+    } = {},
   ) {
     const where: any = {};
     if (opts.status) where.status = opts.status;
     if (opts.spaceId) where.space_id = opts.spaceId;
 
-    if (user.role === USER_ROLE.SUPER_ADMIN || user.role === USER_ROLE.FINANCE) {
+    if (
+      user.role === USER_ROLE.SUPER_ADMIN ||
+      user.role === USER_ROLE.FINANCE
+    ) {
       if (opts.tenantId) where.tenant_id = opts.tenantId;
-    } else if (user.role === USER_ROLE.MANAGER || user.role === USER_ROLE.CLIENT_ADMIN) {
+    } else if (
+      user.role === USER_ROLE.MANAGER ||
+      user.role === USER_ROLE.CLIENT_ADMIN
+    ) {
       where.space = { floor: { building: { tenant_id: user.tenant_id } } };
       if (opts.tenantId) where.tenant_id = opts.tenantId;
     } else if (
@@ -391,7 +463,7 @@ export class BookingService {
       user.role === USER_ROLE.TENANT_ADMIN
     ) {
       if (opts.tenantId && opts.tenantId !== user.tenant_id) {
-        throw new ForbiddenException('Cannot list another tenant\'s bookings');
+        throw new ForbiddenException("Cannot list another tenant's bookings");
       }
       where.tenant_id = user.tenant_id;
     } else if (user.role === USER_ROLE.RECEPTIONIST) {
@@ -407,7 +479,10 @@ export class BookingService {
     }
 
     if (opts.createdBy) {
-      if (user.role === USER_ROLE.TENANT_EMPLOYEE && opts.createdBy !== user.id) {
+      if (
+        user.role === USER_ROLE.TENANT_EMPLOYEE &&
+        opts.createdBy !== user.id
+      ) {
         throw new ForbiddenException();
       }
       if (
@@ -502,7 +577,7 @@ export class BookingService {
         booking.space_id,
         (dto as any).start_time,
         (dto as any).end_time,
-        booking.id
+        booking.id,
       );
     }
 
@@ -528,8 +603,16 @@ export class BookingService {
 
   // ─── APPROVE ─────────────────────────────────────────────────
   async approve(user: AuthUser, id: string, approvedByUserId: string) {
-    if (![USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER].includes(user.role as any)) {
-      throw new ForbiddenException('Only site managers or super admins can approve bookings');
+    if (
+      ![
+        USER_ROLE.SUPER_ADMIN,
+        USER_ROLE.CLIENT_ADMIN,
+        USER_ROLE.MANAGER,
+      ].includes(user.role as any)
+    ) {
+      throw new ForbiddenException(
+        'Only site managers or super admins can approve bookings',
+      );
     }
     const booking = await this.findOneForUser(user, id);
     if (booking.status === BOOKING_STATUS.CONFIRMED) {
@@ -558,8 +641,14 @@ export class BookingService {
         tenantName: updated.tenant.name,
         spaceName: updated.space.name,
         bookingNumber: updated.booking_number,
-        startDatetime: new Date(updated.start_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
-        endDatetime: new Date(updated.end_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        startDatetime: new Date(updated.start_time).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
+        endDatetime: new Date(updated.end_time).toLocaleString('en-US', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
         totalPrice: Number(updated.total_amount ?? 0).toFixed(2),
       });
     }
@@ -582,8 +671,16 @@ export class BookingService {
   }
 
   async reject(user: AuthUser, id: string, reason: string) {
-    if (![USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER].includes(user.role as any)) {
-      throw new ForbiddenException('Only site managers or super admins can reject bookings');
+    if (
+      ![
+        USER_ROLE.SUPER_ADMIN,
+        USER_ROLE.CLIENT_ADMIN,
+        USER_ROLE.MANAGER,
+      ].includes(user.role as any)
+    ) {
+      throw new ForbiddenException(
+        'Only site managers or super admins can reject bookings',
+      );
     }
     const booking = await this.findOneForUser(user, id);
     if (booking.status !== BOOKING_STATUS.PENDING_APPROVAL) {
@@ -594,7 +691,9 @@ export class BookingService {
       where: { id },
       data: {
         status: BOOKING_STATUS.CANCELLED,
-        notes: reason?.trim() ? `Rejected: ${reason.trim()}` : 'Rejected by manager',
+        notes: reason?.trim()
+          ? `Rejected: ${reason.trim()}`
+          : 'Rejected by manager',
       },
       include: { space: true, user: true, tenant: true },
     });
@@ -615,7 +714,11 @@ export class BookingService {
   }
 
   // ─── GENERATE CONTRACT AFTER PAYMENT ─────────────────────────────
-  async generateContractAfterPayment(user: AuthUser, bookingId: string, createdById: string) {
+  async generateContractAfterPayment(
+    user: AuthUser,
+    bookingId: string,
+    createdById: string,
+  ) {
     const booking = await this.findOneForUser(user, bookingId);
 
     // Generate lease contract from booking
@@ -628,7 +731,10 @@ export class BookingService {
       status: 'ACTIVE',
     };
 
-    const contract = await (this.leaseContractService as any).create(contractData as any, createdById);
+    const contract = await (this.leaseContractService as any).create(
+      contractData as any,
+      createdById,
+    );
 
     // Update booking to link to contract
     await (this.prisma as any).booking.update({
@@ -703,7 +809,11 @@ export class BookingService {
   }
 
   // ─── ADD ADDON ───────────────────────────────────────────────
-  async addAddon(user: AuthUser, bookingId: string, dto: CreateBookingAddonDto) {
+  async addAddon(
+    user: AuthUser,
+    bookingId: string,
+    dto: CreateBookingAddonDto,
+  ) {
     await this.findOneForUser(user, bookingId);
     return this.prisma.bookingAddOn.create({
       data: {
@@ -733,18 +843,24 @@ export class BookingService {
   // ─── WORKFLOW: phone confirmation ─────────────────────────────
   async confirmPhoneCall(user: AuthUser, id: string) {
     if (!this.isWorkflowStaff(user.role)) {
-      throw new ForbiddenException('Only reception or managers can confirm calls');
+      throw new ForbiddenException(
+        'Only reception or managers can confirm calls',
+      );
     }
     const booking = await this.findOneForUser(user, id);
     if (booking.status !== BOOKING_STATUS.PENDING_PHONE_CONFIRMATION) {
-      throw new BadRequestException('Booking is not awaiting phone confirmation');
+      throw new BadRequestException(
+        'Booking is not awaiting phone confirmation',
+      );
     }
     if (
       user.role === USER_ROLE.RECEPTIONIST &&
       booking.receptionist_id &&
       booking.receptionist_id !== user.id
     ) {
-      throw new ForbiddenException('This booking is assigned to another receptionist');
+      throw new ForbiddenException(
+        'This booking is assigned to another receptionist',
+      );
     }
 
     const updated = await this.prisma.booking.update({
@@ -760,9 +876,7 @@ export class BookingService {
       void this.mailService.sendPhysicalVisitInstructions({
         to: tenantEmail,
         tenantName:
-          updated.user?.first_name ??
-          updated.tenant?.name ??
-          'Tenant',
+          updated.user?.first_name ?? updated.tenant?.name ?? 'Tenant',
         spaceName: updated.space?.name ?? 'your space',
         bookingNumber: updated.booking_number,
         officeAddress: this.formatOfficeAddress(updated.space ?? {}),
@@ -777,11 +891,15 @@ export class BookingService {
 
   async markPhoneUnreachable(user: AuthUser, id: string, reason?: string) {
     if (!this.isWorkflowStaff(user.role)) {
-      throw new ForbiddenException('Only reception or managers can update call status');
+      throw new ForbiddenException(
+        'Only reception or managers can update call status',
+      );
     }
     const booking = await this.findOneForUser(user, id);
     if (booking.status !== BOOKING_STATUS.PENDING_PHONE_CONFIRMATION) {
-      throw new BadRequestException('Booking is not awaiting phone confirmation');
+      throw new BadRequestException(
+        'Booking is not awaiting phone confirmation',
+      );
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -809,7 +927,8 @@ export class BookingService {
         spaceName: updated.space?.name ?? 'Space',
         bookingNumber: updated.booking_number,
         startDatetime: new Date(updated.start_time).toLocaleString(),
-        reason: reason ?? 'We could not reach you by phone to confirm your booking.',
+        reason:
+          reason ?? 'We could not reach you by phone to confirm your booking.',
       } as any);
     }
 
@@ -818,7 +937,9 @@ export class BookingService {
 
   async markDocumentsPending(user: AuthUser, id: string) {
     if (!this.isWorkflowStaff(user.role)) {
-      throw new ForbiddenException('Only reception or managers can update visit status');
+      throw new ForbiddenException(
+        'Only reception or managers can update visit status',
+      );
     }
     const booking = await this.findOneForUser(user, id);
     if (booking.status !== BOOKING_STATUS.AWAITING_PHYSICAL_VISIT) {
@@ -840,7 +961,9 @@ export class BookingService {
     fileName?: string,
   ) {
     if (!this.isWorkflowStaff(user.role)) {
-      throw new ForbiddenException('Only reception or managers can upload booking documents');
+      throw new ForbiddenException(
+        'Only reception or managers can upload booking documents',
+      );
     }
     await this.findOneForUser(user, bookingId);
 
@@ -851,7 +974,10 @@ export class BookingService {
       throw new BadRequestException('Maximum 5 documents per booking');
     }
 
-    const upload = await this.uploadService.uploadBookingDocument(file, bookingId);
+    const upload = await this.uploadService.uploadBookingDocument(
+      file,
+      bookingId,
+    );
     const doc = await this.prisma.bookingDocument.create({
       data: {
         booking_id: bookingId,
@@ -867,7 +993,9 @@ export class BookingService {
 
   async removeDocument(user: AuthUser, bookingId: string, documentId: string) {
     if (!this.isWorkflowStaff(user.role)) {
-      throw new ForbiddenException('Only reception or managers can remove booking documents');
+      throw new ForbiddenException(
+        'Only reception or managers can remove booking documents',
+      );
     }
     await this.findOneForUser(user, bookingId);
     const doc = await this.prisma.bookingDocument.findFirst({
@@ -883,7 +1011,13 @@ export class BookingService {
   }
 
   async finalizeBooking(user: AuthUser, id: string) {
-    if (![USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER].includes(user.role as any)) {
+    if (
+      ![
+        USER_ROLE.SUPER_ADMIN,
+        USER_ROLE.CLIENT_ADMIN,
+        USER_ROLE.MANAGER,
+      ].includes(user.role as any)
+    ) {
       throw new ForbiddenException('Only managers can finalize bookings');
     }
     const booking = await this.findOneForUser(user, id);
@@ -924,7 +1058,8 @@ export class BookingService {
     if (tenantEmail) {
       void this.mailService.sendBookingFinalized({
         to: tenantEmail,
-        tenantName: updated.user?.first_name ?? updated.tenant?.name ?? 'Tenant',
+        tenantName:
+          updated.user?.first_name ?? updated.tenant?.name ?? 'Tenant',
         spaceName: updated.space?.name ?? 'your space',
         bookingNumber: updated.booking_number,
         contractDownloadUrl: contractDoc.file_url,

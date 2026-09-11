@@ -20,21 +20,28 @@ export class SpaceService {
   ) {}
 
   private toSlug(value: string): string {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 70) || `space-${Date.now()}`;
+    return (
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 70) || `space-${Date.now()}`
+    );
   }
 
-  private async buildUniqueSlug(seed: string, excludeId?: string): Promise<string> {
+  private async buildUniqueSlug(
+    seed: string,
+    excludeId?: string,
+  ): Promise<string> {
     const baseSlug = this.toSlug(seed);
     let slug = baseSlug;
     let i = 2;
     while (
       await this.prisma.space.findFirst({
-        where: excludeId ? ({ slug, NOT: { id: excludeId } } as any) : ({ slug } as any),
+        where: excludeId
+          ? ({ slug, NOT: { id: excludeId } } as any)
+          : ({ slug } as any),
       })
     ) {
       slug = `${baseSlug}-${i}`;
@@ -51,8 +58,14 @@ export class SpaceService {
   private mapSpaceForFrontend(space: any) {
     const slugValue = space?.slug || '';
     const available_addons = (space?.availableAddOns ?? [])
-      .map((link: { addonService?: { id: string; is_active?: boolean } }) => link.addonService)
-      .filter((a: { id?: string; is_active?: boolean } | undefined) => a?.id && a.is_active !== false);
+      .map(
+        (link: { addonService?: { id: string; is_active?: boolean } }) =>
+          link.addonService,
+      )
+      .filter(
+        (a: { id?: string; is_active?: boolean } | undefined) =>
+          a?.id && a.is_active !== false,
+      );
     const { availableAddOns: _links, ...rest } = space ?? {};
     return {
       ...rest,
@@ -94,7 +107,11 @@ export class SpaceService {
     });
   }
 
-  private async syncAddons(spaceId: string, floorId: string, addonIds?: string[]) {
+  private async syncAddons(
+    spaceId: string,
+    floorId: string,
+    addonIds?: string[],
+  ) {
     if (addonIds === undefined) return;
     const floor = await this.prisma.floor.findUnique({
       where: { id: floorId },
@@ -102,20 +119,28 @@ export class SpaceService {
     });
     const tenantId = floor?.building?.tenant_id;
     if (!tenantId) {
-      throw new BadRequestException('Building tenant not found for add-on assignment');
+      throw new BadRequestException(
+        'Building tenant not found for add-on assignment',
+      );
     }
     const uniqueIds = [...new Set(addonIds)];
     if (!uniqueIds.length) {
-      await this.prisma.spaceAddOnService.deleteMany({ where: { space_id: spaceId } });
+      await this.prisma.spaceAddOnService.deleteMany({
+        where: { space_id: spaceId },
+      });
       return;
     }
     const valid = await this.prisma.addOnService.findMany({
       where: { id: { in: uniqueIds }, tenant_id: tenantId, is_active: true },
     });
     if (valid.length !== uniqueIds.length) {
-      throw new BadRequestException('One or more add-on services are invalid for this space');
+      throw new BadRequestException(
+        'One or more add-on services are invalid for this space',
+      );
     }
-    await this.prisma.spaceAddOnService.deleteMany({ where: { space_id: spaceId } });
+    await this.prisma.spaceAddOnService.deleteMany({
+      where: { space_id: spaceId },
+    });
     await this.prisma.spaceAddOnService.createMany({
       data: valid.map((a) => ({ space_id: spaceId, addon_service_id: a.id })),
     });
@@ -166,12 +191,18 @@ export class SpaceService {
       },
       orderBy: { name: 'asc' },
     });
-    const landlordAddons = new Map<string, Awaited<ReturnType<typeof this.prisma.addOnService.findMany>>>();
+    const landlordAddons = new Map<
+      string,
+      Awaited<ReturnType<typeof this.prisma.addOnService.findMany>>
+    >();
     const mapped = [];
     for (const s of spaces) {
       const row = this.mapSpaceForFrontend(s);
       const landlordId = s.floor?.building?.tenant_id;
-      if (landlordId && (!row.available_addons || row.available_addons.length === 0)) {
+      if (
+        landlordId &&
+        (!row.available_addons || row.available_addons.length === 0)
+      ) {
         if (!landlordAddons.has(landlordId)) {
           landlordAddons.set(
             landlordId,
@@ -203,7 +234,10 @@ export class SpaceService {
     if (!space) throw new NotFoundException('Space not found or not available');
     const mapped = this.mapSpaceForFrontend(space);
     const landlordId = space.floor?.building?.tenant_id;
-    if (landlordId && (!mapped.available_addons || mapped.available_addons.length === 0)) {
+    if (
+      landlordId &&
+      (!mapped.available_addons || mapped.available_addons.length === 0)
+    ) {
       const tenantAddons = await this.prisma.addOnService.findMany({
         where: { tenant_id: landlordId, is_active: true },
         orderBy: { name: 'asc' },
@@ -314,29 +348,42 @@ export class SpaceService {
     this.assertPublishable(merged);
     const nextSlug =
       dto.slug || (dto as any).code || dto.name
-        ? await this.buildUniqueSlug(dto.slug || (dto as any).code || dto.name!, id)
+        ? await this.buildUniqueSlug(
+            dto.slug || (dto as any).code || dto.name!,
+            id,
+          )
         : current.slug;
 
     const updated = await this.prisma.space.update({
-      where: { id }, 
+      where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
         ...(nextSlug ? { slug: nextSlug } : {}),
         ...(dto.type !== undefined ? { type: dto.type as any } : {}),
         ...(dto.status !== undefined ? { status: dto.status as any } : {}),
         ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
         ...(dto.area_sqm !== undefined ? { area_sqm: dto.area_sqm } : {}),
-        ...(dto.price_per_hour !== undefined && { hourly_rate: dto.price_per_hour }),
-        ...(dto.price_per_day !== undefined && { daily_rate: dto.price_per_day }),
-        ...(dto.price_per_month !== undefined && { monthly_rate: dto.price_per_month }),
+        ...(dto.price_per_hour !== undefined && {
+          hourly_rate: dto.price_per_hour,
+        }),
+        ...(dto.price_per_day !== undefined && {
+          daily_rate: dto.price_per_day,
+        }),
+        ...(dto.price_per_month !== undefined && {
+          monthly_rate: dto.price_per_month,
+        }),
         ...(dto.floor_id !== undefined ? { floor_id: dto.floor_id } : {}),
         ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
         ...(dto.is_listed !== undefined ? { is_listed: dto.is_listed } : {}),
         ...(dto.requires_approval !== undefined
           ? { requires_approval: dto.requires_approval }
           : {}),
-        ...(dto.is_published !== undefined ? { is_published: dto.is_published } : {}),
+        ...(dto.is_published !== undefined
+          ? { is_published: dto.is_published }
+          : {}),
         ...(dto.address !== undefined ? { address: dto.address } : {}),
         ...(dto.city !== undefined ? { city: dto.city } : {}),
         ...(dto.state !== undefined ? { state: dto.state } : {}),
@@ -382,32 +429,39 @@ export class SpaceService {
 
   async updateStatus(id: string, status: string) {
     await this.findOne(id);
-    return this.prisma.space.update({ where: { id }, data: { status: status as any } });
+    return this.prisma.space.update({
+      where: { id },
+      data: { status: status as any },
+    });
   }
 
-  async updateMapPosition(user: AuthUser, id: string, dto: { map_x?: number; map_y?: number; map_w?: number; map_h?: number }) {
+  async updateMapPosition(
+    user: AuthUser,
+    id: string,
+    dto: { map_x?: number; map_y?: number; map_w?: number; map_h?: number },
+  ) {
     await this.access.assertSpaceMutable(user, id);
-    return (this.prisma as any).space.update({ 
-      where: { id }, 
-      data: { 
+    return (this.prisma as any).space.update({
+      where: { id },
+      data: {
         map_x: dto.map_x,
         map_y: dto.map_y,
         map_w: dto.map_w,
         map_h: dto.map_h,
-      } as any
+      } as any,
     });
   }
 
   async clearMapPosition(user: AuthUser, id: string) {
     await this.access.assertSpaceMutable(user, id);
-    return (this.prisma as any).space.update({ 
-      where: { id }, 
-      data: { 
+    return (this.prisma as any).space.update({
+      where: { id },
+      data: {
         map_x: null,
         map_y: null,
         map_w: null,
         map_h: null,
-      } as any
+      } as any,
     });
   }
 }

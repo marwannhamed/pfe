@@ -10,7 +10,12 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreateInvoiceLineDto } from './dto/create-invoice-line.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { INVOICE_STATUS, PAYMENT_STATUS, USER_ROLE, PAYMENT_METHOD } from '../constants/enums';
+import {
+  INVOICE_STATUS,
+  PAYMENT_STATUS,
+  USER_ROLE,
+  PAYMENT_METHOD,
+} from '../constants/enums';
 import { CLIENT_BILLING } from '../constants/role-groups';
 import { DEFAULT_CURRENCY } from '../constants/qatar';
 import type { AuthUser } from '../auth/types/auth-user';
@@ -32,7 +37,9 @@ export class BillingService {
 
   private fireAndForget(task: Promise<unknown>, context: string) {
     void task.catch((error: any) => {
-      this.logger.warn(`${context} failed: ${error?.message ?? 'Unknown error'}`);
+      this.logger.warn(
+        `${context} failed: ${error?.message ?? 'Unknown error'}`,
+      );
     });
   }
 
@@ -522,7 +529,9 @@ export class BillingService {
   // ════════════════════════════════════════════════════════════
 
   private isClientBilling(user?: AuthUser) {
-    return CLIENT_BILLING.includes(user?.role as (typeof CLIENT_BILLING)[number]);
+    return CLIENT_BILLING.includes(
+      user?.role as (typeof CLIENT_BILLING)[number],
+    );
   }
 
   /** @deprecated use isClientBilling — platform owner does not operate tenant billing */
@@ -592,13 +601,20 @@ export class BillingService {
   }
 
   private isTenantUser(role?: string) {
-    return role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE;
+    return (
+      role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE
+    );
   }
 
-  private resolveTenantScope(user: AuthUser | undefined, tenantId?: string): string | undefined {
+  private resolveTenantScope(
+    user: AuthUser | undefined,
+    tenantId?: string,
+  ): string | undefined {
     if (this.isTenantUser(user?.role)) {
       if (tenantId && tenantId !== user?.tenant_id) {
-        throw new ForbiddenException('You cannot access billing for another organization');
+        throw new ForbiddenException(
+          'You cannot access billing for another organization',
+        );
       }
       return user?.tenant_id;
     }
@@ -627,7 +643,9 @@ export class BillingService {
 
     if (isTenantUser) {
       if (dto.tenant_id !== user.tenant_id) {
-        throw new BadRequestException('You can only pay invoices for your organization');
+        throw new BadRequestException(
+          'You can only pay invoices for your organization',
+        );
       }
       const pending = invoice.payments?.find(
         (p) => p.status === PAYMENT_STATUS.PENDING,
@@ -646,9 +664,8 @@ export class BillingService {
     const method = dto.method ?? (dto as any).payment_method;
     const recordedById = isTenantUser
       ? undefined
-      : dto.recorded_by_id ?? (dto as any).recorded_by_user_id ?? user?.id;
-    const transactionId =
-      dto.transaction_id ?? (dto as any).reference_number;
+      : (dto.recorded_by_id ?? (dto as any).recorded_by_user_id ?? user?.id);
+    const transactionId = dto.transaction_id ?? (dto as any).reference_number;
 
     const paymentStatus = isTenantUser
       ? PAYMENT_STATUS.PENDING
@@ -697,9 +714,7 @@ export class BillingService {
 
     const payment = await this.findOnePayment(id);
     if (payment.status !== PAYMENT_STATUS.PENDING) {
-      throw new BadRequestException(
-        'Only pending payments can be confirmed',
-      );
+      throw new BadRequestException('Only pending payments can be confirmed');
     }
 
     const updated = await this.prisma.payment.update({
@@ -815,13 +830,18 @@ export class BillingService {
     }
 
     if (payment.cheque_document_url) {
-      const oldId = this.uploadService.extractPublicId(payment.cheque_document_url);
+      const oldId = this.uploadService.extractPublicId(
+        payment.cheque_document_url,
+      );
       if (oldId) {
         void this.uploadService.deleteFile(oldId, 'raw');
       }
     }
 
-    const upload = await this.uploadService.uploadPaymentCheque(file, paymentId);
+    const upload = await this.uploadService.uploadPaymentCheque(
+      file,
+      paymentId,
+    );
     return this.prisma.payment.update({
       where: { id: paymentId },
       data: { cheque_document_url: upload.url },

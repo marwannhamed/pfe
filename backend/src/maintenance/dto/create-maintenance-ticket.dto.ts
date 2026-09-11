@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreateMaintenanceTicketDto {
   @ApiProperty({ example: 'uuid-du-space' })
@@ -64,7 +58,9 @@ export class CreateMaintenanceTicketDto {
   @IsOptional()
   cost?: number;
 
-  @ApiPropertyOptional({ description: 'Crisp session id for support traceability' })
+  @ApiPropertyOptional({
+    description: 'Crisp session id for support traceability',
+  })
   @IsString()
   @IsOptional()
   crisp_session_id?: string;

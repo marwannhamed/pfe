@@ -39,7 +39,10 @@ export class MaintenanceController {
 
   @Post()
   @ApiOperation({ summary: 'Créer un ticket de maintenance' })
-  create(@CurrentUser() user: AuthUser, @Body() dto: CreateMaintenanceTicketDto) {
+  create(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateMaintenanceTicketDto,
+  ) {
     return this.maintenanceService.createForUser(user, dto);
   }
 
@@ -50,7 +53,11 @@ export class MaintenanceController {
   @ApiQuery({ name: 'priority', required: false })
   @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'assignedTo', required: false })
-  @ApiQuery({ name: 'view', required: false, enum: ['available', 'mine', 'all'] })
+  @ApiQuery({
+    name: 'view',
+    required: false,
+    enum: ['available', 'mine', 'all'],
+  })
   findAll(
     @CurrentUser() user: AuthUser,
     @Query('spaceId') spaceId?: string,
@@ -71,7 +78,9 @@ export class MaintenanceController {
   }
 
   @Get('accessible-spaces')
-  @ApiOperation({ summary: 'Spaces the current user may report maintenance for' })
+  @ApiOperation({
+    summary: 'Spaces the current user may report maintenance for',
+  })
   getAccessibleSpaces(@CurrentUser() user: AuthUser) {
     return this.maintenanceService.getAccessibleSpaces(user);
   }
@@ -115,7 +124,9 @@ export class MaintenanceController {
   @Patch(':id/accept')
   @UseGuards(RolesGuard)
   @Roles(USER_ROLE.MAINTENANCE)
-  @ApiOperation({ summary: 'Accept / claim an open ticket (maintenance staff)' })
+  @ApiOperation({
+    summary: 'Accept / claim an open ticket (maintenance staff)',
+  })
   @ApiParam({ name: 'id' })
   accept(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.maintenanceService.accept(id, user);
@@ -123,7 +134,12 @@ export class MaintenanceController {
 
   @Patch(':id/start')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.MAINTENANCE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.MAINTENANCE,
+  )
   @ApiOperation({ summary: 'Démarrer le travail (ASSIGNED → IN_PROGRESS)' })
   @ApiParam({ name: 'id' })
   startProgress(@Param('id') id: string, @CurrentUser() user: AuthUser) {
@@ -132,17 +148,35 @@ export class MaintenanceController {
 
   @Patch(':id/resolve')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.MAINTENANCE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.MAINTENANCE,
+  )
   @ApiOperation({ summary: 'Résoudre un ticket (→ RESOLVED)' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'cost', required: false })
-  resolve(@Param('id') id: string, @Query('cost') cost: string | undefined, @CurrentUser() user: AuthUser) {
-    return this.maintenanceService.resolve(id, cost ? Number(cost) : undefined, user);
+  resolve(
+    @Param('id') id: string,
+    @Query('cost') cost: string | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.maintenanceService.resolve(
+      id,
+      cost ? Number(cost) : undefined,
+      user,
+    );
   }
 
   @Patch(':id/close')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.MAINTENANCE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.MAINTENANCE,
+  )
   @ApiOperation({ summary: 'Clôturer un ticket (RESOLVED → CLOSED)' })
   @ApiParam({ name: 'id' })
   close(@Param('id') id: string, @CurrentUser() user: AuthUser) {
@@ -151,7 +185,13 @@ export class MaintenanceController {
 
   @Patch(':id/cancel')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN, USER_ROLE.TENANT_EMPLOYEE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Annuler un ticket (→ CANCELLED)' })
   @ApiParam({ name: 'id' })
   cancel(@Param('id') id: string, @CurrentUser() user: AuthUser) {

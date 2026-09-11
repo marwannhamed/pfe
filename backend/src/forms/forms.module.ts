@@ -12,7 +12,11 @@ import { TenantApplicationsController } from './tenant-applications.controller';
 
 @Module({
   imports: [PrismaModule, MailModule, NotificationModule, AuthModule],
-  controllers: [FormController, TypeformWebhookController, TenantApplicationsController],
+  controllers: [
+    FormController,
+    TypeformWebhookController,
+    TenantApplicationsController,
+  ],
   providers: [FormService, TypeformWebhookService, TenantApplicationService],
 })
 export class FormsModule {}

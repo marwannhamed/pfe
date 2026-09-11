@@ -77,14 +77,20 @@ export class NotificationService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    const stored = user.notification_preferences as Record<string, unknown> | null;
+    const stored = user.notification_preferences as Record<
+      string,
+      unknown
+    > | null;
     if (stored && typeof stored === 'object') {
       return { ...this.defaultPreferences(userId), ...stored, user_id: userId };
     }
     return this.defaultPreferences(userId);
   }
 
-  async updatePreferences(userId: string, preferences: Record<string, unknown>) {
+  async updatePreferences(
+    userId: string,
+    preferences: Record<string, unknown>,
+  ) {
     const merged = {
       ...this.defaultPreferences(userId),
       ...preferences,

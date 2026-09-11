@@ -3,7 +3,10 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 import { BOOKING_DOCUMENT_TYPE } from '../../constants/enums';
 
 export class UploadBookingDocumentDto {
-  @ApiPropertyOptional({ example: 'contract', enum: Object.values(BOOKING_DOCUMENT_TYPE) })
+  @ApiPropertyOptional({
+    example: 'contract',
+    enum: Object.values(BOOKING_DOCUMENT_TYPE),
+  })
   @IsOptional()
   @IsIn(Object.values(BOOKING_DOCUMENT_TYPE))
   document_type?: string;

@@ -51,7 +51,8 @@ export class PerformanceInterceptor implements NestInterceptor {
         });
 
         // Log slow operations
-        if (duration > 1000) { // 1 second threshold
+        if (duration > 1000) {
+          // 1 second threshold
           this.loggingService.warn(
             `Slow API call: ${operation} took ${duration.toFixed(2)}ms`,
             'PERFORMANCE',
@@ -72,7 +73,7 @@ export class PerformanceInterceptor implements NestInterceptor {
         });
 
         throw error;
-      })
+      }),
     );
   }
 }

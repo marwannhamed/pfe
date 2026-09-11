@@ -29,7 +29,9 @@ export class BookingApplicationController {
   constructor(private readonly service: BookingApplicationService) {}
 
   @Post('guest')
-  @ApiOperation({ summary: 'Guest submits a booking application (no account required)' })
+  @ApiOperation({
+    summary: 'Guest submits a booking application (no account required)',
+  })
   createGuest(@Body() dto: CreateGuestBookingApplicationDto) {
     return this.service.createGuest(dto);
   }
@@ -37,8 +39,13 @@ export class BookingApplicationController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Submit a booking application for a published space' })
-  create(@CurrentUser() user: AuthUser, @Body() dto: CreateBookingApplicationDto) {
+  @ApiOperation({
+    summary: 'Submit a booking application for a published space',
+  })
+  create(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateBookingApplicationDto,
+  ) {
     return this.service.create(user, dto);
   }
 
@@ -63,7 +70,9 @@ export class BookingApplicationController {
   @Patch(':id/accept')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Accept application → confirmed booking + space reserved' })
+  @ApiOperation({
+    summary: 'Accept application → confirmed booking + space reserved',
+  })
   @ApiParam({ name: 'id' })
   accept(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.accept(user, id);
@@ -82,4 +91,3 @@ export class BookingApplicationController {
     return this.service.refuse(user, id, dto.reason);
   }
 }
-

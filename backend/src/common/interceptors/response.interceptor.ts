@@ -25,8 +25,14 @@ export interface ApiResponse<T = any> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T>
+> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<ApiResponse<T>> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<Request>();
     const correlationId = this.generateCorrelationId();
@@ -52,14 +58,23 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
           pagination = data.pagination;
         }
         // Handle paginated responses
-        else if (data && typeof data === 'object' && 'data' in data && 'pagination' in data) {
+        else if (
+          data &&
+          typeof data === 'object' &&
+          'data' in data &&
+          'pagination' in data
+        ) {
           responseData = data.data;
           pagination = data.pagination;
         }
         // Handle array responses with pagination info
-        else if (Array.isArray(data) && data.length > 0 && 'pagination' in data[0]) {
+        else if (
+          Array.isArray(data) &&
+          data.length > 0 &&
+          'pagination' in data[0]
+        ) {
           pagination = data[0].pagination;
-          responseData = data.map(item => {
+          responseData = data.map((item) => {
             const { pagination, ...itemData } = item;
             return itemData;
           });
@@ -82,7 +97,9 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
   }
 
   private generateCorrelationId(): string {
-    return Math.random().toString(36).substring(2, 15) +
-           Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 }

@@ -22,8 +22,14 @@ export class MailService {
     logLabel = 'Email',
   ): Promise<boolean> {
     const result = await this.delivery.deliver(options);
-    if (result.ok && result.provider !== 'console' && result.provider !== 'none') {
-      this.logger.log(`${logLabel} sent to ${options.to} via ${result.provider}`);
+    if (
+      result.ok &&
+      result.provider !== 'console' &&
+      result.provider !== 'none'
+    ) {
+      this.logger.log(
+        `${logLabel} sent to ${options.to} via ${result.provider}`,
+      );
       return true;
     }
     if (result.ok && result.provider === 'console') {
@@ -60,12 +66,12 @@ export class MailService {
         subject: `✅ Booking Confirmed — ${dto.bookingNumber}`,
         template: './booking-confirmed',
         context: {
-          tenantName:    dto.tenantName,
-          spaceName:     dto.spaceName,
+          tenantName: dto.tenantName,
+          spaceName: dto.spaceName,
           bookingNumber: dto.bookingNumber,
           startDatetime: dto.startDatetime,
-          endDatetime:   dto.endDatetime,
-          totalPrice:    dto.totalPrice,
+          endDatetime: dto.endDatetime,
+          totalPrice: dto.totalPrice,
         },
       });
       this.logger.log(`Booking confirmed email sent to ${dto.to}`);
@@ -81,11 +87,11 @@ export class MailService {
         subject: `❌ Booking Cancelled — ${dto.bookingNumber}`,
         template: './booking-cancelled',
         context: {
-          tenantName:    dto.tenantName,
-          spaceName:     dto.spaceName,
+          tenantName: dto.tenantName,
+          spaceName: dto.spaceName,
           bookingNumber: dto.bookingNumber,
           startDatetime: dto.startDatetime,
-          reason:        dto.reason ?? 'No reason provided',
+          reason: dto.reason ?? 'No reason provided',
         },
       });
       this.logger.log(`Booking cancelled email sent to ${dto.to}`);
@@ -102,13 +108,13 @@ export class MailService {
         subject: `🧾 New Invoice ${dto.invoiceNumber} — $${dto.amount} due ${dto.dueDate}`,
         template: './invoice-created',
         context: {
-          tenantName:    dto.tenantName,
+          tenantName: dto.tenantName,
           invoiceNumber: dto.invoiceNumber,
-          amount:        dto.amount,
-          issueDate:     (dto as any).issueDate ?? dto.dueDate,
-          dueDate:       dto.dueDate,
-          items:         (dto as any).items ?? '—',
-          paymentUrl:    dto.paymentUrl ?? '#',
+          amount: dto.amount,
+          issueDate: (dto as any).issueDate ?? dto.dueDate,
+          dueDate: dto.dueDate,
+          items: (dto as any).items ?? '—',
+          paymentUrl: dto.paymentUrl ?? '#',
         },
       });
       this.logger.log(`Invoice created email sent to ${dto.to}`);
@@ -124,9 +130,9 @@ export class MailService {
         subject: `✅ Payment Received — Invoice ${dto.invoiceNumber}`,
         template: './invoice-paid',
         context: {
-          tenantName:    dto.tenantName,
+          tenantName: dto.tenantName,
           invoiceNumber: dto.invoiceNumber,
-          amount:        dto.amount,
+          amount: dto.amount,
         },
       });
       this.logger.log(`Invoice paid email sent to ${dto.to}`);
@@ -142,12 +148,12 @@ export class MailService {
         subject: `⚠️ Overdue Invoice ${dto.invoiceNumber} — Action Required`,
         template: './invoice-overdue',
         context: {
-          tenantName:    dto.tenantName,
+          tenantName: dto.tenantName,
           invoiceNumber: dto.invoiceNumber,
-          amount:        dto.amount,
-          dueDate:       dto.dueDate,
-          daysOverdue:   dto.daysOverdue ?? 0,
-          paymentUrl:    dto.paymentUrl ?? '#',
+          amount: dto.amount,
+          dueDate: dto.dueDate,
+          daysOverdue: dto.daysOverdue ?? 0,
+          paymentUrl: dto.paymentUrl ?? '#',
         },
       });
       this.logger.log(`Invoice overdue email sent to ${dto.to}`);
@@ -165,13 +171,13 @@ export class MailService {
         subject: `${urgency} Contract ${dto.contractNumber} expires in ${dto.daysLeft} days`,
         template: './contract-expiring',
         context: {
-          tenantName:     dto.tenantName,
+          tenantName: dto.tenantName,
           contractNumber: dto.contractNumber,
-          endDate:        dto.endDate,
-          daysLeft:       dto.daysLeft,
-          renewUrl:       dto.renewUrl ?? '#',
-          isUrgent:       dto.daysLeft <= 30,
-          isCritical:     dto.daysLeft <= 7,
+          endDate: dto.endDate,
+          daysLeft: dto.daysLeft,
+          renewUrl: dto.renewUrl ?? '#',
+          isUrgent: dto.daysLeft <= 30,
+          isCritical: dto.daysLeft <= 7,
         },
       });
       this.logger.log(`Contract expiring email sent to ${dto.to}`);
@@ -190,12 +196,12 @@ export class MailService {
         context: {
           assigneeName: dto.assigneeName,
           ticketNumber: dto.ticketNumber,
-          title:        dto.title,
-          priority:     dto.priority,
-          category:     dto.category,
-          spaceName:    dto.spaceName ?? 'N/A',
-          description:  dto.description ?? '',
-          isUrgent:     ['URGENT', 'EMERGENCY'].includes(dto.priority),
+          title: dto.title,
+          priority: dto.priority,
+          category: dto.category,
+          spaceName: dto.spaceName ?? 'N/A',
+          description: dto.description ?? '',
+          isUrgent: ['URGENT', 'EMERGENCY'].includes(dto.priority),
         },
       });
       this.logger.log(`Maintenance created email sent to ${dto.to}`);
@@ -212,13 +218,13 @@ export class MailService {
         subject: `👋 Welcome to LeaseManager, ${dto.firstName}!`,
         template: './welcome',
         context: {
-          tenantName:   dto.firstName,
-          firstName:    dto.firstName,
-          lastName:     dto.lastName,
-          role:         dto.role,
-          loginUrl:     dto.loginUrl,
+          tenantName: dto.firstName,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          role: dto.role,
+          loginUrl: dto.loginUrl,
           tempPassword: dto.tempPassword,
-          hasPassword:  !!dto.tempPassword,
+          hasPassword: !!dto.tempPassword,
           supportEmail: process.env.SUPPORT_EMAIL ?? 'support@leasemanager.com',
         },
       });
@@ -258,9 +264,9 @@ export class MailService {
         subject: `🔐 Reset your LeaseManager password`,
         template: './password-reset',
         context: {
-          firstName:  dto.firstName,
-          resetUrl:   dto.resetUrl,
-          expiresIn:  dto.expiresIn,
+          firstName: dto.firstName,
+          resetUrl: dto.resetUrl,
+          expiresIn: dto.expiresIn,
         },
       });
       this.logger.log(`Password reset email sent to ${dto.to}`);
@@ -286,9 +292,13 @@ export class MailService {
           <p>— LeaseManager</p>
         `,
       });
-      this.logger.log(`Application accepted (pending call) email sent to ${payload.to}`);
+      this.logger.log(
+        `Application accepted (pending call) email sent to ${payload.to}`,
+      );
     } catch (err: any) {
-      this.logger.error(`sendApplicationAcceptedPendingCall failed: ${err?.message}`);
+      this.logger.error(
+        `sendApplicationAcceptedPendingCall failed: ${err?.message}`,
+      );
     }
   }
 
@@ -317,7 +327,9 @@ export class MailService {
       });
       this.logger.log(`Physical visit instructions sent to ${payload.to}`);
     } catch (err: any) {
-      this.logger.error(`sendPhysicalVisitInstructions failed: ${err?.message}`);
+      this.logger.error(
+        `sendPhysicalVisitInstructions failed: ${err?.message}`,
+      );
     }
   }
 
@@ -366,9 +378,13 @@ export class MailService {
           <p>— LeaseManager</p>
         `,
       });
-      this.logger.log(`Booking application refused email sent to ${payload.to}`);
+      this.logger.log(
+        `Booking application refused email sent to ${payload.to}`,
+      );
     } catch (err: any) {
-      this.logger.error(`sendBookingApplicationRefused failed: ${err?.message}`);
+      this.logger.error(
+        `sendBookingApplicationRefused failed: ${err?.message}`,
+      );
     }
   }
 
@@ -396,7 +412,9 @@ export class MailService {
         });
         this.logger.log(`Application summary sent to ${to}`);
       } catch (err: any) {
-        this.logger.error(`sendTenantApplicationSummary failed for ${to}: ${err?.message}`);
+        this.logger.error(
+          `sendTenantApplicationSummary failed for ${to}: ${err?.message}`,
+        );
       }
     }
   }
@@ -420,9 +438,13 @@ export class MailService {
           <p>You will receive another email once your application is accepted.</p>
         `,
       });
-      this.logger.log(`Booking application received email sent to ${payload.to}`);
+      this.logger.log(
+        `Booking application received email sent to ${payload.to}`,
+      );
     } catch (err: any) {
-      this.logger.error(`sendBookingApplicationReceived failed: ${err?.message}`);
+      this.logger.error(
+        `sendBookingApplicationReceived failed: ${err?.message}`,
+      );
     }
   }
 
@@ -444,9 +466,13 @@ export class MailService {
           <p><a href="${payload.applicationsUrl}">Review in Booking Applications</a></p>
         `,
       });
-      this.logger.log(`Booking application manager alert sent to ${payload.to}`);
+      this.logger.log(
+        `Booking application manager alert sent to ${payload.to}`,
+      );
     } catch (err: any) {
-      this.logger.error(`sendBookingApplicationSubmittedToManager failed: ${err?.message}`);
+      this.logger.error(
+        `sendBookingApplicationSubmittedToManager failed: ${err?.message}`,
+      );
     }
   }
 

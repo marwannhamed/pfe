@@ -68,7 +68,9 @@ export class BookingController {
 
   @Get('workflow/queues')
   @Roles(...R_WORKFLOW)
-  @ApiOperation({ summary: 'Reception workflow queues (to call, awaiting visit, documents)' })
+  @ApiOperation({
+    summary: 'Reception workflow queues (to call, awaiting visit, documents)',
+  })
   getWorkflowQueues(@CurrentUser() user: AuthUser) {
     return this.bookingService.getWorkflowQueues(user);
   }
@@ -201,7 +203,11 @@ export class BookingController {
     @Param('id') id: string,
     @Query('createdById') createdById: string,
   ) {
-    return this.bookingService.generateContractAfterPayment(user, id, createdById);
+    return this.bookingService.generateContractAfterPayment(
+      user,
+      id,
+      createdById,
+    );
   }
 
   @Patch(':id/cancel')

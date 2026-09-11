@@ -140,7 +140,7 @@ export class PerformanceService implements OnModuleInit {
 
   public recordMetric(metric: PerformanceMetrics): void {
     this.metrics.push(metric);
-    
+
     // Keep only the most recent metrics
     if (this.metrics.length > this.maxMetrics) {
       this.metrics = this.metrics.slice(-this.maxMetrics);
@@ -150,8 +150,8 @@ export class PerformanceService implements OnModuleInit {
   private cleanupOldMetrics(): void {
     // Keep only metrics from the last hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    this.metrics = this.metrics.filter(metric => 
-      new Date(metric.timestamp) > oneHourAgo
+    this.metrics = this.metrics.filter(
+      (metric) => new Date(metric.timestamp) > oneHourAgo,
     );
   }
 
@@ -171,17 +171,17 @@ export class PerformanceService implements OnModuleInit {
     const totalDuration = this.metrics.reduce((sum, m) => sum + m.duration, 0);
     const averageDuration = totalDuration / totalOperations;
 
-    const slowestOperation = this.metrics.reduce((slowest, current) => 
-      current.duration > slowest.duration ? current : slowest
+    const slowestOperation = this.metrics.reduce((slowest, current) =>
+      current.duration > slowest.duration ? current : slowest,
     );
 
-    const fastestOperation = this.metrics.reduce((fastest, current) => 
-      current.duration < fastest.duration ? current : fastest
+    const fastestOperation = this.metrics.reduce((fastest, current) =>
+      current.duration < fastest.duration ? current : fastest,
     );
 
     // Group by operation type
     const operationsByType: Record<string, PerformanceMetrics[]> = {};
-    this.metrics.forEach(metric => {
+    this.metrics.forEach((metric) => {
       if (!operationsByType[metric.operation]) {
         operationsByType[metric.operation] = [];
       }
@@ -189,7 +189,10 @@ export class PerformanceService implements OnModuleInit {
     });
 
     // Calculate stats for each operation type
-    const operationStats: Record<string, { count: number; avgDuration: number }> = {};
+    const operationStats: Record<
+      string,
+      { count: number; avgDuration: number }
+    > = {};
     Object.entries(operationsByType).forEach(([operation, metrics]) => {
       const totalDuration = metrics.reduce((sum, m) => sum + m.duration, 0);
       operationStats[operation] = {
@@ -210,16 +213,22 @@ export class PerformanceService implements OnModuleInit {
   // Get recent slow operations
   getSlowOperations(limit: number = 10): PerformanceMetrics[] {
     return this.metrics
-      .filter(m => m.duration > this.slowOperationThreshold)
+      .filter((m) => m.duration > this.slowOperationThreshold)
       .sort((a, b) => b.duration - a.duration)
       .slice(0, limit);
   }
 
   // Get metrics for a specific operation
-  getOperationMetrics(operation: string, limit: number = 100): PerformanceMetrics[] {
+  getOperationMetrics(
+    operation: string,
+    limit: number = 100,
+  ): PerformanceMetrics[] {
     return this.metrics
-      .filter(m => m.operation === operation)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .filter((m) => m.operation === operation)
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      )
       .slice(0, limit);
   }
 
@@ -243,13 +252,19 @@ Slowest Operation: ${stats.slowestOperation.operation} (${stats.slowestOperation
 Fastest Operation: ${stats.fastestOperation.operation} (${stats.fastestOperation.duration.toFixed(2)}ms)
 
 Top 5 Slow Operations:
-${slowOps.map((op, index) => 
-  `${index + 1}. ${op.operation}: ${op.duration.toFixed(2)}ms at ${op.timestamp}`
-).join('\n')}
+${slowOps
+  .map(
+    (op, index) =>
+      `${index + 1}. ${op.operation}: ${op.duration.toFixed(2)}ms at ${op.timestamp}`,
+  )
+  .join('\n')}
 
 Operations by Type:
 ${Object.entries(stats.operationsByType)
-  .map(([op, stats]) => `${op}: ${stats.count} operations, avg ${stats.avgDuration.toFixed(2)}ms`)
+  .map(
+    ([op, stats]) =>
+      `${op}: ${stats.count} operations, avg ${stats.avgDuration.toFixed(2)}ms`,
+  )
   .join('\n')}
     `.trim();
   }

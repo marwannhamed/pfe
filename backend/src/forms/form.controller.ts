@@ -22,8 +22,14 @@ export class FormController {
 
   @Post('typeform/inquiry')
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
-  @ApiOperation({ summary: 'Create inquiry + pre-filled Typeform URL (hidden inquiry_id, site_id, space_id)' })
-  createTypeformInquiry(@CurrentUser() user: AuthUser, @Body() dto: CreateTypeformInquiryDto) {
+  @ApiOperation({
+    summary:
+      'Create inquiry + pre-filled Typeform URL (hidden inquiry_id, site_id, space_id)',
+  })
+  createTypeformInquiry(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateTypeformInquiryDto,
+  ) {
     return this.forms.createTypeformInquiry(user, dto);
   }
 

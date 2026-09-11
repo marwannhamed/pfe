@@ -36,7 +36,9 @@ export class MarketplaceAdaptersService {
     return this.config.get<string>('COWORKER_API_TOKEN')?.trim();
   }
   private liquidspaceBase(): string | undefined {
-    return this.config.get<string>('LIQUIDSPACE_API_BASE_URL')?.replace(/\/$/, '');
+    return this.config
+      .get<string>('LIQUIDSPACE_API_BASE_URL')
+      ?.replace(/\/$/, '');
   }
   private liquidspaceToken(): string | undefined {
     return this.config.get<string>('LIQUIDSPACE_API_TOKEN')?.trim();
@@ -52,7 +54,9 @@ export class MarketplaceAdaptersService {
       this.logger.debug('Coworker API not configured — skipping push');
       return listingId;
     }
-    const path = listingId ? `${base}/v1/listings/${listingId}` : `${base}/v1/listings`;
+    const path = listingId
+      ? `${base}/v1/listings/${listingId}`
+      : `${base}/v1/listings`;
     const method = listingId ? 'PUT' : 'POST';
     const res = await fetch(path, {
       method,
@@ -64,10 +68,15 @@ export class MarketplaceAdaptersService {
     });
     if (!res.ok) {
       const t = await res.text().catch(() => '');
-      this.logger.warn(`Coworker ${method} failed ${res.status}: ${t.slice(0, 200)}`);
+      this.logger.warn(
+        `Coworker ${method} failed ${res.status}: ${t.slice(0, 200)}`,
+      );
       return listingId;
     }
-    const json = (await res.json().catch(() => ({}))) as { id?: string; listing_id?: string };
+    const json = (await res.json().catch(() => ({}))) as {
+      id?: string;
+      listing_id?: string;
+    };
     return (json.id ?? json.listing_id ?? listingId) as string | null;
   }
 
@@ -108,10 +117,15 @@ export class MarketplaceAdaptersService {
     });
     if (!res.ok) {
       const t = await res.text().catch(() => '');
-      this.logger.warn(`LiquidSpace ${method} failed ${res.status}: ${t.slice(0, 200)}`);
+      this.logger.warn(
+        `LiquidSpace ${method} failed ${res.status}: ${t.slice(0, 200)}`,
+      );
       return listingId;
     }
-    const json = (await res.json().catch(() => ({}))) as { id?: string; space_id?: string };
+    const json = (await res.json().catch(() => ({}))) as {
+      id?: string;
+      space_id?: string;
+    };
     return (json.id ?? json.space_id ?? listingId) as string | null;
   }
 

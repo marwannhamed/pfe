@@ -14,7 +14,10 @@ export class RegisterTenantDto {
   @IsNotEmpty()
   slug: string;
 
-  @ApiProperty({ example: '12345678', description: 'Commercial Registration (CR) Number' })
+  @ApiProperty({
+    example: '12345678',
+    description: 'Commercial Registration (CR) Number',
+  })
   @IsString()
   @IsNotEmpty()
   cr_number: string;
@@ -43,7 +46,10 @@ export class RegisterTenantDto {
   @IsNotEmpty()
   password: string;
 
-  @ApiProperty({ example: '+97412345678', description: 'E.164 international phone number' })
+  @ApiProperty({
+    example: '+97412345678',
+    description: 'E.164 international phone number',
+  })
   @IsString()
   @IsNotEmpty()
   @Matches(PHONE_E164_REGEX, {
@@ -51,7 +57,10 @@ export class RegisterTenantDto {
   })
   phone_number: string;
 
-  @ApiProperty({ example: '28901234567', description: 'QID Number of the signing representative' })
+  @ApiProperty({
+    example: '28901234567',
+    description: 'QID Number of the signing representative',
+  })
   @IsString()
   @IsNotEmpty()
   qid_number: string;

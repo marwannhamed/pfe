@@ -29,19 +29,29 @@ export class CreateGuestBookingApplicationDto {
   @IsEmail()
   guest_email: string;
 
-  @ApiProperty({ example: '+21612345678', description: 'International format — required for reception confirmation call' })
+  @ApiProperty({
+    example: '+21612345678',
+    description:
+      'International format — required for reception confirmation call',
+  })
   @IsString()
   @Matches(/^\+[1-9]\d{7,14}$/, {
     message: 'Phone must be in international format (e.g. +21612345678)',
   })
   guest_phone: string;
 
-  @ApiPropertyOptional({ enum: ['INDIVIDUAL', 'COMPANY'], default: 'INDIVIDUAL' })
+  @ApiPropertyOptional({
+    enum: ['INDIVIDUAL', 'COMPANY'],
+    default: 'INDIVIDUAL',
+  })
   @IsOptional()
   @IsIn(['INDIVIDUAL', 'COMPANY'])
   applicant_type?: 'INDIVIDUAL' | 'COMPANY';
 
-  @ApiPropertyOptional({ example: 'Acme Corp', description: 'Required when applicant_type is COMPANY' })
+  @ApiPropertyOptional({
+    example: 'Acme Corp',
+    description: 'Required when applicant_type is COMPANY',
+  })
   @ValidateIf((o) => o.applicant_type === 'COMPANY')
   @IsString()
   company_name?: string;

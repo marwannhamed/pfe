@@ -60,13 +60,17 @@ export class NotificationController {
   }
 
   @Get('preferences/me')
-  @ApiOperation({ summary: 'Get notification preferences for the current user' })
+  @ApiOperation({
+    summary: 'Get notification preferences for the current user',
+  })
   getMyPreferences(@CurrentUser() user: AuthUser) {
     return this.notificationService.getPreferences(user.id);
   }
 
   @Put('preferences/me')
-  @ApiOperation({ summary: 'Update notification preferences for the current user' })
+  @ApiOperation({
+    summary: 'Update notification preferences for the current user',
+  })
   updateMyPreferences(
     @CurrentUser() user: AuthUser,
     @Body() preferences: Record<string, unknown>,
@@ -77,7 +81,10 @@ export class NotificationController {
   @Get('preferences/:userId')
   @ApiOperation({ summary: 'Get notification preferences for a user' })
   @ApiParam({ name: 'userId' })
-  getPreferences(@Param('userId') userId: string, @CurrentUser() user: AuthUser) {
+  getPreferences(
+    @Param('userId') userId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
     if (userId !== user.id && user.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException();
     }

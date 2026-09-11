@@ -30,7 +30,9 @@ export class AccessPolicyService {
   }
 
   isPortalBooker(role: string): boolean {
-    return role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE;
+    return (
+      role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE
+    );
   }
 
   /** Buildings that contain at least one bookable space (portal customers). */
@@ -48,7 +50,8 @@ export class AccessPolicyService {
     const building = await this.prisma.building.findUnique({
       where: { id: buildingId },
     });
-    if (!building) throw new NotFoundException(`Building #${buildingId} not found`);
+    if (!building)
+      throw new NotFoundException(`Building #${buildingId} not found`);
     if (this.isCrossTenantReader(user.role)) return building;
     if (this.isPortalBooker(user.role)) {
       const bookable = await this.prisma.space.count({
@@ -105,11 +108,17 @@ export class AccessPolicyService {
   async assertBookingReadable(user: AuthUser, bookingId: string) {
     const b = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { space: { include: { floor: { include: { building: true } } } } },
+      include: {
+        space: { include: { floor: { include: { building: true } } } },
+      },
     });
     if (!b) throw new NotFoundException(`Booking #${bookingId} not found`);
     if (this.isCrossTenantReader(user.role)) return b;
-    if (user.role === USER_ROLE.MANAGER || user.role === USER_ROLE.CLIENT_ADMIN || user.role === USER_ROLE.RECEPTIONIST) {
+    if (
+      user.role === USER_ROLE.MANAGER ||
+      user.role === USER_ROLE.CLIENT_ADMIN ||
+      user.role === USER_ROLE.RECEPTIONIST
+    ) {
       const landlordId = b.space?.floor?.building?.tenant_id;
       if (landlordId && landlordId !== user.tenant_id) {
         throw new ForbiddenException('You cannot access this booking');
@@ -131,12 +140,14 @@ export class AccessPolicyService {
     }
     if (this.isPortalBooker(user.role)) {
       if (tenantId) {
-        throw new ForbiddenException('Cannot filter bookable buildings by tenant');
+        throw new ForbiddenException(
+          'Cannot filter bookable buildings by tenant',
+        );
       }
       return this.bookableBuildingWhere();
     }
     if (tenantId && tenantId !== user.tenant_id) {
-      throw new ForbiddenException('Cannot list another tenant\'s buildings');
+      throw new ForbiddenException("Cannot list another tenant's buildings");
     }
     return { tenant_id: user.tenant_id };
   }

@@ -30,7 +30,8 @@ interface AuthenticatedSocket extends Socket {
   namespace: '/notifications',
 })
 export class NotificationsGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('NotificationsGateway');
 
@@ -46,8 +47,10 @@ export class NotificationsGateway
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Authenticate user from JWT token
-      const token = client.handshake.auth.token || client.handshake.headers.authorization?.replace('Bearer ', '');
-      
+      const token =
+        client.handshake.auth.token ||
+        client.handshake.headers.authorization?.replace('Bearer ', '');
+
       if (!token) {
         this.logger.warn(`Client ${client.id} connected without token`);
         client.disconnect();
@@ -74,7 +77,7 @@ export class NotificationsGateway
 
       // Join user to their personal room
       client.join(`user:${user.id}`);
-      
+
       // Join tenant room if user belongs to a tenant
       if (user.tenant_id) {
         client.join(`tenant:${user.tenant_id}`);
@@ -83,7 +86,9 @@ export class NotificationsGateway
       // Join role-based rooms
       client.join(`role:${user.role}`);
 
-      this.logger.log(`Client ${client.id} connected - User: ${user.id}, Role: ${user.role}`);
+      this.logger.log(
+        `Client ${client.id} connected - User: ${user.id}, Role: ${user.role}`,
+      );
 
       client.emit('authenticated', {
         userId: user.id,
@@ -100,15 +105,19 @@ export class NotificationsGateway
         timestamp: new Date().toISOString(),
         read: false,
       });
-
     } catch (error) {
-      this.logger.error(`Authentication failed for client ${client.id}:`, error);
+      this.logger.error(
+        `Authentication failed for client ${client.id}:`,
+        error,
+      );
       client.disconnect();
     }
   }
 
   handleDisconnect(client: AuthenticatedSocket) {
-    this.logger.log(`Client ${client.id} disconnected - User: ${client.user?.id || 'Unknown'}`);
+    this.logger.log(
+      `Client ${client.id} disconnected - User: ${client.user?.id || 'Unknown'}`,
+    );
   }
 
   @SubscribeMessage('join-room')
@@ -205,7 +214,10 @@ export class NotificationsGateway
   }
 
   // Send booking-related notifications
-  sendBookingNotification(booking: any, type: 'created' | 'updated' | 'cancelled' | 'confirmed') {
+  sendBookingNotification(
+    booking: any,
+    type: 'created' | 'updated' | 'cancelled' | 'confirmed',
+  ) {
     const notification = {
       type: 'BOOKING',
       title: `Booking ${type.charAt(0).toUpperCase() + type.slice(1)}`,
@@ -215,16 +227,19 @@ export class NotificationsGateway
 
     // Send to tenant
     this.sendToUser(booking.tenant_id, notification);
-    
+
     // Send to site managers
     this.sendToRole('MANAGER', notification);
-    
+
     // Send to super admins
     this.sendToRole('SUPER_ADMIN', notification);
   }
 
   // Send maintenance notifications
-  sendMaintenanceNotification(ticket: any, type: 'created' | 'updated' | 'resolved') {
+  sendMaintenanceNotification(
+    ticket: any,
+    type: 'created' | 'updated' | 'resolved',
+  ) {
     const notification = {
       type: 'MAINTENANCE',
       title: `Maintenance ${type.charAt(0).toUpperCase() + type.slice(1)}`,
@@ -234,10 +249,10 @@ export class NotificationsGateway
 
     // Send to maintenance staff
     this.sendToRole('MAINTENANCE', notification);
-    
+
     // Send to site managers
     this.sendToRole('MANAGER', notification);
-    
+
     // Send to tenant if not confidential
     if (ticket.priority !== 'CRITICAL') {
       this.sendToTenant(ticket.tenant_id, notification);
@@ -245,17 +260,24 @@ export class NotificationsGateway
   }
 
   // Send payment notifications
-  sendPaymentNotification(payment: any, type: 'received' | 'failed' | 'overdue') {
+  sendPaymentNotification(
+    payment: any,
+    type: 'received' | 'failed' | 'overdue',
+  ) {
     const notification = {
       type: 'PAYMENT',
       title: `Payment ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       message: `Payment for invoice ${payment.invoice_id} has been ${type}`,
-      data: { paymentId: payment.id, invoiceId: payment.invoice_id, amount: payment.amount },
+      data: {
+        paymentId: payment.id,
+        invoiceId: payment.invoice_id,
+        amount: payment.amount,
+      },
     };
 
     // Send to tenant
     this.sendToUser(payment.tenant_id, notification);
-    
+
     // Send to finance team
     this.sendToRole('FINANCE', notification);
   }
@@ -265,11 +287,11 @@ export class NotificationsGateway
     if (room.startsWith('user:')) {
       return room === `user:${user.id}`;
     }
-    
+
     if (room.startsWith('tenant:')) {
       return room === `tenant:${user.tenantId}`;
     }
-    
+
     if (room.startsWith('role:')) {
       const requiredRole = room.replace('role:', '');
       // Super admins can access any role room

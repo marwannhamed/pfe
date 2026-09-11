@@ -87,11 +87,7 @@ export class ReportController {
   }
 
   @Post()
-  @Roles(
-    USER_ROLE.SUPER_ADMIN,
-    USER_ROLE.MANAGER,
-    USER_ROLE.FINANCE,
-  )
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.MANAGER, USER_ROLE.FINANCE)
   @ApiOperation({ summary: 'Générer un rapport' })
   create(@Body() dto: CreateReportDto) {
     return this.reportService.create(dto);
@@ -143,11 +139,7 @@ export class ReportController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(
-    USER_ROLE.SUPER_ADMIN,
-    USER_ROLE.MANAGER,
-    USER_ROLE.FINANCE,
-  )
+  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.MANAGER, USER_ROLE.FINANCE)
   @ApiOperation({ summary: 'Supprimer un rapport' })
   @ApiParam({ name: 'id' })
   remove(@Param('id') id: string) {

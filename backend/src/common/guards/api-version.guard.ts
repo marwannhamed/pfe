@@ -7,14 +7,18 @@ export class ApiVersionGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const version = this.reflector.get<string>(API_VERSION_KEY, context.getHandler());
+    const version = this.reflector.get<string>(
+      API_VERSION_KEY,
+      context.getHandler(),
+    );
     if (!version) {
       return true; // No version required
     }
 
     const request = context.switchToHttp().getRequest();
-    const requestVersion = request.headers['api-version'] || request.query.version || 'v1';
-    
+    const requestVersion =
+      request.headers['api-version'] || request.query.version || 'v1';
+
     return requestVersion === version;
   }
 }

@@ -60,7 +60,9 @@ export class UserController {
 
   @Post('invite')
   @Roles(...R_USER_CREATE)
-  @ApiOperation({ summary: 'Invite a team member by email (no password required)' })
+  @ApiOperation({
+    summary: 'Invite a team member by email (no password required)',
+  })
   invite(@CurrentUser() user: AuthUser, @Body() dto: InviteUserDto) {
     return this.userService.inviteForUser(user, dto);
   }
@@ -113,6 +115,10 @@ export class UserController {
     @Param('id') id: string,
     @Body() body: { currentPassword: string; newPassword: string },
   ) {
-    return this.userService.changePassword(id, body.currentPassword, body.newPassword);
+    return this.userService.changePassword(
+      id,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 }

@@ -5,11 +5,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiTags,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -37,7 +33,9 @@ export class AnalyticsController {
 
   private parseDates(from?: string, to?: string): { from: Date; to: Date } {
     const toDate = to ? new Date(to) : new Date();
-    const fromDate = from ? new Date(from) : new Date(toDate.getTime() - 30 * 86400000);
+    const fromDate = from
+      ? new Date(from)
+      : new Date(toDate.getTime() - 30 * 86400000);
     toDate.setHours(23, 59, 59, 999);
     fromDate.setHours(0, 0, 0, 0);
     return { from: fromDate, to: toDate };
@@ -66,7 +64,11 @@ export class AnalyticsController {
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getRevenueTrend(dates.from, dates.to, tenantId);
+    return this.analyticsService.getRevenueTrend(
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('bookings-trend')
@@ -79,7 +81,11 @@ export class AnalyticsController {
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getBookingsTrend(dates.from, dates.to, tenantId);
+    return this.analyticsService.getBookingsTrend(
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('bookings-by-status')
@@ -92,7 +98,11 @@ export class AnalyticsController {
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getBookingsByStatus(dates.from, dates.to, tenantId);
+    return this.analyticsService.getBookingsByStatus(
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('space-utilization')
@@ -110,7 +120,11 @@ export class AnalyticsController {
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getMaintenanceStats(dates.from, dates.to, tenantId);
+    return this.analyticsService.getMaintenanceStats(
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('top-spaces')
@@ -146,7 +160,12 @@ export class AnalyticsController {
     @Query('to') to?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getOccupancyHeatmap(user, buildingId, dates.from, dates.to);
+    return this.analyticsService.getOccupancyHeatmap(
+      user,
+      buildingId,
+      dates.from,
+      dates.to,
+    );
   }
 
   @Get('revenue-forecast')
@@ -175,6 +194,10 @@ export class AnalyticsController {
     @Query('tenantId') tenantId?: string,
     @Query('buildingId') buildingId?: string,
   ) {
-    return this.analyticsService.getPredictiveMaintenance(user, tenantId, buildingId);
+    return this.analyticsService.getPredictiveMaintenance(
+      user,
+      tenantId,
+      buildingId,
+    );
   }
 }

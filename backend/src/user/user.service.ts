@@ -42,7 +42,9 @@ export class UserService {
       throw new ConflictException(`Email "${dto.email}" déjà utilisé`);
 
     if (dto.role === USER_ROLE.RECEPTIONIST && !dto.managed_by_id) {
-      throw new BadRequestException('managed_by_id is required for receptionist accounts');
+      throw new BadRequestException(
+        'managed_by_id is required for receptionist accounts',
+      );
     }
     if (dto.role === USER_ROLE.RECEPTIONIST && dto.managed_by_id) {
       const manager = await this.prisma.user.findUnique({
@@ -50,12 +52,20 @@ export class UserService {
       });
       if (
         !manager ||
-        ![USER_ROLE.MANAGER, USER_ROLE.CLIENT_ADMIN, USER_ROLE.SUPER_ADMIN].includes(manager.role as any)
+        ![
+          USER_ROLE.MANAGER,
+          USER_ROLE.CLIENT_ADMIN,
+          USER_ROLE.SUPER_ADMIN,
+        ].includes(manager.role as any)
       ) {
-        throw new BadRequestException('managed_by_id must reference a site manager or super admin');
+        throw new BadRequestException(
+          'managed_by_id must reference a site manager or super admin',
+        );
       }
       if (manager.tenant_id !== dto.tenant_id) {
-        throw new BadRequestException('Receptionist must belong to the same organization as their manager');
+        throw new BadRequestException(
+          'Receptionist must belong to the same organization as their manager',
+        );
       }
     }
 
@@ -68,11 +78,11 @@ export class UserService {
 
     if (!options?.skipWelcomeEmail) {
       this.mailService.sendWelcome({
-        to:        user.email,
+        to: user.email,
         firstName: user.first_name ?? user.email.split('@')[0],
-        lastName:  user.last_name ?? '',
-        role:      user.role,
-        loginUrl:  `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login`,
+        lastName: user.last_name ?? '',
+        role: user.role,
+        loginUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login`,
       });
     }
 
@@ -101,7 +111,9 @@ export class UserService {
         );
       }
       if (dto.tenant_id && dto.tenant_id !== actor.tenant_id) {
-        throw new ForbiddenException('Cannot create users outside your organization');
+        throw new ForbiddenException(
+          'Cannot create users outside your organization',
+        );
       }
       const payload: CreateUserDto = { ...dto, tenant_id: actor.tenant_id };
       if (dto.role === USER_ROLE.RECEPTIONIST) {
@@ -132,11 +144,14 @@ export class UserService {
       if (dto.role !== USER_ROLE.TENANT_EMPLOYEE) {
         throw new ForbiddenException('Tenant admins can only invite employees');
       }
-      return this.create({
-        ...dto,
-        tenant_id: actor.tenant_id,
-        tenant_company_id: actor.tenant_company_id ?? actor.tenant_id,
-      }, options);
+      return this.create(
+        {
+          ...dto,
+          tenant_id: actor.tenant_id,
+          tenant_company_id: actor.tenant_company_id ?? actor.tenant_id,
+        },
+        options,
+      );
     }
     throw new ForbiddenException('You cannot create users');
   }
@@ -148,7 +163,9 @@ export class UserService {
       ...userFields,
       password: tempPassword,
     };
-    const created = await this.createForUser(actor, payload, { skipWelcomeEmail: true });
+    const created = await this.createForUser(actor, payload, {
+      skipWelcomeEmail: true,
+    });
     await this.prisma.user.update({
       where: { id: created.id },
       data: { must_change_password: true },
@@ -156,7 +173,10 @@ export class UserService {
 
     let invite_email_sent = false;
     if (send_email !== false) {
-      invite_email_sent = await this.authService.sendTeamInviteEmail(created.id, actor);
+      invite_email_sent = await this.authService.sendTeamInviteEmail(
+        created.id,
+        actor,
+      );
     }
 
     return { ...created, must_change_password: true, invite_email_sent };
@@ -186,7 +206,11 @@ export class UserService {
         ...(role ? { role } : {}),
         ...(managedById ? { managed_by_id: managedById } : {}),
       },
-      include: { managedBy: { select: { id: true, first_name: true, last_name: true, email: true } } },
+      include: {
+        managedBy: {
+          select: { id: true, first_name: true, last_name: true, email: true },
+        },
+      },
       orderBy: { created_at: 'desc' },
     });
     return users.map(this.exclude);
@@ -209,7 +233,8 @@ export class UserService {
     const actorRole = normalizeUserRole(actor.role);
 
     if (actor.id === id) {
-      const { first_name, last_name, email, phone_number, crisp_session_id } = dto;
+      const { first_name, last_name, email, phone_number, crisp_session_id } =
+        dto;
       const selfUpdate: UpdateUserDto = {
         ...(first_name !== undefined ? { first_name } : {}),
         ...(last_name !== undefined ? { last_name } : {}),
@@ -226,14 +251,18 @@ export class UserService {
 
     if (actorRole === USER_ROLE.CLIENT_ADMIN) {
       if (target.tenant_id !== actor.tenant_id) {
-        throw new ForbiddenException('Cannot update users outside your organization');
+        throw new ForbiddenException(
+          'Cannot update users outside your organization',
+        );
       }
       return this.update(id, dto);
     }
 
     if (actorRole === USER_ROLE.MANAGER) {
       if (target.tenant_id !== actor.tenant_id) {
-        throw new ForbiddenException('Cannot update users outside your organization');
+        throw new ForbiddenException(
+          'Cannot update users outside your organization',
+        );
       }
       const manageable: string[] = [
         USER_ROLE.FINANCE,
@@ -241,15 +270,25 @@ export class UserService {
         USER_ROLE.RECEPTIONIST,
       ];
       if (!manageable.includes(target.role)) {
-        throw new ForbiddenException('Managers can only update finance, maintenance, or reception staff');
+        throw new ForbiddenException(
+          'Managers can only update finance, maintenance, or reception staff',
+        );
       }
       const { first_name, last_name, email, phone_number, status } = dto;
-      return this.update(id, { first_name, last_name, email, phone_number, status });
+      return this.update(id, {
+        first_name,
+        last_name,
+        email,
+        phone_number,
+        status,
+      });
     }
 
     if (actorRole === USER_ROLE.TENANT_ADMIN) {
       if (target.tenant_id !== actor.tenant_id) {
-        throw new ForbiddenException('Cannot update users outside your organization');
+        throw new ForbiddenException(
+          'Cannot update users outside your organization',
+        );
       }
       if (target.role !== USER_ROLE.TENANT_EMPLOYEE) {
         throw new ForbiddenException('Tenant admins can only update employees');

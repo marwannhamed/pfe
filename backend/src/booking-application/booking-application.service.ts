@@ -71,11 +71,18 @@ export class BookingApplicationService {
   private applicantLabel(app: {
     guest_name?: string | null;
     guest_email?: string | null;
-    user?: { first_name?: string | null; last_name?: string | null; email?: string; tenant?: { name?: string } | null } | null;
+    user?: {
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string;
+      tenant?: { name?: string } | null;
+    } | null;
   }) {
     if (app.guest_name) return app.guest_name;
     if (app.user?.tenant?.name) return app.user.tenant.name;
-    const name = [app.user?.first_name, app.user?.last_name].filter(Boolean).join(' ');
+    const name = [app.user?.first_name, app.user?.last_name]
+      .filter(Boolean)
+      .join(' ');
     return name || app.guest_email || app.user?.email || 'An applicant';
   }
 
@@ -95,22 +102,32 @@ export class BookingApplicationService {
     if (!space) throw new NotFoundException('Space not found');
     const landlordId = space.floor?.building?.tenant_id;
     const byId = new Map(
-      (space.availableAddOns ?? []).map((l) => [l.addon_service_id, l.addonService]),
+      (space.availableAddOns ?? []).map((l) => [
+        l.addon_service_id,
+        l.addonService,
+      ]),
     );
-    const resolved: { addon_service_id: string; quantity: number; unit_price: number }[] = [];
+    const resolved: {
+      addon_service_id: string;
+      quantity: number;
+      unit_price: number;
+    }[] = [];
     for (const item of addons) {
       let svc = byId.get(item.addon_service_id);
       if ((!svc || !svc.is_active) && landlordId) {
-        svc = await this.prisma.addOnService.findFirst({
-          where: {
-            id: item.addon_service_id,
-            tenant_id: landlordId,
-            is_active: true,
-          },
-        }) ?? undefined;
+        svc =
+          (await this.prisma.addOnService.findFirst({
+            where: {
+              id: item.addon_service_id,
+              tenant_id: landlordId,
+              is_active: true,
+            },
+          })) ?? undefined;
       }
       if (!svc || !svc.is_active) {
-        throw new BadRequestException(`Add-on service is not available for this space`);
+        throw new BadRequestException(
+          `Add-on service is not available for this space`,
+        );
       }
       resolved.push({
         addon_service_id: item.addon_service_id,
@@ -141,7 +158,9 @@ export class BookingApplicationService {
     return space;
   }
 
-  private async pickReceptionist(landlordTenantId: string): Promise<string | null> {
+  private async pickReceptionist(
+    landlordTenantId: string,
+  ): Promise<string | null> {
     const receptionist = await this.prisma.user.findFirst({
       where: {
         tenant_id: landlordTenantId,
@@ -203,7 +222,9 @@ export class BookingApplicationService {
     if (app.applicant_type === 'COMPANY' && app.company_name?.trim()) {
       return app.company_name.trim();
     }
-    return app.guest_name?.trim() || app.guest_email?.split('@')[0] || 'Applicant';
+    return (
+      app.guest_name?.trim() || app.guest_email?.split('@')[0] || 'Applicant'
+    );
   }
 
   private async ensureApplicantAccount(app: {
@@ -285,7 +306,9 @@ export class BookingApplicationService {
     const email = dto.guest_email.trim().toLowerCase();
     const applicantType = dto.applicant_type ?? 'INDIVIDUAL';
     if (applicantType === 'COMPANY' && !dto.company_name?.trim()) {
-      throw new BadRequestException('Company name is required for business applications');
+      throw new BadRequestException(
+        'Company name is required for business applications',
+      );
     }
 
     const existing = await this.prisma.bookingApplication.findFirst({
@@ -296,7 +319,9 @@ export class BookingApplicationService {
       },
     });
     if (existing) {
-      throw new BadRequestException('A pending application already exists for this email and space');
+      throw new BadRequestException(
+        'A pending application already exists for this email and space',
+      );
     }
 
     const addonRows = await this.resolveApplicationAddons(
@@ -363,7 +388,9 @@ export class BookingApplicationService {
       },
     });
     if (existing) {
-      throw new BadRequestException('You already have a pending application for this space');
+      throw new BadRequestException(
+        'You already have a pending application for this space',
+      );
     }
 
     const addonRows = await this.resolveApplicationAddons(
@@ -422,7 +449,10 @@ export class BookingApplicationService {
         orderBy: { created_at: 'desc' },
       });
     }
-    if (user.role === USER_ROLE.MANAGER || user.role === USER_ROLE.CLIENT_ADMIN) {
+    if (
+      user.role === USER_ROLE.MANAGER ||
+      user.role === USER_ROLE.CLIENT_ADMIN
+    ) {
       return this.prisma.bookingApplication.findMany({
         where: {
           ...(status ? { status } : {}),
@@ -447,7 +477,9 @@ export class BookingApplicationService {
     const app = await this.prisma.bookingApplication.findUnique({
       where: { id },
       include: {
-        space: { include: { features: true, floor: { include: { building: true } } } },
+        space: {
+          include: { features: true, floor: { include: { building: true } } },
+        },
         user: { include: { tenant: true } },
         reviewedBy: true,
         booking: true,
@@ -457,7 +489,8 @@ export class BookingApplicationService {
     if (!app) throw new NotFoundException('Application not found');
     const isOwner =
       app.user_id === user.id ||
-      (!!app.guest_email && app.guest_email.toLowerCase() === user.email.toLowerCase());
+      (!!app.guest_email &&
+        app.guest_email.toLowerCase() === user.email.toLowerCase());
     if (!this.isManager(user.role) && !isOwner) {
       throw new ForbiddenException('Access denied');
     }
@@ -485,7 +518,10 @@ export class BookingApplicationService {
     }
 
     const email = app.guest_email?.trim().toLowerCase();
-    if (!email) throw new BadRequestException('Guest application is missing contact email');
+    if (!email)
+      throw new BadRequestException(
+        'Guest application is missing contact email',
+      );
 
     let applicantUser = await tx.user.findUnique({
       where: { email },
@@ -514,7 +550,8 @@ export class BookingApplicationService {
         },
       });
       const tempPassword = await bcrypt.hash(
-        Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+        Math.random().toString(36).slice(2) +
+          Math.random().toString(36).slice(2),
         10,
       );
       const parts = (app.guest_name ?? '').trim().split(/\s+/);
@@ -555,7 +592,9 @@ export class BookingApplicationService {
 
     const app = await this.findOneForUser(user, id);
     if (app.status !== BOOKING_APPLICATION_STATUS.PENDING) {
-      throw new BadRequestException('Only pending applications can be accepted');
+      throw new BadRequestException(
+        'Only pending applications can be accepted',
+      );
     }
 
     const space = app.space;
@@ -578,7 +617,10 @@ export class BookingApplicationService {
       : null;
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const applicant = await this.resolveApplicantForAccept(tx, app as ApplicationWithRelations);
+      const applicant = await this.resolveApplicantForAccept(
+        tx,
+        app as ApplicationWithRelations,
+      );
 
       const booking = await tx.booking.create({
         data: {
@@ -657,7 +699,9 @@ export class BookingApplicationService {
     }
 
     if (result.booking?.id) {
-      const invoice = await this.billingService.generateInvoiceFromBooking(result.booking.id);
+      const invoice = await this.billingService.generateInvoiceFromBooking(
+        result.booking.id,
+      );
       await this.prisma.booking.update({
         where: { id: result.booking.id },
         data: { invoice_id: invoice.id },

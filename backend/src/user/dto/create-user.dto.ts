@@ -17,7 +17,9 @@ export class CreateUserDto {
   @IsUUID()
   tenant_id: string;
 
-  @ApiPropertyOptional({ description: 'Renter company tenant (tenant portal users)' })
+  @ApiPropertyOptional({
+    description: 'Renter company tenant (tenant portal users)',
+  })
   @IsOptional()
   @IsUUID()
   tenant_company_id?: string;
@@ -41,12 +43,20 @@ export class CreateUserDto {
   @MinLength(8)
   password: string;
 
-  @ApiPropertyOptional({ example: 'TENANT_EMPLOYEE', enum: USER_ROLE, default: USER_ROLE.TENANT_EMPLOYEE })
+  @ApiPropertyOptional({
+    example: 'TENANT_EMPLOYEE',
+    enum: USER_ROLE,
+    default: USER_ROLE.TENANT_EMPLOYEE,
+  })
   @IsEnum(Object.values(USER_ROLE))
   @IsOptional()
   role?: string;
 
-  @ApiPropertyOptional({ example: 'ACTIVE', enum: USER_STATUS, default: USER_STATUS.ACTIVE })
+  @ApiPropertyOptional({
+    example: 'ACTIVE',
+    enum: USER_STATUS,
+    default: USER_STATUS.ACTIVE,
+  })
   @IsEnum(Object.values(USER_STATUS))
   @IsOptional()
   status?: string;
@@ -64,7 +74,9 @@ export class CreateUserDto {
   })
   phone_number: string;
 
-  @ApiPropertyOptional({ description: 'Manager who supervises this receptionist' })
+  @ApiPropertyOptional({
+    description: 'Manager who supervises this receptionist',
+  })
   @IsOptional()
   @IsUUID()
   managed_by_id?: string;

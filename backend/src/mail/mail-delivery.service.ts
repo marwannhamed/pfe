@@ -49,7 +49,8 @@ export class MailDeliveryService {
     if (mode === 'brevo') return false;
 
     const host = this.config.get<string>('MAIL_HOST')?.toLowerCase() ?? '';
-    const isDev = (this.config.get<string>('NODE_ENV') ?? 'development') !== 'production';
+    const isDev =
+      (this.config.get<string>('NODE_ENV') ?? 'development') !== 'production';
     if (isDev && host.includes('mailtrap')) {
       return true;
     }
@@ -86,13 +87,17 @@ export class MailDeliveryService {
     const user = this.config.get<string>('MAIL_USER')?.trim();
     const pass = this.config.get<string>('MAIL_PASSWORD')?.trim();
     if (!host || !user || !pass) return false;
-    if (user === 'your-email@gmail.com' || pass === 'your-app-password') return false;
+    if (user === 'your-email@gmail.com' || pass === 'your-app-password')
+      return false;
     return true;
   }
 
   private getFromAddress(): string {
-    const name = this.config.get<string>('MAIL_FROM_NAME')?.trim() || 'LeaseManager';
-    const email = this.config.get<string>('MAIL_FROM')?.trim() || 'noreply@leasemanager.com';
+    const name =
+      this.config.get<string>('MAIL_FROM_NAME')?.trim() || 'LeaseManager';
+    const email =
+      this.config.get<string>('MAIL_FROM')?.trim() ||
+      'noreply@leasemanager.com';
     return `"${name}" <${email}>`;
   }
 
@@ -144,7 +149,8 @@ export class MailDeliveryService {
     return {
       ok: false,
       provider: 'console',
-      error: 'Mail not configured (set BREVO_API_KEY or MAIL_HOST/MAIL_USER/MAIL_PASSWORD)',
+      error:
+        'Mail not configured (set BREVO_API_KEY or MAIL_HOST/MAIL_USER/MAIL_PASSWORD)',
     };
   }
 
@@ -159,7 +165,9 @@ export class MailDeliveryService {
         html: options.html,
         text: options.text,
       });
-      this.logger.log(`Email sent via SMTP to ${options.to}: ${options.subject}`);
+      this.logger.log(
+        `Email sent via SMTP to ${options.to}: ${options.subject}`,
+      );
       return { ok: true, provider: 'smtp' };
     } catch (err: any) {
       const message = err?.message ?? String(err);

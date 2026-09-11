@@ -15,75 +15,151 @@ export class AnalyticsService {
   ) {}
 
   private pct(curr: number, prev: number) {
-    return prev === 0 ? (curr > 0 ? 100 : 0) : Math.round(((curr - prev) / prev) * 100);
+    return prev === 0
+      ? curr > 0
+        ? 100
+        : 0
+      : Math.round(((curr - prev) / prev) * 100);
   }
 
   // ─── Overview KPIs ────────────────────────────────────────────────────────
   @Cache(300000) // 5 minutes cache
   async getOverview(from: Date, to: Date, tenantId?: string) {
-    const diffMs   = to.getTime() - from.getTime();
+    const diffMs = to.getTime() - from.getTime();
     const prevFrom = new Date(from.getTime() - diffMs);
-    const prevTo   = new Date(from);
-    const tFilter  = tenantId ? { tenant_id: tenantId } : {};
+    const prevTo = new Date(from);
+    const tFilter = tenantId ? { tenant_id: tenantId } : {};
 
     const [rev, prevRev] = await Promise.all([
-      this.prisma.invoice.aggregate({ where: { ...tFilter, status: 'PAID',    created_at: { gte: from, lte: to }       }, _sum: { total_amount: true } }),
-      this.prisma.invoice.aggregate({ where: { ...tFilter, status: 'PAID',    created_at: { gte: prevFrom, lte: prevTo } }, _sum: { total_amount: true } }),
+      this.prisma.invoice.aggregate({
+        where: {
+          ...tFilter,
+          status: 'PAID',
+          created_at: { gte: from, lte: to },
+        },
+        _sum: { total_amount: true },
+      }),
+      this.prisma.invoice.aggregate({
+        where: {
+          ...tFilter,
+          status: 'PAID',
+          created_at: { gte: prevFrom, lte: prevTo },
+        },
+        _sum: { total_amount: true },
+      }),
     ]);
 
     const [bookings, prevBookings, confirmedBookings] = await Promise.all([
-      this.prisma.booking.count({ where: { ...tFilter, created_at: { gte: from, lte: to } } }),
-      this.prisma.booking.count({ where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } } }),
-      this.prisma.booking.count({ where: { ...tFilter, status: 'CONFIRMED', created_at: { gte: from, lte: to } } }),
+      this.prisma.booking.count({
+        where: { ...tFilter, created_at: { gte: from, lte: to } },
+      }),
+      this.prisma.booking.count({
+        where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } },
+      }),
+      this.prisma.booking.count({
+        where: {
+          ...tFilter,
+          status: 'CONFIRMED',
+          created_at: { gte: from, lte: to },
+        },
+      }),
     ]);
 
     const [invoices, prevInvoices, overdueInvoices] = await Promise.all([
-      this.prisma.invoice.count({ where: { ...tFilter, created_at: { gte: from, lte: to } } }),
-      this.prisma.invoice.count({ where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } } }),
+      this.prisma.invoice.count({
+        where: { ...tFilter, created_at: { gte: from, lte: to } },
+      }),
+      this.prisma.invoice.count({
+        where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } },
+      }),
       this.prisma.invoice.count({ where: { ...tFilter, status: 'OVERDUE' } }),
     ]);
 
-    const activeTenants = await this.prisma.tenant.count({ where: { status: 'ACTIVE' } });
+    const activeTenants = await this.prisma.tenant.count({
+      where: { status: 'ACTIVE' },
+    });
 
     const [totalSpaces, occupiedSpaces, availableSpaces] = await Promise.all([
       this.prisma.space.count(),
-      this.prisma.space.count({ where: { status: { in: ['OCCUPIED', 'RESERVED'] } } }),
+      this.prisma.space.count({
+        where: { status: { in: ['OCCUPIED', 'RESERVED'] } },
+      }),
       this.prisma.space.count({ where: { status: 'AVAILABLE' } }),
     ]);
 
     const [tickets, prevTickets, openTickets] = await Promise.all([
-      this.prisma.maintenanceTicket.count({ where: { created_at: { gte: from, lte: to } } }),
-      this.prisma.maintenanceTicket.count({ where: { created_at: { gte: prevFrom, lte: prevTo } } }),
-      this.prisma.maintenanceTicket.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } }),
+      this.prisma.maintenanceTicket.count({
+        where: { created_at: { gte: from, lte: to } },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { created_at: { gte: prevFrom, lte: prevTo } },
+      }),
+      this.prisma.maintenanceTicket.count({
+        where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } },
+      }),
     ]);
 
     return {
-      revenue:             { current: Number(rev._sum.total_amount ?? 0), previous: Number(prevRev._sum.total_amount ?? 0), change: this.pct(Number(rev._sum.total_amount ?? 0), Number(prevRev._sum.total_amount ?? 0)) },
-      bookings:            { current: bookings,   previous: prevBookings,  change: this.pct(bookings, prevBookings),  confirmed: confirmedBookings },
-      invoices:            { current: invoices,   previous: prevInvoices,  change: this.pct(invoices, prevInvoices),  overdue: overdueInvoices },
-      occupancyRate:       { current: totalSpaces > 0 ? Math.round((occupiedSpaces / totalSpaces) * 100) : 0, total: totalSpaces, occupied: occupiedSpaces, available: availableSpaces },
+      revenue: {
+        current: Number(rev._sum.total_amount ?? 0),
+        previous: Number(prevRev._sum.total_amount ?? 0),
+        change: this.pct(
+          Number(rev._sum.total_amount ?? 0),
+          Number(prevRev._sum.total_amount ?? 0),
+        ),
+      },
+      bookings: {
+        current: bookings,
+        previous: prevBookings,
+        change: this.pct(bookings, prevBookings),
+        confirmed: confirmedBookings,
+      },
+      invoices: {
+        current: invoices,
+        previous: prevInvoices,
+        change: this.pct(invoices, prevInvoices),
+        overdue: overdueInvoices,
+      },
+      occupancyRate: {
+        current:
+          totalSpaces > 0
+            ? Math.round((occupiedSpaces / totalSpaces) * 100)
+            : 0,
+        total: totalSpaces,
+        occupied: occupiedSpaces,
+        available: availableSpaces,
+      },
       activeTenants,
-      maintenanceTickets:  { current: tickets, previous: prevTickets, change: this.pct(tickets, prevTickets), open: openTickets },
+      maintenanceTickets: {
+        current: tickets,
+        previous: prevTickets,
+        change: this.pct(tickets, prevTickets),
+        open: openTickets,
+      },
     };
   }
 
   // ─── Revenue trend (monthly) ──────────────────────────────────────────────
   async getRevenueTrend(from: Date, to: Date, tenantId?: string) {
     const invoices = await this.prisma.invoice.findMany({
-      where: { ...(tenantId ? { tenant_id: tenantId } : {}), status: 'PAID', created_at: { gte: from, lte: to } },
+      where: {
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+        status: 'PAID',
+        created_at: { gte: from, lte: to },
+      },
       select: { total_amount: true, created_at: true },
       orderBy: { created_at: 'asc' },
     });
 
     const grouped: Record<string, number> = {};
-    invoices.forEach(inv => {
+    invoices.forEach((inv) => {
       const key = inv.created_at.toISOString().slice(0, 7);
       grouped[key] = (grouped[key] ?? 0) + Number(inv.total_amount);
     });
 
     const result: { month: string; revenue: number }[] = [];
     const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
-    const end    = new Date(to.getFullYear(),   to.getMonth(),   1);
+    const end = new Date(to.getFullYear(), to.getMonth(), 1);
     while (cursor <= end) {
       const key = cursor.toISOString().slice(0, 7);
       result.push({ month: key, revenue: Math.round(grouped[key] ?? 0) });
@@ -95,32 +171,40 @@ export class AnalyticsService {
   // ─── Bookings trend (daily) ───────────────────────────────────────────────
   async getBookingsTrend(from: Date, to: Date, tenantId?: string) {
     const bookings = await this.prisma.booking.findMany({
-      where: { ...(tenantId ? { tenant_id: tenantId } : {}), created_at: { gte: from, lte: to } },
+      where: {
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+        created_at: { gte: from, lte: to },
+      },
       select: { created_at: true },
       orderBy: { created_at: 'asc' },
     });
 
     const grouped: Record<string, number> = {};
-    bookings.forEach(b => {
+    bookings.forEach((b) => {
       const key = b.created_at.toISOString().slice(0, 10);
       grouped[key] = (grouped[key] ?? 0) + 1;
     });
 
     const diffDays = Math.ceil((to.getTime() - from.getTime()) / 86400000);
     const result: { date: string; bookings: number }[] = [];
-    const cursor  = new Date(from); cursor.setHours(0, 0, 0, 0);
-    const endDay  = new Date(to);   endDay.setHours(23, 59, 59, 999);
+    const cursor = new Date(from);
+    cursor.setHours(0, 0, 0, 0);
+    const endDay = new Date(to);
+    endDay.setHours(23, 59, 59, 999);
 
     if (diffDays > 60) {
       // Group by week for long ranges
       const weeks: Record<string, number> = {};
       Object.entries(grouped).forEach(([date, count]) => {
         const d = new Date(date);
-        const weekStart = new Date(d); weekStart.setDate(d.getDate() - d.getDay());
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
         const key = weekStart.toISOString().slice(0, 10);
         weeks[key] = (weeks[key] ?? 0) + count;
       });
-      return Object.entries(weeks).sort(([a], [b]) => a.localeCompare(b)).map(([date, bookings]) => ({ date, bookings }));
+      return Object.entries(weeks)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, bookings]) => ({ date, bookings }));
     }
 
     while (cursor <= endDay) {
@@ -133,35 +217,68 @@ export class AnalyticsService {
 
   // ─── Bookings by status ───────────────────────────────────────────────────
   async getBookingsByStatus(from: Date, to: Date, tenantId?: string) {
-    const statuses = ['CONFIRMED', 'PENDING_APPROVAL', 'CANCELLED', 'COMPLETED', 'CHECKED_IN', 'NO_SHOW'];
-    const filter   = tenantId ? { tenant_id: tenantId } : {};
-    const counts   = await Promise.all(
-      statuses.map(async status => ({
+    const statuses = [
+      'CONFIRMED',
+      'PENDING_APPROVAL',
+      'CANCELLED',
+      'COMPLETED',
+      'CHECKED_IN',
+      'NO_SHOW',
+    ];
+    const filter = tenantId ? { tenant_id: tenantId } : {};
+    const counts = await Promise.all(
+      statuses.map(async (status) => ({
         status,
-        count: await this.prisma.booking.count({ where: { ...filter, status: status as any, created_at: { gte: from, lte: to } } }),
-      }))
+        count: await this.prisma.booking.count({
+          where: {
+            ...filter,
+            status: status as any,
+            created_at: { gte: from, lte: to },
+          },
+        }),
+      })),
     );
-    return counts.filter(c => c.count > 0);
+    return counts.filter((c) => c.count > 0);
   }
 
   // ─── Space utilization ────────────────────────────────────────────────────
   async getSpaceUtilization() {
-    const spaces = await this.prisma.space.findMany({ select: { type: true, status: true } });
-    const byType: Record<string, { total: number; occupied: number; available: number; maintenance: number }> = {};
-    spaces.forEach(s => {
-      if (!byType[s.type]) byType[s.type] = { total: 0, occupied: 0, available: 0, maintenance: 0 };
+    const spaces = await this.prisma.space.findMany({
+      select: { type: true, status: true },
+    });
+    const byType: Record<
+      string,
+      {
+        total: number;
+        occupied: number;
+        available: number;
+        maintenance: number;
+      }
+    > = {};
+    spaces.forEach((s) => {
+      if (!byType[s.type])
+        byType[s.type] = {
+          total: 0,
+          occupied: 0,
+          available: 0,
+          maintenance: 0,
+        };
       byType[s.type].total++;
-      if (s.status === 'OCCUPIED' || s.status === 'RESERVED') byType[s.type].occupied++;
-      else if (s.status === 'AVAILABLE')   byType[s.type].available++;
+      if (s.status === 'OCCUPIED' || s.status === 'RESERVED')
+        byType[s.type].occupied++;
+      else if (s.status === 'AVAILABLE') byType[s.type].available++;
       else if (s.status === 'MAINTENANCE') byType[s.type].maintenance++;
     });
     return Object.entries(byType).map(([type, data]) => ({
-      type:        type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()),
-      total:       data.total,
-      occupied:    data.occupied,
-      available:   data.available,
+      type: type
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (l) => l.toUpperCase()),
+      total: data.total,
+      occupied: data.occupied,
+      available: data.available,
       maintenance: data.maintenance,
-      rate:        Math.round((data.occupied / data.total) * 100),
+      rate: Math.round((data.occupied / data.total) * 100),
     }));
   }
 
@@ -177,27 +294,42 @@ export class AnalyticsService {
           ],
         }),
       },
-      select: { status: true, priority: true, reported_at: true, resolved_at: true },
+      select: {
+        status: true,
+        priority: true,
+        reported_at: true,
+        resolved_at: true,
+      },
     });
 
-    const byStatus:   Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
     const byPriority: Record<string, number> = {};
-    tickets.forEach(t => {
-      byStatus[t.status]     = (byStatus[t.status]     ?? 0) + 1;
+    tickets.forEach((t) => {
+      byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
       byPriority[t.priority] = (byPriority[t.priority] ?? 0) + 1;
     });
 
-    const resolved = tickets.filter(t => t.resolved_at != null);
+    const resolved = tickets.filter((t) => t.resolved_at != null);
     let avgResolutionHours = 0;
     if (resolved.length > 0) {
-      const total = resolved.reduce((sum, t) => sum + (t.resolved_at!.getTime() - t.reported_at.getTime()) / 3600000, 0);
+      const total = resolved.reduce(
+        (sum, t) =>
+          sum + (t.resolved_at!.getTime() - t.reported_at.getTime()) / 3600000,
+        0,
+      );
       avgResolutionHours = Math.round(total / resolved.length);
     }
 
     return {
-      byStatus:          Object.entries(byStatus).map(([status, count])     => ({ status,   count })),
-      byPriority:        Object.entries(byPriority).map(([priority, count]) => ({ priority, count })),
-      total:             tickets.length,
+      byStatus: Object.entries(byStatus).map(([status, count]) => ({
+        status,
+        count,
+      })),
+      byPriority: Object.entries(byPriority).map(([priority, count]) => ({
+        priority,
+        count,
+      })),
+      total: tickets.length,
       avgResolutionHours,
     };
   }
@@ -209,17 +341,37 @@ export class AnalyticsService {
         created_at: { gte: from, lte: to },
         ...(tenantId && { tenant_id: tenantId }),
       },
-      include: { space: { select: { name: true, type: true, currency: true } } },
+      include: {
+        space: { select: { name: true, type: true, currency: true } },
+      },
     });
 
-    const bySpace: Record<string, { name: string; type: string; count: number; revenue: number; currency: string }> = {};
-    bookings.forEach(b => {
-      if (!bySpace[b.space_id]) bySpace[b.space_id] = { name: b.space.name, type: b.space.type, count: 0, revenue: 0, currency: b.space.currency };
+    const bySpace: Record<
+      string,
+      {
+        name: string;
+        type: string;
+        count: number;
+        revenue: number;
+        currency: string;
+      }
+    > = {};
+    bookings.forEach((b) => {
+      if (!bySpace[b.space_id])
+        bySpace[b.space_id] = {
+          name: b.space.name,
+          type: b.space.type,
+          count: 0,
+          revenue: 0,
+          currency: b.space.currency,
+        };
       bySpace[b.space_id].count++;
       bySpace[b.space_id].revenue += Number(b.total_price ?? 0);
     });
 
-    return Object.values(bySpace).sort((a, b) => b.count - a.count).slice(0, 5);
+    return Object.values(bySpace)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }
 
   // ─── Revenue by tenant ────────────────────────────────────────────────────
@@ -230,23 +382,41 @@ export class AnalyticsService {
     });
 
     const byTenant: Record<string, { name: string; revenue: number }> = {};
-    invoices.forEach(inv => {
-      if (!byTenant[inv.tenant_id]) byTenant[inv.tenant_id] = { name: inv.tenant?.name ?? 'Unknown', revenue: 0 };
+    invoices.forEach((inv) => {
+      if (!byTenant[inv.tenant_id])
+        byTenant[inv.tenant_id] = {
+          name: inv.tenant?.name ?? 'Unknown',
+          revenue: 0,
+        };
       byTenant[inv.tenant_id].revenue += Number(inv.total_amount);
     });
 
-    return Object.values(byTenant).sort((a, b) => b.revenue - a.revenue).slice(0, 6).map(t => ({ ...t, revenue: Math.round(t.revenue) }));
+    return Object.values(byTenant)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 6)
+      .map((t) => ({ ...t, revenue: Math.round(t.revenue) }));
   }
 
-  private tenantFilter(user: AuthUser, tenantId?: string): { tenant_id?: string } {
-    if (user.role === USER_ROLE.SUPER_ADMIN || user.role === USER_ROLE.FINANCE) {
+  private tenantFilter(
+    user: AuthUser,
+    tenantId?: string,
+  ): { tenant_id?: string } {
+    if (
+      user.role === USER_ROLE.SUPER_ADMIN ||
+      user.role === USER_ROLE.FINANCE
+    ) {
       return tenantId ? { tenant_id: tenantId } : {};
     }
     return { tenant_id: user.tenant_id };
   }
 
   /** Desk / room utilization from bookings vs capacity over a window (heatmap input). */
-  async getOccupancyHeatmap(user: AuthUser, buildingId: string, from: Date, to: Date) {
+  async getOccupancyHeatmap(
+    user: AuthUser,
+    buildingId: string,
+    from: Date,
+    to: Date,
+  ) {
     await this.access.assertBuildingReadable(user, buildingId);
     const periodMs = Math.max(1, to.getTime() - from.getTime());
     const periodHours = periodMs / 3600000;
@@ -266,7 +436,14 @@ export class AnalyticsService {
     });
 
     const spaceIds = spaces.map((s) => s.id);
-    if (spaceIds.length === 0) return { buildingId, from, to, periodHours: Math.round(periodHours), spaces: [] };
+    if (spaceIds.length === 0)
+      return {
+        buildingId,
+        from,
+        to,
+        periodHours: Math.round(periodHours),
+        spaces: [],
+      };
 
     const bookings = await this.prisma.booking.findMany({
       where: {
@@ -277,7 +454,12 @@ export class AnalyticsService {
       select: { space_id: true, start_time: true, end_time: true },
     });
 
-    const overlapHours = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => {
+    const overlapHours = (
+      aStart: Date,
+      aEnd: Date,
+      bStart: Date,
+      bEnd: Date,
+    ) => {
       const s = Math.max(aStart.getTime(), bStart.getTime());
       const e = Math.min(aEnd.getTime(), bEnd.getTime());
       return Math.max(0, e - s) / 3600000;
@@ -302,7 +484,8 @@ export class AnalyticsService {
         bookedHours: Math.round(booked * 10) / 10,
         potentialDeskHours: Math.round(potential * 10) / 10,
         utilization: Math.round(utilization * 1000) / 1000,
-        heat: utilization < 0.15 ? 'low' : utilization < 0.45 ? 'medium' : 'high',
+        heat:
+          utilization < 0.15 ? 'low' : utilization < 0.45 ? 'medium' : 'high',
         map_x: space.map_x,
         map_y: space.map_y,
         map_w: space.map_w,
@@ -310,15 +493,27 @@ export class AnalyticsService {
       };
     });
 
-    return { buildingId, from, to, periodHours: Math.round(periodHours * 10) / 10, spaces: desks };
+    return {
+      buildingId,
+      from,
+      to,
+      periodHours: Math.round(periodHours * 10) / 10,
+      spaces: desks,
+    };
   }
 
   /** Cashflow-style view from lease end dates + active MRR (heuristic, not GAAP). */
-  async getRevenueForecast(user: AuthUser, tenantIdParam?: string, horizonMonths = 12) {
+  async getRevenueForecast(
+    user: AuthUser,
+    tenantIdParam?: string,
+    horizonMonths = 12,
+  ) {
     const filter = this.tenantFilter(user, tenantIdParam);
     const now = new Date();
     const horizonEnd = new Date(now);
-    horizonEnd.setMonth(horizonEnd.getMonth() + Math.min(Math.max(horizonMonths, 1), 36));
+    horizonEnd.setMonth(
+      horizonEnd.getMonth() + Math.min(Math.max(horizonMonths, 1), 36),
+    );
 
     const leases = await this.prisma.leaseContract.findMany({
       where: {
@@ -341,24 +536,44 @@ export class AnalyticsService {
     let activeMrr = 0;
     for (const l of leases) {
       const rent = Number(l.monthly_rent ?? 0);
-      if (['ACTIVE', 'RENEWED'].includes(l.status) && l.start_date <= now && l.end_date >= now) {
+      if (
+        ['ACTIVE', 'RENEWED'].includes(l.status) &&
+        l.start_date <= now &&
+        l.end_date >= now
+      ) {
         activeMrr += rent;
       }
     }
 
     const keyOf = (d: Date) => d.toISOString().slice(0, 7);
-    const monthlyTimeline: { month: string; activeMrr: number; expiringMrr: number }[] = [];
+    const monthlyTimeline: {
+      month: string;
+      activeMrr: number;
+      expiringMrr: number;
+    }[] = [];
     const cursor = new Date(now.getFullYear(), now.getMonth(), 1);
     while (cursor <= horizonEnd) {
       const key = keyOf(cursor);
       const monthStart = new Date(cursor);
-      const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+      const monthEnd = new Date(
+        cursor.getFullYear(),
+        cursor.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
 
       let monthActive = 0;
       let monthExpiring = 0;
       for (const l of leases) {
         const rent = Number(l.monthly_rent ?? 0);
-        if (['ACTIVE', 'RENEWED'].includes(l.status) && l.start_date <= monthEnd && l.end_date >= monthStart) {
+        if (
+          ['ACTIVE', 'RENEWED'].includes(l.status) &&
+          l.start_date <= monthEnd &&
+          l.end_date >= monthStart
+        ) {
           monthActive += rent;
         }
         if (keyOf(l.end_date) === key) monthExpiring += rent;
@@ -390,7 +605,8 @@ export class AnalyticsService {
       summary: {
         activeMonthlyRecurring: Math.round(activeMrr),
         expiringNext90DaysContracts: expiringSoon.filter(
-          (e) => (new Date(e.end_date).getTime() - now.getTime()) / 86400000 <= 90,
+          (e) =>
+            (new Date(e.end_date).getTime() - now.getTime()) / 86400000 <= 90,
         ).length,
       },
       monthly: monthlyTimeline,
@@ -399,7 +615,11 @@ export class AnalyticsService {
   }
 
   /** Heuristic risk scores — combine recurrence, priority, optional equipment age / usage. */
-  async getPredictiveMaintenance(user: AuthUser, tenantIdParam?: string, buildingId?: string) {
+  async getPredictiveMaintenance(
+    user: AuthUser,
+    tenantIdParam?: string,
+    buildingId?: string,
+  ) {
     const filter = this.tenantFilter(user, tenantIdParam);
     if (buildingId) await this.access.assertBuildingReadable(user, buildingId);
 
@@ -409,7 +629,9 @@ export class AnalyticsService {
     const tickets = await this.prisma.maintenanceTicket.findMany({
       where: {
         ...filter,
-        ...(buildingId ? { space: { floor: { building_id: buildingId } } } : {}),
+        ...(buildingId
+          ? { space: { floor: { building_id: buildingId } } }
+          : {}),
       },
       select: {
         id: true,
@@ -426,7 +648,9 @@ export class AnalyticsService {
       take: 500,
     });
 
-    const spaceIds = [...new Set(tickets.map((t) => t.space_id).filter(Boolean))] as string[];
+    const spaceIds = [
+      ...new Set(tickets.map((t) => t.space_id).filter(Boolean)),
+    ] as string[];
     const repeatCounts: Record<string, number> = {};
     if (spaceIds.length) {
       const raw = await this.prisma.maintenanceTicket.groupBy({
@@ -435,7 +659,9 @@ export class AnalyticsService {
           space_id: { in: spaceIds },
           reported_at: { gte: since },
           ...filter,
-          ...(buildingId ? { space: { floor: { building_id: buildingId } } } : {}),
+          ...(buildingId
+            ? { space: { floor: { building_id: buildingId } } }
+            : {}),
         },
         _count: { id: true },
       });
@@ -448,19 +674,25 @@ export class AnalyticsService {
       .filter((t) => ['OPEN', 'ASSIGNED', 'IN_PROGRESS'].includes(t.status))
       .map((t) => {
         let risk = 20;
-        const repeats = t.space_id ? repeatCounts[t.space_id] ?? 1 : 1;
+        const repeats = t.space_id ? (repeatCounts[t.space_id] ?? 1) : 1;
         risk += Math.min(40, (repeats - 1) * 12);
         if (t.priority === 'URGENT' || t.priority === 'EMERGENCY') risk += 25;
-        if (t.usage_hours_estimate != null && t.usage_hours_estimate > 4000) risk += 15;
+        if (t.usage_hours_estimate != null && t.usage_hours_estimate > 4000)
+          risk += 15;
         if (t.equipment_installed_at) {
-          const years = (Date.now() - t.equipment_installed_at.getTime()) / (86400000 * 365);
+          const years =
+            (Date.now() - t.equipment_installed_at.getTime()) /
+            (86400000 * 365);
           risk += Math.min(25, years * 5);
         }
         risk = Math.min(100, Math.round(risk));
         const hints: string[] = [];
-        if (repeats > 2) hints.push(`${repeats} ticket(s) on/near this space in 120d`);
-        if (t.usage_hours_estimate != null && t.usage_hours_estimate > 4000) hints.push('High usage hours on file');
-        if (t.equipment_installed_at) hints.push('Equipment age contributes to score');
+        if (repeats > 2)
+          hints.push(`${repeats} ticket(s) on/near this space in 120d`);
+        if (t.usage_hours_estimate != null && t.usage_hours_estimate > 4000)
+          hints.push('High usage hours on file');
+        if (t.equipment_installed_at)
+          hints.push('Equipment age contributes to score');
         return {
           ticketId: t.id,
           title: t.title,
@@ -475,6 +707,9 @@ export class AnalyticsService {
       })
       .sort((a, b) => b.riskScore - a.riskScore);
 
-    return { generatedAt: new Date().toISOString(), tickets: flags.slice(0, 80) };
+    return {
+      generatedAt: new Date().toISOString(),
+      tickets: flags.slice(0, 80),
+    };
   }
 }

@@ -56,7 +56,10 @@ export class FloorController {
   @Roles(...R_FLOOR)
   @ApiOperation({ summary: 'Lister les étages (scoped par rôle)' })
   @ApiQuery({ name: 'buildingId', required: false })
-  findAll(@CurrentUser() user: AuthUser, @Query('buildingId') buildingId?: string) {
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('buildingId') buildingId?: string,
+  ) {
     return this.floorService.findAllForUser(user, buildingId);
   }
 
@@ -72,7 +75,9 @@ export class FloorController {
 
   @Get('publish-default')
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
-  @ApiOperation({ summary: 'Default floor for publishing a space (client workspace)' })
+  @ApiOperation({
+    summary: 'Default floor for publishing a space (client workspace)',
+  })
   getPublishDefault(@CurrentUser() user: AuthUser) {
     return this.floorService.getPublishDefaultForUser(user);
   }
@@ -89,7 +94,11 @@ export class FloorController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Mettre à jour un étage' })
   @ApiParam({ name: 'id' })
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateFloorDto) {
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateFloorDto,
+  ) {
     return this.floorService.updateForUser(user, id, dto);
   }
 

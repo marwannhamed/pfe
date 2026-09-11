@@ -14,7 +14,12 @@ import { RegisterTenantDto } from './dto/register-tenant.dto';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { ConfigurationService } from '../config/configuration.service';
-import { AUDIT_ACTION, NOTIFICATION_TYPE, NOTIFICATION_CHANNEL, AUDIT_SEVERITY } from '../constants/enums';
+import {
+  AUDIT_ACTION,
+  NOTIFICATION_TYPE,
+  NOTIFICATION_CHANNEL,
+  AUDIT_SEVERITY,
+} from '../constants/enums';
 import type { RequestMeta } from '../common/utils/request-meta.util';
 
 @Injectable()
@@ -28,17 +33,20 @@ export class AuthService {
     private configService: ConfigurationService,
   ) {}
 
-  async generateTokens(payload: { userId: string; sessionId?: string }): Promise<any> {
+  async generateTokens(payload: {
+    userId: string;
+    sessionId?: string;
+  }): Promise<any> {
     const accessToken = await this.jwtService.sign(payload, {
       secret: this.configService.jwtSecret,
       expiresIn: this.configService.jwtExpirationTime,
     });
-    
+
     const refreshToken = await this.jwtService.sign(payload, {
       secret: this.configService.jwtRefreshSecret,
       expiresIn: this.configService.jwtRefreshExpirationTime,
     });
-    
+
     return { accessToken, refreshToken };
   }
 
@@ -85,12 +93,22 @@ export class AuthService {
     return { accessToken, refreshToken, sessionId: session.id };
   }
 
-  async login(email: string, password: string, meta?: RequestMeta): Promise<any> {
+  async login(
+    email: string,
+    password: string,
+    meta?: RequestMeta,
+  ): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: {
         tenant: {
-          select: { id: true, name: true, slug: true, subscription_plan: true, status: true },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            subscription_plan: true,
+            status: true,
+          },
         },
       },
     });
@@ -117,7 +135,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid password!');
     }
 
-    const { accessToken, refreshToken, sessionId } = await this.issueSessionTokens(user.id);
+    const { accessToken, refreshToken, sessionId } =
+      await this.issueSessionTokens(user.id);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -185,7 +204,9 @@ export class AuthService {
       },
     });
 
-    const { accessToken, refreshToken } = await this.issueSessionTokens(newUser.id);
+    const { accessToken, refreshToken } = await this.issueSessionTokens(
+      newUser.id,
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userWithoutPassword } = newUser;
@@ -234,7 +255,9 @@ export class AuthService {
       return { tenant, user };
     });
 
-    const { accessToken, refreshToken } = await this.issueSessionTokens(result.user.id);
+    const { accessToken, refreshToken } = await this.issueSessionTokens(
+      result.user.id,
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userWithoutPassword } = result.user;
@@ -268,7 +291,10 @@ export class AuthService {
         if (!session) {
           throw new UnauthorizedException('Invalid refresh token!');
         }
-      } else if (user.session_refresh_token && user.session_refresh_token === refreshTok) {
+      } else if (
+        user.session_refresh_token &&
+        user.session_refresh_token === refreshTok
+      ) {
         // Legacy single-session token — migrate to a dedicated session row
         sessionId = await this.createUserSession(user.id, refreshTok);
         await this.prisma.user.update({
@@ -296,7 +322,10 @@ export class AuthService {
       const { password, ...userWithoutPassword } = user;
       return { accessToken, refreshToken, user: userWithoutPassword };
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       throw new UnauthorizedException('Invalid refresh token!');

@@ -40,9 +40,17 @@ export class AuditController {
   @ApiOperation({ summary: "Lister tous les logs d'audit" })
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'action', required: false, enum: Object.values(AUDIT_ACTION) })
+  @ApiQuery({
+    name: 'action',
+    required: false,
+    enum: Object.values(AUDIT_ACTION),
+  })
   @ApiQuery({ name: 'resourceType', required: false })
-  @ApiQuery({ name: 'severity', required: false, enum: Object.values(AUDIT_SEVERITY) })
+  @ApiQuery({
+    name: 'severity',
+    required: false,
+    enum: Object.values(AUDIT_SEVERITY),
+  })
   findAll(
     @Query('tenantId') tenantId?: string,
     @Query('userId') userId?: string,

@@ -5,7 +5,9 @@ import { CreateUserDto } from './create-user.dto';
 export class UpdateUserDto extends PartialType(
   OmitType(CreateUserDto, ['tenant_id', 'password'] as const),
 ) {
-  @ApiPropertyOptional({ description: 'Crisp session id for support correlation' })
+  @ApiPropertyOptional({
+    description: 'Crisp session id for support correlation',
+  })
   @IsOptional()
   @IsString()
   crisp_session_id?: string | null;

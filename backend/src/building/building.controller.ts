@@ -84,7 +84,11 @@ export class BuildingController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Mettre à jour un bâtiment' })
   @ApiParam({ name: 'id' })
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateBuildingDto) {
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBuildingDto,
+  ) {
     return this.buildingService.updateForUser(user, id, dto);
   }
 

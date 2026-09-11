@@ -31,7 +31,8 @@ export class CreateBuildingDto {
 
   @ApiPropertyOptional({
     example: 10,
-    description: 'Total floors in the physical building (reference only — does not create floor records)',
+    description:
+      'Total floors in the physical building (reference only — does not create floor records)',
   })
   @IsInt()
   @IsOptional()

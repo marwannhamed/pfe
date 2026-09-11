@@ -1,5 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoggingService } from '../logging/logging.service';
 import { PerformanceService } from '../performance/performance.service';
@@ -36,22 +41,22 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Detailed health information' })
   async detailedHealth() {
     const startTime = Date.now();
-    
+
     try {
       // Check database connection
       const dbStatus = await this.checkDatabase();
-      
+
       // Check system resources
       const systemInfo = this.getSystemInfo();
-      
+
       // Check logging service
       const logStats = this.loggingService.getLogStats();
-      
+
       // Check performance metrics
       const perfStats = this.performanceService.getStats();
-      
+
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -74,7 +79,9 @@ export class HealthController {
         system: systemInfo,
       };
     } catch (error) {
-      this.loggingService.error('Health check failed', 'HEALTH_CHECK', { error: error.message });
+      this.loggingService.error('Health check failed', 'HEALTH_CHECK', {
+        error: error.message,
+      });
       return {
         status: 'error',
         timestamp: new Date().toISOString(),
@@ -92,7 +99,7 @@ export class HealthController {
     const perfStats = this.performanceService.getStats();
     const slowOperations = this.performanceService.getSlowOperations(10);
     const logStats = this.loggingService.getLogStats();
-    
+
     return {
       timestamp: new Date().toISOString(),
       performance: {
@@ -102,7 +109,7 @@ export class HealthController {
         fastestOperation: perfStats.fastestOperation,
         operationsByType: perfStats.operationsByType,
       },
-      slowOperations: slowOperations.map(op => ({
+      slowOperations: slowOperations.map((op) => ({
         operation: op.operation,
         duration: `${op.duration.toFixed(2)}ms`,
         timestamp: op.timestamp,
@@ -132,7 +139,7 @@ export class HealthController {
       const startTime = Date.now();
       await this.prisma.$queryRaw`SELECT 1`;
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'ok',
         responseTime: `${responseTime}ms`,
@@ -152,7 +159,7 @@ export class HealthController {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
-    
+
     return {
       platform: os.platform(),
       arch: os.arch(),

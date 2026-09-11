@@ -142,7 +142,10 @@ export class CreateSpaceDto {
   @Type(() => SpaceFeatureInputDto)
   features?: SpaceFeatureInputDto[];
 
-  @ApiPropertyOptional({ type: [String], description: 'Add-on service IDs available for this space' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Add-on service IDs available for this space',
+  })
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })

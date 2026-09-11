@@ -11,7 +11,13 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { CreateClientAccountDto } from './dto/create-client-account.dto';
@@ -51,7 +57,12 @@ export class TenantController {
   }
 
   @Get()
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+  )
   @ApiOperation({ summary: 'Lister tous les tenants' })
   @ApiQuery({ name: 'type', required: false, enum: ['CLIENT', 'RENTER'] })
   findAll(@CurrentUser() user: AuthUser, @Query('type') type?: string) {
@@ -76,7 +87,12 @@ export class TenantController {
   }
 
   @Get(':id/active-users')
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.FINANCE, USER_ROLE.TENANT_ADMIN, USER_ROLE.MANAGER)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.MANAGER,
+  )
   @ApiOperation({ summary: 'Utilisateurs actifs du tenant' })
   @ApiParam({ name: 'id' })
   getActiveUsers(@CurrentUser() user: AuthUser, @Param('id') id: string) {
@@ -84,7 +100,13 @@ export class TenantController {
   }
 
   @Get(':id')
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.FINANCE, USER_ROLE.TENANT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.TENANT_EMPLOYEE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Récupérer un tenant' })
   @ApiParam({ name: 'id' })
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
@@ -108,9 +130,15 @@ export class TenantController {
   }
 
   @Patch(':id/reporting-embeds')
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+  )
   @ApiOperation({
-    summary: 'White-label Power BI / Tableau iframe URLs for property owners (non-secret)',
+    summary:
+      'White-label Power BI / Tableau iframe URLs for property owners (non-secret)',
   })
   @ApiParam({ name: 'id' })
   updateReportingEmbeds(

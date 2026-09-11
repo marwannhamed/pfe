@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 
 export class ReportEmbedPanelDto {
   @ApiPropertyOptional({ example: 'Portfolio overview' })
@@ -10,7 +16,8 @@ export class ReportEmbedPanelDto {
   title?: string;
 
   @ApiPropertyOptional({
-    description: 'HTTPS embed URL from Power BI or Tableau (publish/embed flow).',
+    description:
+      'HTTPS embed URL from Power BI or Tableau (publish/embed flow).',
   })
   @IsOptional()
   @IsUrl({ require_tld: false })

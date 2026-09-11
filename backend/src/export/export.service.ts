@@ -11,21 +11,35 @@ export class ExportService {
   // ─── Helpers ──────────────────────────────────────────────────────────────
   private fmtDate(d: Date | string | null): string {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   private fmtDateTime(d: Date | string | null): string {
     if (!d) return '';
-    return new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   // ─── Style helpers ─────────────────────────────────────────────────────────
   private styleWorksheet(ws: ExcelJS.Worksheet, headers: string[]) {
     // Header row styling
     const headerRow = ws.getRow(1);
-    headerRow.eachCell(cell => {
-      cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
-      cell.font   = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1E3A5F' },
+      };
+      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
       cell.border = { bottom: { style: 'thin', color: { argb: 'FF2563EB' } } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
@@ -44,8 +58,12 @@ export class ExportService {
     rows.forEach((rowData, rowIndex) => {
       const row = ws.addRow(rowData);
       const isEven = rowIndex % 2 === 0;
-      row.eachCell(cell => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? 'FFFFFFFF' : 'FFF8FAFC' } };
+      row.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFFFFFFF' : 'FFF8FAFC' },
+        };
         cell.font = { size: 10 };
         cell.alignment = { vertical: 'middle' };
         cell.border = {
@@ -60,21 +78,31 @@ export class ExportService {
     const escape = (v: any) => {
       const s = String(v ?? '');
       return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"` : s;
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
     };
     const lines = [headers.map(escape).join(',')];
-    rows.forEach(row => lines.push(row.map(escape).join(',')));
+    rows.forEach((row) => lines.push(row.map(escape).join(',')));
     return lines.join('\n');
   }
 
-  private async buildWorkbook(sheetName: string, headers: string[], rows: any[][]): Promise<ExcelJS.Workbook> {
+  private async buildWorkbook(
+    sheetName: string,
+    headers: string[],
+    rows: any[][],
+  ): Promise<ExcelJS.Workbook> {
     const wb = new ExcelJS.Workbook();
-    wb.creator  = 'LeaseManager';
-    wb.created  = new Date();
+    wb.creator = 'LeaseManager';
+    wb.created = new Date();
     wb.modified = new Date();
 
     const ws = wb.addWorksheet(sheetName, {
-      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1 },
+      pageSetup: {
+        paperSize: 9,
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+      },
     });
 
     ws.addRow(headers);
@@ -84,7 +112,12 @@ export class ExportService {
     // Summary row
     ws.addRow([]);
     const summaryRow = ws.addRow([`Total: ${rows.length} records`]);
-    summaryRow.getCell(1).font = { bold: true, italic: true, size: 10, color: { argb: 'FF64748B' } };
+    summaryRow.getCell(1).font = {
+      bold: true,
+      italic: true,
+      size: 10,
+      color: { argb: 'FF64748B' },
+    };
 
     return wb;
   }
@@ -92,25 +125,43 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // BOOKINGS
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportBookings(format: ExportFormat, from?: Date, to?: Date, tenantId?: string) {
+  async exportBookings(
+    format: ExportFormat,
+    from?: Date,
+    to?: Date,
+    tenantId?: string,
+  ) {
     const bookings = await this.prisma.booking.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
-        space:      { select: { name: true, type: true } },
-        tenant:     { select: { name: true } },
+        space: { select: { name: true, type: true } },
+        tenant: { select: { name: true } },
       } as any,
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Booking #', 'Space', 'Type', 'Tenant', 'Created By', 'Status', 'Start', 'End', 'Attendees', 'Total Price', 'Currency', 'Created At'];
-    const rows = bookings.map(b => [
+    const headers = [
+      'Booking #',
+      'Space',
+      'Type',
+      'Tenant',
+      'Created By',
+      'Status',
+      'Start',
+      'End',
+      'Attendees',
+      'Total Price',
+      'Currency',
+      'Created At',
+    ];
+    const rows = bookings.map((b) => [
       (b as any).booking_number,
-      (b as any).space?.name    ?? '',
+      (b as any).space?.name ?? '',
       (b as any).space?.type?.replace(/_/g, ' ') ?? '',
-      (b as any).tenant?.name   ?? '',
+      (b as any).tenant?.name ?? '',
       '', // createdBy removed
       (b as any).status.replace(/_/g, ' '),
       this.fmtDateTime((b as any).start_time),
@@ -121,7 +172,11 @@ export class ExportService {
       this.fmtDate((b as any).created_at),
     ]);
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `bookings_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `bookings_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Bookings', headers, rows);
     return { workbook: wb, filename: `bookings_${Date.now()}.xlsx` };
   }
@@ -129,22 +184,42 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // INVOICES
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportInvoices(format: ExportFormat, from?: Date, to?: Date, tenantId?: string) {
+  async exportInvoices(
+    format: ExportFormat,
+    from?: Date,
+    to?: Date,
+    tenantId?: string,
+  ) {
     const invoices = await this.prisma.invoice.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
-        tenant:   { select: { name: true } },
+        tenant: { select: { name: true } },
         payments: { select: { amount: true, status: true } },
       },
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Invoice #', 'Tenant', 'Type', 'Status', 'Subtotal', 'Tax', 'Total', 'Currency', 'Issue Date', 'Due Date', 'Paid Amount', 'Created At'];
-    const rows = invoices.map(inv => {
-      const paidAmount = inv.payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + Number(p.amount), 0);
+    const headers = [
+      'Invoice #',
+      'Tenant',
+      'Type',
+      'Status',
+      'Subtotal',
+      'Tax',
+      'Total',
+      'Currency',
+      'Issue Date',
+      'Due Date',
+      'Paid Amount',
+      'Created At',
+    ];
+    const rows = invoices.map((inv) => {
+      const paidAmount = inv.payments
+        .filter((p) => p.status === 'COMPLETED')
+        .reduce((s, p) => s + Number(p.amount), 0);
       return [
         inv.invoice_number,
         inv.tenant?.name ?? '',
@@ -161,7 +236,11 @@ export class ExportService {
       ];
     });
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `invoices_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `invoices_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Invoices', headers, rows);
     return { workbook: wb, filename: `invoices_${Date.now()}.xlsx` };
   }
@@ -169,21 +248,37 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // PAYMENTS
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportPayments(format: ExportFormat, from?: Date, to?: Date, tenantId?: string) {
+  async exportPayments(
+    format: ExportFormat,
+    from?: Date,
+    to?: Date,
+    tenantId?: string,
+  ) {
     const payments = await this.prisma.payment.findMany({
       where: {
         ...(tenantId && { tenant_id: tenantId }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
-        invoice:    { select: { invoice_number: true } },
-        tenant:     { select: { name: true } },
+        invoice: { select: { invoice_number: true } },
+        tenant: { select: { name: true } },
       } as any,
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Payment #', 'Invoice #', 'Tenant', 'Amount', 'Currency', 'Method', 'Status', 'Payment Date', 'Recorded By', 'Created At'];
-    const rows = payments.map(p => [
+    const headers = [
+      'Payment #',
+      'Invoice #',
+      'Tenant',
+      'Amount',
+      'Currency',
+      'Method',
+      'Status',
+      'Payment Date',
+      'Recorded By',
+      'Created At',
+    ];
+    const rows = payments.map((p) => [
       p.payment_number,
       (p as any).invoice?.invoice_number ?? '',
       (p as any).tenant?.name ?? '',
@@ -196,7 +291,11 @@ export class ExportService {
       this.fmtDate(p.created_at),
     ]);
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `payments_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `payments_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Payments', headers, rows);
     return { workbook: wb, filename: `payments_${Date.now()}.xlsx` };
   }
@@ -208,14 +307,30 @@ export class ExportService {
     const tenants = await this.prisma.tenant.findMany({
       include: {
         _count: {
-          select: { users: true, leaseContracts: true, bookings: true, invoices: true },
+          select: {
+            users: true,
+            leaseContracts: true,
+            bookings: true,
+            invoices: true,
+          },
         },
       },
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Name', 'Slug', 'Contact Email', 'Contact Phone', 'Status', 'Users', 'Contracts', 'Bookings', 'Invoices', 'Created At'];
-    const rows = tenants.map(t => [
+    const headers = [
+      'Name',
+      'Slug',
+      'Contact Email',
+      'Contact Phone',
+      'Status',
+      'Users',
+      'Contracts',
+      'Bookings',
+      'Invoices',
+      'Created At',
+    ];
+    const rows = tenants.map((t) => [
       t.name,
       t.slug,
       t.contact_email ?? '',
@@ -228,7 +343,11 @@ export class ExportService {
       this.fmtDate(t.created_at),
     ]);
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `tenants_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `tenants_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Tenants', headers, rows);
     return { workbook: wb, filename: `tenants_${Date.now()}.xlsx` };
   }
@@ -240,15 +359,34 @@ export class ExportService {
     const spaces = await (this.prisma as any).space.findMany({
       include: {
         floor: {
-          select: { floor_number: true, name: true, building: { select: { name: true } } },
+          select: {
+            floor_number: true,
+            name: true,
+            building: { select: { name: true } },
+          },
         },
         _count: { select: { bookings: true } },
       } as any,
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Name', 'Code', 'Type', 'Status', 'Capacity', 'Area (m²)', 'Building', 'Floor', 'Price/Hour', 'Price/Day', 'Price/Month', 'Currency', 'Total Bookings', 'Created At'];
-    const rows = spaces.map(s => [
+    const headers = [
+      'Name',
+      'Code',
+      'Type',
+      'Status',
+      'Capacity',
+      'Area (m²)',
+      'Building',
+      'Floor',
+      'Price/Hour',
+      'Price/Day',
+      'Price/Month',
+      'Currency',
+      'Total Bookings',
+      'Created At',
+    ];
+    const rows = spaces.map((s) => [
       s.name,
       (s as any).code ?? '',
       s.type.replace(/_/g, ' '),
@@ -257,15 +395,25 @@ export class ExportService {
       Number(s.area_sqm).toFixed(1),
       s.floor?.building?.name ?? '',
       s.floor ? `Floor ${s.floor.floor_number} — ${s.floor.name}` : '',
-      (s as any).price_per_hour  ? Number((s as any).price_per_hour).toFixed(2)  : '',
-      (s as any).price_per_day   ? Number((s as any).price_per_day).toFixed(2)   : '',
-      (s as any).price_per_month ? Number((s as any).price_per_month).toFixed(2) : '',
+      (s as any).price_per_hour
+        ? Number((s as any).price_per_hour).toFixed(2)
+        : '',
+      (s as any).price_per_day
+        ? Number((s as any).price_per_day).toFixed(2)
+        : '',
+      (s as any).price_per_month
+        ? Number((s as any).price_per_month).toFixed(2)
+        : '',
       s.currency ?? 'USD',
       s._count.bookings,
       this.fmtDate(s.created_at),
     ]);
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `spaces_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `spaces_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Spaces', headers, rows);
     return { workbook: wb, filename: `spaces_${Date.now()}.xlsx` };
   }
@@ -273,7 +421,12 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // MAINTENANCE TICKETS
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportMaintenance(format: ExportFormat, from?: Date, to?: Date, tenantId?: string) {
+  async exportMaintenance(
+    format: ExportFormat,
+    from?: Date,
+    to?: Date,
+    tenantId?: string,
+  ) {
     const tickets = await (this.prisma as any).maintenanceTicket.findMany({
       where: {
         ...(from && to && { created_at: { gte: from, lte: to } }),
@@ -285,13 +438,26 @@ export class ExportService {
         }),
       },
       include: {
-        space:      { select: { name: true } },
+        space: { select: { name: true } },
       } as any,
       orderBy: { created_at: 'desc' },
     });
 
-    const headers = ['Ticket #', 'Title', 'Space', 'Category', 'Priority', 'Status', 'Created By', 'Assigned To', 'Reported At', 'Resolved At', 'Cost', 'Created At'];
-    const rows = tickets.map(t => [
+    const headers = [
+      'Ticket #',
+      'Title',
+      'Space',
+      'Category',
+      'Priority',
+      'Status',
+      'Created By',
+      'Assigned To',
+      'Reported At',
+      'Resolved At',
+      'Cost',
+      'Created At',
+    ];
+    const rows = tickets.map((t) => [
       t.ticket_number,
       t.title,
       t.space?.name ?? '',
@@ -306,7 +472,11 @@ export class ExportService {
       this.fmtDate(t.created_at),
     ]);
 
-    if (format === 'csv') return { data: this.toCSV(headers, rows), filename: `maintenance_${Date.now()}.csv` };
+    if (format === 'csv')
+      return {
+        data: this.toCSV(headers, rows),
+        filename: `maintenance_${Date.now()}.csv`,
+      };
     const wb = await this.buildWorkbook('Maintenance Tickets', headers, rows);
     return { workbook: wb, filename: `maintenance_${Date.now()}.xlsx` };
   }

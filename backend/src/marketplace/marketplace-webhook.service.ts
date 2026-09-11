@@ -8,7 +8,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { BOOKING_STATUS, NOTIFICATION_CHANNEL, NOTIFICATION_PRIORITY, NOTIFICATION_TYPE, USER_ROLE } from '../constants/enums';
+import {
+  BOOKING_STATUS,
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_PRIORITY,
+  NOTIFICATION_TYPE,
+  USER_ROLE,
+} from '../constants/enums';
 import { NotificationService } from '../notification/notification.service';
 import { MailService } from '../mail/mail.service';
 
@@ -38,7 +44,8 @@ export class MarketplaceWebhookService {
     canonicalPayload: string,
     signatureHeader: string | undefined,
   ): void {
-    const skip = this.config.get<string>('MARKETPLACE_WEBHOOK_VERIFY') === 'false';
+    const skip =
+      this.config.get<string>('MARKETPLACE_WEBHOOK_VERIFY') === 'false';
     if (skip) return;
     let secret = this.webhookSecret(platform);
     if (!secret) {
@@ -49,7 +56,9 @@ export class MarketplaceWebhookService {
       throw new UnauthorizedException('Webhook not configured');
     }
     if (!signatureHeader) throw new UnauthorizedException('Missing signature');
-    const expected = createHmac('sha256', secret).update(canonicalPayload).digest('hex');
+    const expected = createHmac('sha256', secret)
+      .update(canonicalPayload)
+      .digest('hex');
     const provided = signatureHeader.replace(/^sha256=/i, '').trim();
     if (provided.length !== expected.length || provided !== expected) {
       throw new UnauthorizedException('Invalid signature');
@@ -121,7 +130,8 @@ export class MarketplaceWebhookService {
       where: { tenant_id: siteTenantId, status: 'ACTIVE' },
       orderBy: { created_at: 'asc' },
     });
-    if (!anyUser) throw new BadRequestException('No user to attach marketplace booking');
+    if (!anyUser)
+      throw new BadRequestException('No user to attach marketplace booking');
     return anyUser.id;
   }
 
@@ -164,7 +174,11 @@ export class MarketplaceWebhookService {
       return { ok: true, duplicate: true, bookingId: existing.id };
     }
 
-    const space = await this.resolveSpace(platform, body.spaceId, body.listingId);
+    const space = await this.resolveSpace(
+      platform,
+      body.spaceId,
+      body.listingId,
+    );
     const tenantId = space.floor.building.tenant_id;
     const userId = await this.pickBookingActorUserId(tenantId);
 
@@ -245,6 +259,10 @@ export class MarketplaceWebhookService {
       }
     }
 
-    return { ok: true, bookingId: booking.id, bookingNumber: booking.booking_number };
+    return {
+      ok: true,
+      bookingId: booking.id,
+      bookingNumber: booking.booking_number,
+    };
   }
 }

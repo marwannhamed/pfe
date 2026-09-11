@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAddonServiceDto } from './dto/create-addon-service.dto';
 import { UpdateAddonServiceDto } from './dto/update-addon-service.dto';
@@ -18,14 +22,20 @@ export class AddonServiceService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Make a published service selectable on every space owned by the landlord. */
-  private async linkServiceToAllLandlordSpaces(addonServiceId: string, landlordTenantId: string) {
+  private async linkServiceToAllLandlordSpaces(
+    addonServiceId: string,
+    landlordTenantId: string,
+  ) {
     const spaces = await this.prisma.space.findMany({
       where: { floor: { building: { tenant_id: landlordTenantId } } },
       select: { id: true },
     });
     if (!spaces.length) return;
     await this.prisma.spaceAddOnService.createMany({
-      data: spaces.map((s) => ({ space_id: s.id, addon_service_id: addonServiceId })),
+      data: spaces.map((s) => ({
+        space_id: s.id,
+        addon_service_id: addonServiceId,
+      })),
       skipDuplicates: true,
     });
   }
@@ -64,17 +74,24 @@ export class AddonServiceService {
   }
 
   async findAll(params?: FindAllParams) {
-    const { tenantId, category, isActive, page = 1, limit = 10, search } = params || {};
+    const {
+      tenantId,
+      category,
+      isActive,
+      page = 1,
+      limit = 10,
+      search,
+    } = params || {};
 
     const where: any = {
-      ...(tenantId  && { tenant_id: tenantId }),
-      ...(category  && { category }),
+      ...(tenantId && { tenant_id: tenantId }),
+      ...(category && { category }),
       ...(isActive !== undefined && { is_active: isActive }),
     };
 
     if (search) {
       where.OR = [
-        { name:        { contains: search } },
+        { name: { contains: search } },
         { description: { contains: search } },
       ];
     }
@@ -85,8 +102,8 @@ export class AddonServiceService {
         where,
         include: { tenant: true },
         orderBy: { created_at: 'desc' },
-        skip:    (page - 1) * limit,
-        take:    limit,
+        skip: (page - 1) * limit,
+        take: limit,
       }),
     ]);
 
@@ -118,7 +135,7 @@ export class AddonServiceService {
 
   async findOne(id: string) {
     const addon = await this.prisma.addOnService.findUnique({
-      where:   { id },
+      where: { id },
       include: { tenant: true },
     });
 
@@ -151,8 +168,8 @@ export class AddonServiceService {
     if (dto.is_active !== undefined) data.is_active = dto.is_active;
 
     const service = await this.prisma.addOnService.update({
-      where:   { id },
-      data:    data as any,
+      where: { id },
+      data: data as any,
       include: { tenant: true },
     });
 
@@ -187,8 +204,8 @@ export class AddonServiceService {
   async activate(id: string) {
     const existing = await this.findOne(id);
     const service = await this.prisma.addOnService.update({
-      where:   { id },
-      data:    { is_active: true },
+      where: { id },
+      data: { is_active: true },
       include: { tenant: true },
     });
     await this.linkServiceToAllLandlordSpaces(id, existing.tenant_id);
@@ -198,8 +215,8 @@ export class AddonServiceService {
   async deactivate(id: string) {
     await this.findOne(id);
     return this.prisma.addOnService.update({
-      where:   { id },
-      data:    { is_active: false },
+      where: { id },
+      data: { is_active: false },
       include: { tenant: true },
     });
   }
@@ -218,7 +235,7 @@ export class AddonServiceService {
         },
       }),
       this.prisma.bookingAddOn.findMany({
-        where:  { addon_service_id: id },
+        where: { addon_service_id: id },
         select: { quantity: true, unit_price: true },
       }),
     ]);
@@ -228,7 +245,11 @@ export class AddonServiceService {
       0,
     );
 
-    return { totalBookings: totalUsage, activeBookings: activeUsage, totalRevenue };
+    return {
+      totalBookings: totalUsage,
+      activeBookings: activeUsage,
+      totalRevenue,
+    };
   }
 
   async getCategories(tenantId?: string) {
@@ -237,7 +258,7 @@ export class AddonServiceService {
         is_active: true,
         ...(tenantId && { tenant_id: tenantId }),
       },
-      select:   { category: true },
+      select: { category: true },
       distinct: ['category'],
     });
     return rows.map((r) => r.category).filter(Boolean);
@@ -248,10 +269,7 @@ export class AddonServiceService {
       where: {
         is_active: true,
         ...(tenantId && { tenant_id: tenantId }),
-        OR: [
-          { name:     { contains: query } },
-          { category: { contains: query } },
-        ],
+        OR: [{ name: { contains: query } }, { category: { contains: query } }],
       },
       include: { tenant: true },
       orderBy: { name: 'asc' },

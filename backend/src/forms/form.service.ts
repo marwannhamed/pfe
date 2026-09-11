@@ -16,12 +16,16 @@ export class FormService {
     private readonly config: ConfigService,
   ) {}
 
-  private async resolveLandlordTenantId(dto: CreateTypeformInquiryDto): Promise<{
+  private async resolveLandlordTenantId(
+    dto: CreateTypeformInquiryDto,
+  ): Promise<{
     landlord_tenant_id: string;
     space_id: string | null;
   }> {
     if (!dto.space_id) {
-      throw new BadRequestException('Provide space_id to scope the application');
+      throw new BadRequestException(
+        'Provide space_id to scope the application',
+      );
     }
     const space = await this.prisma.space.findUnique({
       where: { id: dto.space_id },
@@ -36,12 +40,19 @@ export class FormService {
 
   assertCanCreateInquiry(user: AuthUser, landlord_tenant_id: string) {
     if (user.role === USER_ROLE.SUPER_ADMIN) return;
-    if (user.role === USER_ROLE.MANAGER && user.tenant_id === landlord_tenant_id) return;
-    throw new ForbiddenException('Only super admins or site managers for this organization can create application links');
+    if (
+      user.role === USER_ROLE.MANAGER &&
+      user.tenant_id === landlord_tenant_id
+    )
+      return;
+    throw new ForbiddenException(
+      'Only super admins or site managers for this organization can create application links',
+    );
   }
 
   async createTypeformInquiry(user: AuthUser, dto: CreateTypeformInquiryDto) {
-    const { landlord_tenant_id, space_id } = await this.resolveLandlordTenantId(dto);
+    const { landlord_tenant_id, space_id } =
+      await this.resolveLandlordTenantId(dto);
     this.assertCanCreateInquiry(user, landlord_tenant_id);
 
     const app = await this.prisma.tenantApplication.create({
@@ -57,7 +68,8 @@ export class FormService {
       throw new BadRequestException('TYPEFORM_FORM_ID is not configured');
     }
     const base =
-      this.config.get<string>('TYPEFORM_BASE_URL')?.trim() || 'https://form.typeform.com/to';
+      this.config.get<string>('TYPEFORM_BASE_URL')?.trim() ||
+      'https://form.typeform.com/to';
     const enc = (v: string) => encodeURIComponent(v);
     const url = `${base.replace(/\/$/, '')}/${formId}#inquiry_id=${enc(app.id)}&space_id=${enc(space_id ?? '')}`;
 

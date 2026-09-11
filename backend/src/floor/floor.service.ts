@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFloorDto } from './dto/create-floor.dto';
 import { UpdateFloorDto } from './dto/update-floor.dto';
@@ -93,7 +97,8 @@ export class FloorService {
 
   async updateForUser(user: AuthUser, id: string, dto: UpdateFloorDto) {
     await this.access.assertFloorReadable(user, id);
-    if (dto.building_id) await this.access.assertBuildingReadable(user, dto.building_id);
+    if (dto.building_id)
+      await this.access.assertBuildingReadable(user, dto.building_id);
     if (dto.floor_number !== undefined) {
       const current = await this.prisma.floor.findUnique({ where: { id } });
       if (!current) throw new NotFoundException(`Floor #${id} introuvable`);
@@ -114,11 +119,17 @@ export class FloorService {
     return this.prisma.floor.update({
       where: { id },
       data: {
-        ...(dto.building_id !== undefined ? { building_id: dto.building_id } : {}),
-        ...(dto.floor_number !== undefined ? { floor_number: dto.floor_number } : {}),
+        ...(dto.building_id !== undefined
+          ? { building_id: dto.building_id }
+          : {}),
+        ...(dto.floor_number !== undefined
+          ? { floor_number: dto.floor_number }
+          : {}),
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.area_sqm !== undefined ? { area_sqm: dto.area_sqm } : {}),
-        ...(dto.floor_plan_url !== undefined ? { floor_plan_url: dto.floor_plan_url } : {}),
+        ...(dto.floor_plan_url !== undefined
+          ? { floor_plan_url: dto.floor_plan_url }
+          : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
       },
       include: { spaces: true },

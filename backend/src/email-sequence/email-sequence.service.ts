@@ -33,7 +33,9 @@ export class EmailSequenceService {
   ) {}
 
   private frontendUrl(): string {
-    return this.config.get<string>('FRONTEND_URL')?.trim() || 'http://localhost:5173';
+    return (
+      this.config.get<string>('FRONTEND_URL')?.trim() || 'http://localhost:5173'
+    );
   }
 
   private templateId(envKey: string): number | undefined {
@@ -43,7 +45,9 @@ export class EmailSequenceService {
     return Number.isFinite(n) && n > 0 ? n : undefined;
   }
 
-  private tenantParams(tenant: Pick<Tenant, 'name' | 'slug' | 'contact_email'>): Record<string, string> {
+  private tenantParams(
+    tenant: Pick<Tenant, 'name' | 'slug' | 'contact_email'>,
+  ): Record<string, string> {
     const base = this.frontendUrl();
     return {
       TENANT_NAME: tenant.name,
@@ -55,7 +59,8 @@ export class EmailSequenceService {
       BOOKINGS_HELP_URL: `${base}/portal/bookings`,
       TEAM_USERS_HELP_URL: `${base}/portal/users`,
       BILLING_HELP_URL: `${base}/portal/billing`,
-      SURVEY_URL: this.config.get<string>('BREVO_SURVEY_URL')?.trim() || `${base}/portal`,
+      SURVEY_URL:
+        this.config.get<string>('BREVO_SURVEY_URL')?.trim() || `${base}/portal`,
     };
   }
 
@@ -74,7 +79,9 @@ export class EmailSequenceService {
     });
     if (existing) return;
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
     if (!tenant?.contact_email) return;
 
     const baselineAt = new Date();
@@ -102,7 +109,9 @@ export class EmailSequenceService {
 
     const tid = this.templateId(BREVO_TEMPLATE_ENV.ONBOARDING_DAY0);
     if (!tid) {
-      this.logger.warn(`Missing ${BREVO_TEMPLATE_ENV.ONBOARDING_DAY0}; Day 0 email skipped`);
+      this.logger.warn(
+        `Missing ${BREVO_TEMPLATE_ENV.ONBOARDING_DAY0}; Day 0 email skipped`,
+      );
       return;
     }
 
@@ -143,12 +152,36 @@ export class EmailSequenceService {
         minDay: number;
         sentAt: Date | null;
         env: string;
-        field: 'day1_sent_at' | 'day3_sent_at' | 'day7_sent_at' | 'day30_sent_at';
+        field:
+          | 'day1_sent_at'
+          | 'day3_sent_at'
+          | 'day7_sent_at'
+          | 'day30_sent_at';
       }> = [
-        { minDay: 1, sentAt: row.day1_sent_at, env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY1, field: 'day1_sent_at' },
-        { minDay: 3, sentAt: row.day3_sent_at, env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY3, field: 'day3_sent_at' },
-        { minDay: 7, sentAt: row.day7_sent_at, env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY7, field: 'day7_sent_at' },
-        { minDay: 30, sentAt: row.day30_sent_at, env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY30, field: 'day30_sent_at' },
+        {
+          minDay: 1,
+          sentAt: row.day1_sent_at,
+          env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY1,
+          field: 'day1_sent_at',
+        },
+        {
+          minDay: 3,
+          sentAt: row.day3_sent_at,
+          env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY3,
+          field: 'day3_sent_at',
+        },
+        {
+          minDay: 7,
+          sentAt: row.day7_sent_at,
+          env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY7,
+          field: 'day7_sent_at',
+        },
+        {
+          minDay: 30,
+          sentAt: row.day30_sent_at,
+          env: BREVO_TEMPLATE_ENV.ONBOARDING_DAY30,
+          field: 'day30_sent_at',
+        },
       ];
 
       for (const step of steps) {

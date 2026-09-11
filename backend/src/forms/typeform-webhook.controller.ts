@@ -19,7 +19,8 @@ export class TypeformWebhookController {
   @Post('application')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Typeform form_response — create pending tenant, attach answers/files, notify managers',
+    summary:
+      'Typeform form_response — create pending tenant, attach answers/files, notify managers',
   })
   async application(
     @Req() req: Request & { rawBody?: Buffer },

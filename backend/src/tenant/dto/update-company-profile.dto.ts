@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateCompanyProfileDto {
   @ApiPropertyOptional({ example: 'Atlas Property Management' })
@@ -26,7 +32,10 @@ export class UpdateCompanyProfileDto {
   @MaxLength(200)
   website?: string;
 
-  @ApiPropertyOptional({ example: '12345678901', description: 'Commercial Registration (CR) number' })
+  @ApiPropertyOptional({
+    example: '12345678901',
+    description: 'Commercial Registration (CR) number',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)

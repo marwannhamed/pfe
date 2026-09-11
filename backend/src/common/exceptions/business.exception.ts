@@ -40,21 +40,19 @@ export class BusinessException extends HttpException {
   }
 
   static notFound(resource: string, identifier?: string): BusinessException {
-    const message = identifier 
+    const message = identifier
       ? `${resource} with identifier '${identifier}' not found`
       : `${resource} not found`;
-    
-    const details: BusinessErrorDetails[] = [{ 
-      code: 'NOT_FOUND',
-      ...(resource && { resource }),
-      ...(identifier && { identifier })
-    }];
-    
-    return new BusinessException(
-      message,
-      HttpStatus.NOT_FOUND,
-      details,
-    );
+
+    const details: BusinessErrorDetails[] = [
+      {
+        code: 'NOT_FOUND',
+        ...(resource && { resource }),
+        ...(identifier && { identifier }),
+      },
+    ];
+
+    return new BusinessException(message, HttpStatus.NOT_FOUND, details);
   }
 
   static validationFailed(
@@ -62,49 +60,44 @@ export class BusinessException extends HttpException {
     field?: string,
     value?: any,
   ): BusinessException {
-    const details: BusinessErrorDetails[] = [{ 
-      code: 'VALIDATION_FAILED',
-      ...(field && { field }),
-      ...(value && { value })
-    }];
-    
-    return new BusinessException(
-      message,
-      HttpStatus.BAD_REQUEST,
-      details,
-    );
+    const details: BusinessErrorDetails[] = [
+      {
+        code: 'VALIDATION_FAILED',
+        ...(field && { field }),
+        ...(value && { value }),
+      },
+    ];
+
+    return new BusinessException(message, HttpStatus.BAD_REQUEST, details);
   }
 
-  static conflict(message: string, details?: BusinessErrorDetails[]): BusinessException {
-    return new BusinessException(
-      message,
-      HttpStatus.CONFLICT,
-      details,
-    );
+  static conflict(
+    message: string,
+    details?: BusinessErrorDetails[],
+  ): BusinessException {
+    return new BusinessException(message, HttpStatus.CONFLICT, details);
   }
 
-  static unauthorized(message: string = 'Unauthorized access'): BusinessException {
-    return new BusinessException(
-      message,
-      HttpStatus.UNAUTHORIZED,
-      [{ code: 'UNAUTHORIZED' }],
-    );
+  static unauthorized(
+    message: string = 'Unauthorized access',
+  ): BusinessException {
+    return new BusinessException(message, HttpStatus.UNAUTHORIZED, [
+      { code: 'UNAUTHORIZED' },
+    ]);
   }
 
   static forbidden(message: string = 'Forbidden access'): BusinessException {
-    return new BusinessException(
-      message,
-      HttpStatus.FORBIDDEN,
-      [{ code: 'FORBIDDEN' }],
-    );
+    return new BusinessException(message, HttpStatus.FORBIDDEN, [
+      { code: 'FORBIDDEN' },
+    ]);
   }
 
-  static paymentRequired(message: string = 'Payment required'): BusinessException {
-    return new BusinessException(
-      message,
-      HttpStatus.PAYMENT_REQUIRED,
-      [{ code: 'PAYMENT_REQUIRED' }],
-    );
+  static paymentRequired(
+    message: string = 'Payment required',
+  ): BusinessException {
+    return new BusinessException(message, HttpStatus.PAYMENT_REQUIRED, [
+      { code: 'PAYMENT_REQUIRED' },
+    ]);
   }
 
   static tooManyRequests(

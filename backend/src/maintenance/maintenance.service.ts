@@ -8,7 +8,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMaintenanceTicketDto } from './dto/create-maintenance-ticket.dto';
 import { UpdateMaintenanceTicketDto } from './dto/update-maintenance-ticket.dto';
-import { TICKET_STATUS, TICKET_PRIORITY, SPACE_STATUS, USER_ROLE } from '../constants/enums';
+import {
+  TICKET_STATUS,
+  TICKET_PRIORITY,
+  SPACE_STATUS,
+  USER_ROLE,
+} from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 import { MailService } from '../mail/mail.service';
 import { generateMaintenanceTicketNumber } from './ticket-number.util';
@@ -94,7 +99,11 @@ export class MaintenanceService {
   private mapTicket<T extends Record<string, unknown>>(ticket: T) {
     if (!ticket || typeof ticket !== 'object') return ticket;
     const { assignee, ...rest } = ticket as T & { assignee?: unknown };
-    return { ...rest, assignedTo: assignee ?? (rest as { assignedTo?: unknown }).assignedTo ?? null };
+    return {
+      ...rest,
+      assignedTo:
+        assignee ?? (rest as { assignedTo?: unknown }).assignedTo ?? null,
+    };
   }
 
   private mapTickets<T extends Record<string, unknown>>(tickets: T[]) {
@@ -109,10 +118,10 @@ export class MaintenanceService {
       include: {
         floor: {
           include: {
-            building: true
-          }
-        }
-      }
+            building: true,
+          },
+        },
+      },
     });
 
     if (!space) {
@@ -125,8 +134,8 @@ export class MaintenanceService {
     const maintenanceEmployees = await this.prisma.user.findMany({
       where: {
         tenant_id: tenantId,
-        role: 'MAINTENANCE'
-      }
+        role: 'MAINTENANCE',
+      },
     });
 
     if (maintenanceEmployees.length === 0) {
@@ -136,21 +145,24 @@ export class MaintenanceService {
     // Simple round-robin assignment based on category
     // In a real system, you might have specialized employees per category
     const categorySpecialists = {
-      'PLUMBING': 0,
-      'ELECTRICAL': 1,
-      'HVAC': 2,
-      'CLEANING': 3,
-      'FURNITURE': 4,
-      'IT_EQUIPMENT': 5,
-      'OTHER': 0
+      PLUMBING: 0,
+      ELECTRICAL: 1,
+      HVAC: 2,
+      CLEANING: 3,
+      FURNITURE: 4,
+      IT_EQUIPMENT: 5,
+      OTHER: 0,
     };
 
-    const specialistIndex = categorySpecialists[category as keyof typeof categorySpecialists] || 0;
+    const specialistIndex =
+      categorySpecialists[category as keyof typeof categorySpecialists] || 0;
     return maintenanceEmployees[specialistIndex % maintenanceEmployees.length];
   }
 
   private isPortalCustomer(role: string) {
-    return role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE;
+    return (
+      role === USER_ROLE.TENANT_ADMIN || role === USER_ROLE.TENANT_EMPLOYEE
+    );
   }
 
   private portalTicketScope(user: AuthUser) {
@@ -178,12 +190,7 @@ export class MaintenanceService {
       where: {
         tenant_id: user.tenant_id,
         status: {
-          notIn: [
-            'CANCELLED',
-            'DRAFT',
-            'PENDING_APPROVAL',
-            'NO_SHOW',
-          ],
+          notIn: ['CANCELLED', 'DRAFT', 'PENDING_APPROVAL', 'NO_SHOW'],
         },
       },
       select: { space_id: true },
@@ -230,7 +237,9 @@ export class MaintenanceService {
   async create(dto: CreateMaintenanceTicketDto) {
     const reporterId = dto.user_id ?? dto.created_by_user_id;
     if (!reporterId) {
-      throw new BadRequestException('user_id or created_by_user_id is required');
+      throw new BadRequestException(
+        'user_id or created_by_user_id is required',
+      );
     }
 
     const space = await this.prisma.space.findUnique({
@@ -238,10 +247,10 @@ export class MaintenanceService {
       include: {
         floor: {
           include: {
-            building: true
-          }
-        }
-      }
+            building: true,
+          },
+        },
+      },
     });
     if (!space)
       throw new NotFoundException(`Space #${dto.space_id} introuvable`);
@@ -275,7 +284,7 @@ export class MaintenanceService {
     ) {
       await this.prisma.space.update({
         where: { id: dto.space_id },
-        data: { status: SPACE_STATUS.MAINTENANCE }
+        data: { status: SPACE_STATUS.MAINTENANCE },
       });
     }
 
@@ -294,15 +303,20 @@ export class MaintenanceService {
       try {
         await this.mailService.sendMaintenanceCreated({
           to: assignee.email,
-          assigneeName: `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email,
-          ticketNumber: ticket.ticket_number ?? ticket.id.slice(0, 8).toUpperCase(),
+          assigneeName:
+            `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() ||
+            assignee.email,
+          ticketNumber:
+            ticket.ticket_number ?? ticket.id.slice(0, 8).toUpperCase(),
           title: ticket.title,
           priority: ticket.priority,
           category: ticket.category as string,
           spaceName: ticket.space?.name,
           description: ticket.description ?? undefined,
         });
-        this.logger.log(`Maintenance assignment email sent to ${assignee.email}`);
+        this.logger.log(
+          `Maintenance assignment email sent to ${assignee.email}`,
+        );
       } catch (e: any) {
         this.logger.warn(`Maintenance email failed: ${e?.message}`);
       }
@@ -316,8 +330,8 @@ export class MaintenanceService {
       const siteManager = await this.prisma.user.findFirst({
         where: {
           role: 'MANAGER',
-          tenant_id: ticket.space?.floor?.building?.tenant_id
-        }
+          tenant_id: ticket.space?.floor?.building?.tenant_id,
+        },
       });
 
       if (siteManager?.email) {
@@ -432,7 +446,10 @@ export class MaintenanceService {
     if (this.isPortalCustomer(user.role)) {
       const tickets = await (this.prisma as any).maintenanceTicket.findMany({
         where: {
-          AND: [this.portalTicketScope(user), ...(spaceId ? [{ space_id: spaceId }] : [])],
+          AND: [
+            this.portalTicketScope(user),
+            ...(spaceId ? [{ space_id: spaceId }] : []),
+          ],
         },
         select: { status: true, priority: true },
       });
@@ -469,8 +486,7 @@ export class MaintenanceService {
       return {
         total,
         open: byStatus.OPEN ?? 0,
-        in_progress:
-          (byStatus.IN_PROGRESS ?? 0) + (byStatus.ASSIGNED ?? 0),
+        in_progress: (byStatus.IN_PROGRESS ?? 0) + (byStatus.ASSIGNED ?? 0),
         resolved: (byStatus.RESOLVED ?? 0) + (byStatus.CLOSED ?? 0),
         urgent: tickets.filter((t: { priority: string }) =>
           ['URGENT', 'EMERGENCY'].includes(t.priority),
@@ -507,7 +523,11 @@ export class MaintenanceService {
         space: true,
       } as any,
     });
-    if (dto.status != null && before?.status != null && dto.status !== before.status) {
+    if (
+      dto.status != null &&
+      before?.status != null &&
+      dto.status !== before.status
+    ) {
       this.fireBrevoStatus(id, before.status, dto.status as string);
     }
     return updated;
@@ -528,7 +548,9 @@ export class MaintenanceService {
       where: { id },
       data: {
         status,
-        ...(status === TICKET_STATUS.RESOLVED ? { resolved_at: new Date() } : {}),
+        ...(status === TICKET_STATUS.RESOLVED
+          ? { resolved_at: new Date() }
+          : {}),
       },
       include: this.ticketInclude,
     });
@@ -540,7 +562,11 @@ export class MaintenanceService {
   }
 
   // ─── SEND STATUS UPDATE NOTIFICATIONS ───────────────────────────
-  private async sendStatusUpdateNotifications(ticket: any, newStatus: string, updatedByUserId?: string) {
+  private async sendStatusUpdateNotifications(
+    ticket: any,
+    newStatus: string,
+    updatedByUserId?: string,
+  ) {
     // Basic notification implementation
     console.log(`Ticket ${ticket.id} status updated to ${newStatus}`);
   }
@@ -560,10 +586,7 @@ export class MaintenanceService {
         `Impossible d'assigner un ticket ${ticket.status}`,
       );
     }
-    if (
-      ticket.assigned_to &&
-      ticket.assigned_to !== assignedToUserId
-    ) {
+    if (ticket.assigned_to && ticket.assigned_to !== assignedToUserId) {
       throw new BadRequestException(
         'This ticket is already assigned to another technician',
       );
@@ -640,13 +663,16 @@ export class MaintenanceService {
     if (!user) return;
     if (user.role === USER_ROLE.MAINTENANCE) {
       if (ticket.assigned_to !== user.id) {
-        throw new ForbiddenException('You can only update tickets assigned to you');
+        throw new ForbiddenException(
+          'You can only update tickets assigned to you',
+        );
       }
       return;
     }
     if (allowCreatorCancel) {
       const isPortal =
-        user.role === USER_ROLE.TENANT_ADMIN || user.role === USER_ROLE.TENANT_EMPLOYEE;
+        user.role === USER_ROLE.TENANT_ADMIN ||
+        user.role === USER_ROLE.TENANT_EMPLOYEE;
       if (isPortal && ticket.created_by_user_id !== user.id) {
         throw new ForbiddenException('You can only cancel tickets you created');
       }
@@ -756,7 +782,7 @@ export class MaintenanceService {
 
   // ─── STATS ───────────────────────────────────────────────────
   async getStats(spaceId?: string) {
-    const where = spaceId ? { space_id: spaceId } as any : {};
+    const where = spaceId ? ({ space_id: spaceId } as any) : {};
 
     const [total, open, inProgress, resolved, closed] = await Promise.all([
       (this.prisma as any).maintenanceTicket.count({ where }),

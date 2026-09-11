@@ -77,7 +77,10 @@ export class BrevoService {
           `MAIL_FROM (${preferredEmail}) is not a verified Brevo sender — using ${verified[0].email} instead. ` +
             `Add/verify the sender in Brevo → Senders, or set MAIL_FROM=${verified[0].email}`,
         );
-        return { email: verified[0].email, name: preferredName || verified[0].name };
+        return {
+          email: verified[0].email,
+          name: preferredName || verified[0].name,
+        };
       }
       this.logger.warn(
         `MAIL_FROM (${preferredEmail}) is not verified in Brevo and no senders found — delivery may fail`,
@@ -86,7 +89,10 @@ export class BrevoService {
     }
 
     if (verified.length > 0) {
-      return { email: verified[0].email, name: preferredName || verified[0].name };
+      return {
+        email: verified[0].email,
+        name: preferredName || verified[0].name,
+      };
     }
 
     return { email: 'noreply@leasemanager.com', name: preferredName };
@@ -121,7 +127,9 @@ export class BrevoService {
 
     if (!res.ok) {
       const text = await res.text();
-      this.logger.warn(`Brevo createOrUpdateContact failed: ${res.status} ${text}`);
+      this.logger.warn(
+        `Brevo createOrUpdateContact failed: ${res.status} ${text}`,
+      );
       return null;
     }
 
@@ -162,7 +170,9 @@ export class BrevoService {
 
     if (!res.ok) {
       const text = await res.text();
-      this.logger.warn(`Brevo sendTransactionalEmail failed: ${res.status} ${text}`);
+      this.logger.warn(
+        `Brevo sendTransactionalEmail failed: ${res.status} ${text}`,
+      );
       return false;
     }
 
@@ -177,7 +187,8 @@ export class BrevoService {
     htmlContent: string;
     textContent?: string;
   }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-    if (!this.isConfigured()) return { ok: false, error: 'Brevo not configured' };
+    if (!this.isConfigured())
+      return { ok: false, error: 'Brevo not configured' };
 
     const sender = await this.resolveSender();
 

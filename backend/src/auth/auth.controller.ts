@@ -1,6 +1,16 @@
 //src/auth/auth.controller.ts
 
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -31,7 +41,10 @@ export class AuthController {
     type: AuthResponseDto,
     isArray: false,
   })
-  login(@Body() { email, password }: LoginDto, @Req() req: Request): Promise<ResponseDto> {
+  login(
+    @Body() { email, password }: LoginDto,
+    @Req() req: Request,
+  ): Promise<ResponseDto> {
     return this.authService.login(email, password, getRequestMeta(req));
   }
 
@@ -63,7 +76,10 @@ export class AuthController {
 
   @Post('logout')
   @ApiOkResponse({ description: 'Logout and invalidate refresh token' })
-  logout(@Body() { refreshToken }: RefreshTokenDto, @Req() req: Request): Promise<boolean> {
+  logout(
+    @Body() { refreshToken }: RefreshTokenDto,
+    @Req() req: Request,
+  ): Promise<boolean> {
     return this.authService.logout(refreshToken, getRequestMeta(req));
   }
 
@@ -102,7 +118,10 @@ export class AuthController {
   @Get('login-activity')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({ description: 'Recent login, logout, and failed login events for the current user' })
+  @ApiOkResponse({
+    description:
+      'Recent login, logout, and failed login events for the current user',
+  })
   getLoginActivity(@CurrentUser() user: AuthUser) {
     return this.authService.getLoginActivity(user.id);
   }
@@ -110,7 +129,9 @@ export class AuthController {
   @Get('sessions')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({ description: 'List active browser sessions for the current user' })
+  @ApiOkResponse({
+    description: 'List active browser sessions for the current user',
+  })
   listSessions(@CurrentUser() user: AuthUser) {
     return this.authService.listSessions(user.id, user.sessionId ?? undefined);
   }
@@ -133,7 +154,9 @@ export class AuthController {
   @Post('sessions/revoke-others')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOkResponse({ description: 'Revoke all sessions except the current browser' })
+  @ApiOkResponse({
+    description: 'Revoke all sessions except the current browser',
+  })
   revokeOtherSessions(@CurrentUser() user: AuthUser): Promise<boolean> {
     return this.authService.revokeOtherSessions(
       user.id,

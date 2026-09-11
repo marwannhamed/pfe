@@ -23,8 +23,11 @@ export class TenantApplicationService {
 
   private assertReviewer(user: AuthUser, landlordTenantId: string) {
     if (user.role === USER_ROLE.SUPER_ADMIN) return;
-    if (user.role === USER_ROLE.MANAGER && user.tenant_id === landlordTenantId) return;
-    throw new ForbiddenException('You cannot review applications for this organization');
+    if (user.role === USER_ROLE.MANAGER && user.tenant_id === landlordTenantId)
+      return;
+    throw new ForbiddenException(
+      'You cannot review applications for this organization',
+    );
   }
 
   async listPending(user: AuthUser) {
@@ -83,7 +86,9 @@ export class TenantApplicationService {
       throw new BadRequestException('No applicant tenant linked');
     }
     if (app.applicant_tenant.status !== TENANT_STATUS.PENDING) {
-      throw new BadRequestException('Applicant tenant is not in pending status');
+      throw new BadRequestException(
+        'Applicant tenant is not in pending status',
+      );
     }
 
     const email = app.contact_email || app.applicant_tenant.contact_email;

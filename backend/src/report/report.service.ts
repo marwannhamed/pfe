@@ -70,8 +70,9 @@ export class ReportService {
     const data = await this.generateReportData(resolvedType, dto.parameters);
     const title =
       dto.title?.trim() ||
-      REPORT_TEMPLATES.find((t) => t.key === dto.type || t.type === resolvedType)
-        ?.name ||
+      REPORT_TEMPLATES.find(
+        (t) => t.key === dto.type || t.type === resolvedType,
+      )?.name ||
       `Report — ${resolvedType}`;
 
     return this.prisma.report.create({

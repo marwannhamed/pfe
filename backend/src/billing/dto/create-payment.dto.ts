@@ -74,7 +74,9 @@ export class CreatePaymentDto {
   @IsIn([PAYMENT_STATUS.PENDING, PAYMENT_STATUS.COMPLETED])
   status?: string;
 
-  @ApiPropertyOptional({ description: 'URL of uploaded cheque PDF (usually set via upload endpoint)' })
+  @ApiPropertyOptional({
+    description: 'URL of uploaded cheque PDF (usually set via upload endpoint)',
+  })
   @IsString()
   @IsOptional()
   cheque_document_url?: string;

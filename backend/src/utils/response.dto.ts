@@ -16,7 +16,12 @@ export class ResponseDto<T = any> {
   @ApiProperty({ required: false })
   statusCode?: number;
 
-  constructor(message: string, data?: T, success: boolean = true, statusCode?: number) {
+  constructor(
+    message: string,
+    data?: T,
+    success: boolean = true,
+    statusCode?: number,
+  ) {
     this.message = message;
     this.data = data;
     this.success = success;

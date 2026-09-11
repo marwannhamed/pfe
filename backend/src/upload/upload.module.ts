@@ -13,7 +13,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     }),
   ],
   controllers: [UploadController],
-  providers:   [UploadService],
-  exports:     [UploadService],  // so other services can inject it
+  providers: [UploadService],
+  exports: [UploadService], // so other services can inject it
 })
 export class UploadModule {}

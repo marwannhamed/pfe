@@ -9,12 +9,12 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 export class CreateNotificationDto {
   @ApiProperty({ example: 'uuid-du-tenant' })
   @IsUUID()
-  tenant_id: string;          // ← added
+  tenant_id: string; // ← added
 
   @ApiProperty({ example: 'uuid-du-user' })
   @IsUUID()
   @IsOptional()
-  user_id?: string;           // ← made optional (notifications can be tenant-wide)
+  user_id?: string; // ← made optional (notifications can be tenant-wide)
 
   @ApiProperty({ example: 'BOOKING_CONFIRMATION' })
   @IsString()

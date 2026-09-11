@@ -14,7 +14,7 @@ import { LoggingService } from './logging/logging.service';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import * as compression from 'compression';
-import 'dotenv/config';  
+import 'dotenv/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -52,42 +52,45 @@ async function bootstrap() {
 
   // ── Security Middleware ─────────────────────────────────────────────────────
   // Helmet for security headers
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  }));
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Rate limiting (off in development unless RATE_LIMIT_ENABLED=true)
   if (configurationService.rateLimitEnabled) {
-    app.use(rateLimit({
-      windowMs: configurationService.rateLimitWindowMs,
-      max: configurationService.rateLimitMaxRequests,
-      skip: (req) =>
-        req.method === 'OPTIONS' ||
-        req.path?.includes('/webhooks/') ||
-        req.path?.includes('/integrations/google-business/oauth/callback') ||
-        req.path === '/health',
-      message: {
-        success: false,
-        statusCode: 429,
-        message: 'Too many requests from this IP, please try again later.',
-        error: 'TooManyRequests',
-        timestamp: new Date().toISOString(),
-      },
-      standardHeaders: true,
-      legacyHeaders: false,
-    }));
+    app.use(
+      rateLimit({
+        windowMs: configurationService.rateLimitWindowMs,
+        max: configurationService.rateLimitMaxRequests,
+        skip: (req) =>
+          req.method === 'OPTIONS' ||
+          req.path?.includes('/webhooks/') ||
+          req.path?.includes('/integrations/google-business/oauth/callback') ||
+          req.path === '/health',
+        message: {
+          success: false,
+          statusCode: 429,
+          message: 'Too many requests from this IP, please try again later.',
+          error: 'TooManyRequests',
+          timestamp: new Date().toISOString(),
+        },
+        standardHeaders: true,
+        legacyHeaders: false,
+      }),
+    );
   } else {
     console.log('⚠️  Rate limiting disabled (development mode)');
   }
-
 
   // ── Global exception filter ───────────────────────────────────────────────────
   const loggingService = app.get(LoggingService);
@@ -122,25 +125,29 @@ async function bootstrap() {
 
   // ── Health Check Endpoint ───────────────────────────────────────────────────
   if (configurationService.enableMetrics) {
-    app.getHttpAdapter().get(configurationService.healthCheckEndpoint, (_req, res: Response) => {
-      res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: configurationService.nodeEnv,
-        version: '1.0.0',
+    app
+      .getHttpAdapter()
+      .get(configurationService.healthCheckEndpoint, (_req, res: Response) => {
+        res.status(200).json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          environment: configurationService.nodeEnv,
+          version: '1.0.0',
+        });
       });
-    });
   }
 
   // ── Start ────────────────────────────────────────────────────────────────────
   const port = configurationService.port;
   await app.listen(port);
-  
+
   if (configurationService.isDevelopment) {
     console.log(`🚀 Server running on http://localhost:${port}`);
     console.log(`📚 Swagger docs at http://localhost:${port}/api`);
-    console.log(`🏥 Health check at http://localhost:${port}${configurationService.healthCheckEndpoint}`);
+    console.log(
+      `🏥 Health check at http://localhost:${port}${configurationService.healthCheckEndpoint}`,
+    );
     console.log(`🌍 Environment: ${configurationService.nodeEnv}`);
     console.log(`🔗 Frontend URL: ${frontendUrl}`);
   }

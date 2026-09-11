@@ -11,7 +11,11 @@ import { CreateClientAccountDto } from './dto/create-client-account.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { UpdateReportingEmbedsDto } from './dto/update-reporting-embeds.dto';
 import { UpdateCompanyProfileDto } from './dto/update-company-profile.dto';
-import { ORGANIZATION_TYPE, TENANT_STATUS, USER_ROLE } from '../constants/enums';
+import {
+  ORGANIZATION_TYPE,
+  TENANT_STATUS,
+  USER_ROLE,
+} from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 import { MailService } from '../mail/mail.service';
 import { slugifyCompanyName } from './utils/slug.util';
@@ -31,19 +35,21 @@ export class TenantService {
     });
     if (existing)
       throw new ConflictException(`Slug "${dto.slug}" déjà utilisé`);
-    return this.prisma.tenant.create({ 
+    return this.prisma.tenant.create({
       data: {
         ...dto,
         organization_type: ORGANIZATION_TYPE.CLIENT,
         status: dto.status as any,
-      }
+      },
     });
   }
 
   /** Super Admin: create isolated client workspace + CLIENT_ADMIN with temp password. */
   async provisionClient(dto: CreateClientAccountDto) {
     const email = dto.contact_email.trim().toLowerCase();
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (existingUser) {
       throw new ConflictException(`A user with email ${email} already exists`);
     }
@@ -61,7 +67,8 @@ export class TenantService {
     const sendEmail = dto.send_welcome_email !== false;
 
     const contactLocal = email.split('@')[0] ?? 'Client';
-    const firstName = contactLocal.replace(/[._-]/g, ' ').split(' ')[0] ?? 'Client';
+    const firstName =
+      contactLocal.replace(/[._-]/g, ' ').split(' ')[0] ?? 'Client';
 
     const result = await this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
@@ -208,12 +215,12 @@ export class TenantService {
 
   async update(id: string, dto: UpdateTenantDto) {
     await this.findOne(id);
-    return this.prisma.tenant.update({ 
-      where: { id }, 
+    return this.prisma.tenant.update({
+      where: { id },
       data: {
         ...dto,
         status: dto.status as any, // Cast to any to bypass enum type check
-      }
+      },
     });
   }
 
@@ -246,7 +253,8 @@ export class TenantService {
       USER_ROLE.CLIENT_ADMIN,
     ];
     if (portalRoles.includes(user.role)) {
-      if (id !== user.tenant_id) throw new ForbiddenException('Cannot view another tenant');
+      if (id !== user.tenant_id)
+        throw new ForbiddenException('Cannot view another tenant');
     }
     return this.findOne(id);
   }
@@ -263,7 +271,9 @@ export class TenantService {
     });
     if (!tenant) throw new NotFoundException('Organization not found');
     if (tenant.organization_type !== ORGANIZATION_TYPE.CLIENT) {
-      throw new ForbiddenException('Company profile is for client organizations only');
+      throw new ForbiddenException(
+        'Company profile is for client organizations only',
+      );
     }
 
     const [activeUsers, buildings, spaces] = await Promise.all([
@@ -276,7 +286,8 @@ export class TenantService {
       }),
     ]);
 
-    const profile = (tenant.application_profile as Record<string, unknown> | null) ?? {};
+    const profile =
+      (tenant.application_profile as Record<string, unknown> | null) ?? {};
 
     return {
       id: tenant.id,
@@ -309,7 +320,9 @@ export class TenantService {
 
   async updateMyOrganization(user: AuthUser, dto: UpdateCompanyProfileDto) {
     if (user.role !== USER_ROLE.CLIENT_ADMIN || !user.tenant_id) {
-      throw new ForbiddenException('Only client admins can update the company profile');
+      throw new ForbiddenException(
+        'Only client admins can update the company profile',
+      );
     }
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -317,10 +330,13 @@ export class TenantService {
     });
     if (!tenant) throw new NotFoundException('Organization not found');
     if (tenant.organization_type !== ORGANIZATION_TYPE.CLIENT) {
-      throw new ForbiddenException('Company profile is for client organizations only');
+      throw new ForbiddenException(
+        'Company profile is for client organizations only',
+      );
     }
 
-    const prevProfile = (tenant.application_profile as Record<string, unknown> | null) ?? {};
+    const prevProfile =
+      (tenant.application_profile as Record<string, unknown> | null) ?? {};
     const profileFields = [
       'phone',
       'website',

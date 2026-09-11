@@ -4,7 +4,14 @@ import { Cache } from '../common/decorators/cache.decorator';
 
 export interface SearchQuery {
   query: string;
-  type?: 'all' | 'bookings' | 'spaces' | 'tenants' | 'contracts' | 'invoices' | 'maintenance';
+  type?:
+    | 'all'
+    | 'bookings'
+    | 'spaces'
+    | 'tenants'
+    | 'contracts'
+    | 'invoices'
+    | 'maintenance';
   filters?: {
     dateRange?: { start: string; end: string };
     status?: string[];
@@ -48,7 +55,13 @@ export class SearchService {
     limit: number;
     facets: any;
   }> {
-    const { query, type = 'all', filters = {}, sort = { field: 'relevance', order: 'desc' }, pagination = { page: 1, limit: 20 } } = searchQuery;
+    const {
+      query,
+      type = 'all',
+      filters = {},
+      sort = { field: 'relevance', order: 'desc' },
+      pagination = { page: 1, limit: 20 },
+    } = searchQuery;
 
     try {
       const results: SearchResult[] = [];
@@ -59,19 +72,31 @@ export class SearchService {
 
       // Search different entity types based on type filter
       if (type === 'all' || type === 'bookings') {
-        const bookingResults = await this.searchBookings(searchConditions, sort, pagination);
+        const bookingResults = await this.searchBookings(
+          searchConditions,
+          sort,
+          pagination,
+        );
         results.push(...bookingResults.items);
         total += bookingResults.total;
       }
 
       if (type === 'all' || type === 'spaces') {
-        const spaceResults = await this.searchSpaces(searchConditions, sort, pagination);
+        const spaceResults = await this.searchSpaces(
+          searchConditions,
+          sort,
+          pagination,
+        );
         results.push(...spaceResults.items);
         total += spaceResults.total;
       }
 
       if (type === 'all' || type === 'tenants') {
-        const tenantResults = await this.searchTenants(searchConditions, sort, pagination);
+        const tenantResults = await this.searchTenants(
+          searchConditions,
+          sort,
+          pagination,
+        );
         results.push(...tenantResults.items);
         total += tenantResults.total;
       }
@@ -84,13 +109,21 @@ export class SearchService {
       // }
 
       if (type === 'all' || type === 'invoices') {
-        const invoiceResults = await this.searchInvoices(searchConditions, sort, pagination);
+        const invoiceResults = await this.searchInvoices(
+          searchConditions,
+          sort,
+          pagination,
+        );
         results.push(...invoiceResults.items);
         total += invoiceResults.total;
       }
 
       if (type === 'all' || type === 'maintenance') {
-        const maintenanceResults = await this.searchMaintenance(searchConditions, sort, pagination);
+        const maintenanceResults = await this.searchMaintenance(
+          searchConditions,
+          sort,
+          pagination,
+        );
         results.push(...maintenanceResults.items);
         total += maintenanceResults.total;
       }
@@ -174,7 +207,9 @@ export class SearchService {
     // Apply search conditions
     if (conditions.search) {
       where.OR = [
-        { booking_number: { contains: conditions.search, mode: 'insensitive' } },
+        {
+          booking_number: { contains: conditions.search, mode: 'insensitive' },
+        },
         { notes: { contains: conditions.search, mode: 'insensitive' } },
       ];
     }
@@ -210,7 +245,7 @@ export class SearchService {
       (this.prisma as any).booking.count({ where }),
     ]);
 
-    const items = bookings.map(booking => ({
+    const items = bookings.map((booking) => ({
       type: 'booking',
       id: booking.id,
       title: `Booking ${booking.booking_number}`,
@@ -259,7 +294,7 @@ export class SearchService {
       (this.prisma as any).space.count({ where }),
     ]);
 
-    const items = spaces.map(space => ({
+    const items = spaces.map((space) => ({
       type: 'space',
       id: space.id,
       title: space.name,
@@ -296,7 +331,7 @@ export class SearchService {
       (this.prisma as any).tenant.count({ where }),
     ]);
 
-    const items = tenants.map(tenant => ({
+    const items = tenants.map((tenant) => ({
       type: 'tenant',
       id: tenant.id,
       title: tenant.name,
@@ -319,7 +354,9 @@ export class SearchService {
 
     if (conditions.search) {
       where.OR = [
-        { invoice_number: { contains: conditions.search, mode: 'insensitive' } },
+        {
+          invoice_number: { contains: conditions.search, mode: 'insensitive' },
+        },
       ];
     }
 
@@ -351,7 +388,7 @@ export class SearchService {
       (this.prisma as any).invoice.count({ where }),
     ]);
 
-    const items = invoices.map(invoice => ({
+    const items = invoices.map((invoice) => ({
       type: 'invoice',
       id: invoice.id,
       title: `Invoice ${invoice.invoice_number}`,
@@ -399,7 +436,7 @@ export class SearchService {
       (this.prisma as any).maintenanceTicket.count({ where }),
     ]);
 
-    const items = tickets.map(ticket => ({
+    const items = tickets.map((ticket) => ({
       type: 'maintenance',
       id: ticket.id,
       title: ticket.title,
@@ -445,7 +482,10 @@ export class SearchService {
       },
     };
 
-    return sortFields[entityType]?.[sort.field] || sortFields[entityType]?.relevance || { created_at: 'desc' };
+    return (
+      sortFields[entityType]?.[sort.field] ||
+      sortFields[entityType]?.relevance || { created_at: 'desc' }
+    );
   }
 
   private calculateRelevance(item: any, search: string): number {
@@ -455,12 +495,13 @@ export class SearchService {
     const searchLower = search.toLowerCase();
 
     // Check different fields for matches
-    const fields = Object.values(item).filter(value => 
-      typeof value === 'string' && value.toLowerCase().includes(searchLower)
+    const fields = Object.values(item).filter(
+      (value) =>
+        typeof value === 'string' && value.toLowerCase().includes(searchLower),
     );
 
     // Exact match gets highest score
-    fields.forEach(field => {
+    fields.forEach((field) => {
       const fieldStr = String(field).toLowerCase();
       if (fieldStr === searchLower) {
         score += 2.0;
@@ -483,8 +524,14 @@ export class SearchService {
     Object.entries(item).forEach(([key, value]) => {
       const valueStr = String(value);
       if (valueStr.toLowerCase().includes(searchLower)) {
-        const start = Math.max(0, valueStr.toLowerCase().indexOf(searchLower) - 20);
-        const end = Math.min(valueStr.length, valueStr.toLowerCase().indexOf(searchLower) + search.length + 20);
+        const start = Math.max(
+          0,
+          valueStr.toLowerCase().indexOf(searchLower) - 20,
+        );
+        const end = Math.min(
+          valueStr.length,
+          valueStr.toLowerCase().indexOf(searchLower) + search.length + 20,
+        );
         highlights.push(valueStr.substring(start, end));
       }
     });
@@ -504,7 +551,10 @@ export class SearchService {
     return results;
   }
 
-  private applyPagination(results: SearchResult[], pagination: any): SearchResult[] {
+  private applyPagination(
+    results: SearchResult[],
+    pagination: any,
+  ): SearchResult[] {
     const start = (pagination.page - 1) * pagination.limit;
     const end = start + pagination.limit;
     return results.slice(start, end);
@@ -557,16 +607,14 @@ export class SearchService {
   async getSuggestions(query: string, type?: string): Promise<string[]> {
     // Simple implementation for search suggestions
     const suggestions: string[] = [];
-    
+
     if (query.length < 2) return suggestions;
 
     // Get suggestions from different entity types
     const [spaces, tenants] = await Promise.all([
       (this.prisma as any).space.findMany({
         where: {
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-          ],
+          OR: [{ name: { contains: query, mode: 'insensitive' } }],
         },
         select: { name: true },
         take: 5,
@@ -583,8 +631,8 @@ export class SearchService {
       }),
     ]);
 
-    spaces.forEach(space => suggestions.push(space.name));
-    tenants.forEach(tenant => suggestions.push(tenant.name));
+    spaces.forEach((space) => suggestions.push(space.name));
+    tenants.forEach((tenant) => suggestions.push(tenant.name));
 
     return [...new Set(suggestions)].slice(0, 10);
   }

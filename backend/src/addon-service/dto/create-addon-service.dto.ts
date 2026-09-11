@@ -10,10 +10,13 @@ import {
   Min,
 } from 'class-validator';
 
-type BillingCycleValue = typeof BILLING_CYCLE[keyof typeof BILLING_CYCLE];
+type BillingCycleValue = (typeof BILLING_CYCLE)[keyof typeof BILLING_CYCLE];
 
 export class CreateAddonServiceDto {
-  @ApiPropertyOptional({ example: 'uuid-du-tenant', description: 'Set automatically from the authenticated user' })
+  @ApiPropertyOptional({
+    example: 'uuid-du-tenant',
+    description: 'Set automatically from the authenticated user',
+  })
   @IsUUID()
   @IsOptional()
   tenant_id?: string;

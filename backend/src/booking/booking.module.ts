@@ -13,6 +13,14 @@ import { UploadModule } from '../upload/upload.module';
   controllers: [BookingController],
   providers: [BookingService],
   exports: [BookingService],
-  imports: [PrismaModule, MailModule, NotificationModule, AuditModule, BillingModule, LeaseContractModule, UploadModule],
+  imports: [
+    PrismaModule,
+    MailModule,
+    NotificationModule,
+    AuditModule,
+    BillingModule,
+    LeaseContractModule,
+    UploadModule,
+  ],
 })
 export class BookingModule {}

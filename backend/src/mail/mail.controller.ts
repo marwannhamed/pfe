@@ -1,5 +1,10 @@
 import { Body, Controller, Post, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { MailService } from './mail.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ResponseDto } from 'src/utils/response.dto';
@@ -59,7 +64,10 @@ export class MailController {
 
   // Email management endpoints
   @Get('stats')
-  @ApiResponse({ status: 200, description: 'Email statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email statistics retrieved successfully',
+  })
   getStats() {
     // Mock stats - in real implementation, this would query the database
     return new ResponseDto('Email statistics retrieved successfully', {
@@ -71,20 +79,32 @@ export class MailController {
   }
 
   @Get('settings')
-  @ApiResponse({ status: 200, description: 'Email settings retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email settings retrieved successfully',
+  })
   getSettings() {
-    return new ResponseDto('Email settings retrieved successfully', this.mailService.getDeliveryStatus());
+    return new ResponseDto(
+      'Email settings retrieved successfully',
+      this.mailService.getDeliveryStatus(),
+    );
   }
 
   @Post('settings')
-  @ApiResponse({ status: 200, description: 'Email settings updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email settings updated successfully',
+  })
   updateSettings(@Body() settings: any) {
     // In real implementation, this would update the email configuration
     return new ResponseDto('Email settings updated successfully', settings);
   }
 
   @Get('logs')
-  @ApiResponse({ status: 200, description: 'Email logs retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email logs retrieved successfully',
+  })
   getLogs() {
     // Mock logs - in real implementation, this would query the email logs
     return new ResponseDto('Email logs retrieved successfully', {

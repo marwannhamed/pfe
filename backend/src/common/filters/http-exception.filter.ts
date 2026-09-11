@@ -60,7 +60,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         'Database is not available. Start Docker Desktop, then run: docker compose up -d postgres (in the backend folder).';
       error = 'ServiceUnavailable';
       details = null;
-      this.loggingService.error(`Database unavailable: ${(exception as Error).message}`, 'DB_UNAVAILABLE');
+      this.loggingService.error(
+        `Database unavailable: ${(exception as Error).message}`,
+        'DB_UNAVAILABLE',
+      );
     } else {
       // Handle unexpected errors
       status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -98,8 +101,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
   }
 
   private generateCorrelationId(): string {
-    return Math.random().toString(36).substring(2, 15) +
-           Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 
   private logError(

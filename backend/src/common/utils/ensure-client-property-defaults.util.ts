@@ -1,9 +1,11 @@
 import type { Prisma } from '@prisma/client';
 
-type Db = Prisma.TransactionClient | {
-  building: Prisma.TransactionClient['building'];
-  floor: Prisma.TransactionClient['floor'];
-};
+type Db =
+  | Prisma.TransactionClient
+  | {
+      building: Prisma.TransactionClient['building'];
+      floor: Prisma.TransactionClient['floor'];
+    };
 
 /** Hidden portfolio shell so clients publish spaces without managing buildings/floors. */
 export async function ensureClientPropertyDefaults(db: Db, tenantId: string) {

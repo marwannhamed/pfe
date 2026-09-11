@@ -45,7 +45,9 @@ export class SpaceController {
   constructor(private readonly spaceService: SpaceService) {}
 
   @Get('public/map')
-  @ApiOperation({ summary: 'Published available spaces for guest map (no auth)' })
+  @ApiOperation({
+    summary: 'Published available spaces for guest map (no auth)',
+  })
   findPublishedMap() {
     return this.spaceService.findPublishedForMap();
   }
@@ -109,7 +111,11 @@ export class SpaceController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Update a space' })
   @ApiParam({ name: 'id' })
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateSpaceDto) {
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateSpaceDto,
+  ) {
     return this.spaceService.update(user, id, dto);
   }
 

@@ -21,7 +21,9 @@ export async function cascadeDeleteSpacesForFloors(
   const bookingIds = bookings.map((b) => b.id);
 
   if (bookingIds.length) {
-    await tx.bookingAddOn.deleteMany({ where: { booking_id: { in: bookingIds } } });
+    await tx.bookingAddOn.deleteMany({
+      where: { booking_id: { in: bookingIds } },
+    });
     await tx.maintenanceTicket.updateMany({
       where: { booking_id: { in: bookingIds } },
       data: { booking_id: null },

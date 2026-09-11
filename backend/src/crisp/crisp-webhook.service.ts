@@ -2,7 +2,11 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { TICKET_CATEGORY, TICKET_PRIORITY, TICKET_STATUS } from '../constants/enums';
+import {
+  TICKET_CATEGORY,
+  TICKET_PRIORITY,
+  TICKET_STATUS,
+} from '../constants/enums';
 import { generateMaintenanceTicketNumber } from '../maintenance/ticket-number.util';
 
 const MAINTENANCE_TAG = 'maintenance-request';
@@ -16,7 +20,11 @@ export class CrispWebhookService {
     private readonly config: ConfigService,
   ) {}
 
-  verifySignature(rawBody: string, timestamp: string | undefined, signature: string | undefined): void {
+  verifySignature(
+    rawBody: string,
+    timestamp: string | undefined,
+    signature: string | undefined,
+  ): void {
     const bypass = this.config.get<string>('CRISP_WEBHOOK_VERIFY') === 'false';
     if (bypass) return;
 
@@ -89,14 +97,18 @@ export class CrispWebhookService {
     const d = (payload.data ?? payload) as Record<string, unknown>;
     const sid =
       (typeof d.session_id === 'string' && d.session_id) ||
-      (typeof (d.session as { session_id?: string } | undefined)?.session_id === 'string' &&
+      (typeof (d.session as { session_id?: string } | undefined)?.session_id ===
+        'string' &&
         (d.session as { session_id: string }).session_id) ||
-      (typeof (d as { session_id?: string }).session_id === 'string' && (d as { session_id: string }).session_id);
+      (typeof (d as { session_id?: string }).session_id === 'string' &&
+        (d as { session_id: string }).session_id);
     return sid || null;
   }
 
   private buildTranscript(data: Record<string, unknown>): string {
-    const messages = (data as { messages?: { content?: string; type?: string }[] }).messages;
+    const messages = (
+      data as { messages?: { content?: string; type?: string }[] }
+    ).messages;
     if (Array.isArray(messages) && messages.length) {
       return messages
         .map((m) => (m?.content ? `[${m.type ?? 'text'}] ${m.content}` : ''))
@@ -107,7 +119,10 @@ export class CrispWebhookService {
     return `Crisp payload excerpt:\n${JSON.stringify(data).slice(0, 6000)}`;
   }
 
-  async handleEvent(rawBody: string, payload: Record<string, unknown>): Promise<{ ok: boolean; created?: string }> {
+  async handleEvent(
+    rawBody: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ ok: boolean; created?: string }> {
     const event = String(payload.event ?? '');
     const data = (payload.data ?? {}) as Record<string, unknown>;
 
@@ -144,7 +159,9 @@ export class CrispWebhookService {
     }
 
     if (!tenantId) {
-      const fallback = this.config.get<string>('CRISP_WEBHOOK_FALLBACK_TENANT_ID')?.trim();
+      const fallback = this.config
+        .get<string>('CRISP_WEBHOOK_FALLBACK_TENANT_ID')
+        ?.trim();
       if (!fallback) {
         this.logger.warn(
           'Crisp maintenance-request: no visitor email match and no CRISP_WEBHOOK_FALLBACK_TENANT_ID',
@@ -171,13 +188,17 @@ export class CrispWebhookService {
     });
 
     if (sessionId && userId) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { crisp_session_id: sessionId },
-      }).catch(() => undefined);
+      await this.prisma.user
+        .update({
+          where: { id: userId },
+          data: { crisp_session_id: sessionId },
+        })
+        .catch(() => undefined);
     }
 
-    this.logger.log(`Created maintenance ticket ${ticket.id} from Crisp session ${sessionId ?? 'n/a'}`);
+    this.logger.log(
+      `Created maintenance ticket ${ticket.id} from Crisp session ${sessionId ?? 'n/a'}`,
+    );
     return { ok: true, created: ticket.id };
   }
 }

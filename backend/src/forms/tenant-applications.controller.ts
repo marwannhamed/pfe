@@ -25,15 +25,24 @@ export class TenantApplicationsController {
 
   @Post(':id/approve')
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
-  @ApiOperation({ summary: 'Approve application — activate tenant (TRIAL), create TENANT_ADMIN if needed, send password setup email' })
+  @ApiOperation({
+    summary:
+      'Approve application — activate tenant (TRIAL), create TENANT_ADMIN if needed, send password setup email',
+  })
   approve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.applications.approve(user, id);
   }
 
   @Post(':id/reject')
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
-  @ApiOperation({ summary: 'Reject application — mark rejected, suspend pending tenant' })
-  reject(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: RejectApplicationDto) {
+  @ApiOperation({
+    summary: 'Reject application — mark rejected, suspend pending tenant',
+  })
+  reject(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: RejectApplicationDto,
+  ) {
     return this.applications.reject(user, id, body?.reason);
   }
 }

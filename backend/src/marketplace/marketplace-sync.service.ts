@@ -126,7 +126,10 @@ export class MarketplaceSyncService {
 
     const toUnpublish = await this.prisma.space.findMany({
       where: {
-        OR: [{ coworker_listing_id: { not: null } }, { liquidspace_listing_id: { not: null } }],
+        OR: [
+          { coworker_listing_id: { not: null } },
+          { liquidspace_listing_id: { not: null } },
+        ],
         NOT: { AND: [{ is_listed: true }, { status: SPACE_STATUS.AVAILABLE }] },
       },
       select: {
@@ -142,7 +145,9 @@ export class MarketplaceSyncService {
           await this.adapters.deleteCoworkerListing(s.coworker_listing_id);
         }
         if (s.liquidspace_listing_id) {
-          await this.adapters.deleteLiquidspaceListing(s.liquidspace_listing_id);
+          await this.adapters.deleteLiquidspaceListing(
+            s.liquidspace_listing_id,
+          );
         }
         await this.prisma.space.update({
           where: { id: s.id },

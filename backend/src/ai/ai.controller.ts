@@ -47,7 +47,9 @@ Tenant context: user role ${user.role}. Answer in plain language. If unsure, say
 
   @Post('tenant-assistant')
   @Roles(...AI_ROLES)
-  @ApiOperation({ summary: 'Tenant-facing help: bookings, spaces, billing basics (OpenAI)' })
+  @ApiOperation({
+    summary: 'Tenant-facing help: bookings, spaces, billing basics (OpenAI)',
+  })
   async tenantAssistant(
     @CurrentUser() user: AuthUser,
     @Body() dto: TenantAssistantDto,
@@ -63,13 +65,19 @@ User role: ${user.role}. Be short, friendly, and actionable. Never promise refun
 
   @Post('maintenance/suggest-category')
   @Roles(...AI_ROLES)
-  @ApiOperation({ summary: 'Suggest maintenance ticket category from title/description (OpenAI)' })
+  @ApiOperation({
+    summary:
+      'Suggest maintenance ticket category from title/description (OpenAI)',
+  })
   async suggestMaintenanceCategory(@Body() dto: MaintenanceSuggestDto) {
     const allowed = Object.values(TICKET_CATEGORY).join(', ');
     const system = `Classify the maintenance request into exactly one category from: ${allowed}.
 Reply with a single line: CATEGORY|one short reason (max 120 chars). Example: PLUMBING|mentions leak`;
     const userMsg = [dto.title, dto.description].filter(Boolean).join('\n');
-    const raw = await this.openAi.chat([{ role: 'user', content: userMsg }], system);
+    const raw = await this.openAi.chat(
+      [{ role: 'user', content: userMsg }],
+      system,
+    );
     const [catPart] = raw.split('|');
     const category = (catPart ?? '').trim().toUpperCase();
     const valid = Object.values(TICKET_CATEGORY).includes(category as any)

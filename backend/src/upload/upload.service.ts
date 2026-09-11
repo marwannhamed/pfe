@@ -19,7 +19,7 @@ export class UploadService {
   constructor() {
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key:    process.env.CLOUDINARY_API_KEY,
+      api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     });
   }
@@ -63,7 +63,9 @@ export class UploadService {
       });
       this.logger.log(`Deleted Cloudinary file: ${publicId}`);
     } catch (err) {
-      this.logger.warn(`Could not delete Cloudinary file ${publicId}: ${err.message}`);
+      this.logger.warn(
+        `Could not delete Cloudinary file ${publicId}: ${err.message}`,
+      );
     }
   }
 
@@ -87,10 +89,10 @@ export class UploadService {
   ): Promise<UploadResult> {
     this.validateImage(file);
     const result = await this.uploadFromBuffer(file.buffer, {
-      folder:         `leasemgr/spaces/${spaceId}`,
-      resource_type:  'image',
-      quality:        'auto',
-      fetch_format:   'auto',
+      folder: `leasemgr/spaces/${spaceId}`,
+      resource_type: 'image',
+      quality: 'auto',
+      fetch_format: 'auto',
       transformation: [{ width: 1200, height: 800, crop: 'limit' }],
     });
     return this.formatResult(result);
@@ -113,12 +115,17 @@ export class UploadService {
     file: Express.Multer.File,
     floorId: string,
   ): Promise<UploadResult> {
-    this.validateImage(file, ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp']);
+    this.validateImage(file, [
+      'image/jpeg',
+      'image/png',
+      'image/svg+xml',
+      'image/webp',
+    ]);
     const result = await this.uploadFromBuffer(file.buffer, {
-      folder:        `leasemgr/floors/${floorId}`,
+      folder: `leasemgr/floors/${floorId}`,
       resource_type: 'image',
-      quality:       'auto',
-      fetch_format:  'auto',
+      quality: 'auto',
+      fetch_format: 'auto',
       // No crop — keep floor plan proportions intact
     });
     return this.formatResult(result);
@@ -169,10 +176,10 @@ export class UploadService {
   ): Promise<UploadResult> {
     this.validatePDF(file);
     const result = await this.uploadFromBuffer(file.buffer, {
-      folder:        `leasemgr/contracts/${contractId}`,
+      folder: `leasemgr/contracts/${contractId}`,
       resource_type: 'raw',
-      format:        'pdf',
-      use_filename:  true,
+      format: 'pdf',
+      use_filename: true,
       unique_filename: true,
     });
     return this.formatResult(result);
@@ -187,10 +194,10 @@ export class UploadService {
   ): Promise<UploadResult> {
     this.validatePDF(file);
     const result = await this.uploadFromBuffer(file.buffer, {
-      folder:        `leasemgr/invoices/${invoiceId}`,
+      folder: `leasemgr/invoices/${invoiceId}`,
       resource_type: 'raw',
-      format:        'pdf',
-      use_filename:  true,
+      format: 'pdf',
+      use_filename: true,
       unique_filename: true,
     });
     return this.formatResult(result);
@@ -271,12 +278,12 @@ export class UploadService {
   // ─── Format result ────────────────────────────────────────────
   private formatResult(result: UploadApiResponse): UploadResult {
     return {
-      url:       result.secure_url,
+      url: result.secure_url,
       public_id: result.public_id,
-      format:    result.format,
-      bytes:     result.bytes,
-      width:     result.width,
-      height:    result.height,
+      format: result.format,
+      bytes: result.bytes,
+      width: result.width,
+      height: result.height,
     };
   }
 }

@@ -50,7 +50,10 @@ export class AddonServiceController {
   private async assertOwned(user: AuthUser, id: string) {
     const service = await this.addonServiceService.findOne(id);
     if (!service) throw new NotFoundException('Addon service not found');
-    if (user.role !== USER_ROLE.SUPER_ADMIN && service.tenant_id !== user.tenant_id) {
+    if (
+      user.role !== USER_ROLE.SUPER_ADMIN &&
+      service.tenant_id !== user.tenant_id
+    ) {
       throw new ForbiddenException('You cannot access this add-on service');
     }
     return service;
@@ -59,7 +62,10 @@ export class AddonServiceController {
   @Post()
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Create new addon service' })
-  @ApiResponse({ status: 201, description: 'Addon service created successfully' })
+  @ApiResponse({
+    status: 201,
+    description: 'Addon service created successfully',
+  })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -68,42 +74,59 @@ export class AddonServiceController {
   ) {
     const tenantId = user.tenant_id;
     if (!tenantId) {
-      throw new BadRequestException('Your account is not linked to an organization');
+      throw new BadRequestException(
+        'Your account is not linked to an organization',
+      );
     }
-    const service = await this.addonServiceService.create({ ...dto, tenant_id: tenantId });
+    const service = await this.addonServiceService.create({
+      ...dto,
+      tenant_id: tenantId,
+    });
     return new ResponseDto('Addon service created successfully', service);
   }
 
   @Get()
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN, USER_ROLE.TENANT_EMPLOYEE)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get all addon services with pagination' })
   @ApiQuery({ name: 'tenantId', required: false })
   @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'isActive', required: false, description: 'true | false' })
-  @ApiQuery({ name: 'page',     required: false, type: Number })
-  @ApiQuery({ name: 'limit',    required: false, type: Number })
-  @ApiQuery({ name: 'search',   required: false })
-  @ApiResponse({ status: 200, description: 'Addon services retrieved successfully' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'Addon services retrieved successfully',
+  })
   async findAll(
     @CurrentUser() user: AuthUser,
-    @Query('tenantId')  tenantId?:    string,
-    @Query('category')  category?:    string,
-    @Query('isActive')  isActiveRaw?: string,
-    @Query('page')      pageRaw?:     string,
-    @Query('limit')     limitRaw?:    string,
-    @Query('search')    search?:      string,
+    @Query('tenantId') tenantId?: string,
+    @Query('category') category?: string,
+    @Query('isActive') isActiveRaw?: string,
+    @Query('page') pageRaw?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('search') search?: string,
   ) {
-    const page  = Number(pageRaw)  || 1;
+    const page = Number(pageRaw) || 1;
     const limit = Number(limitRaw) || 10;
 
-    if (page < 1)              throw new BadRequestException('Page must be greater than 0');
-    if (limit < 1 || limit > 100) throw new BadRequestException('Limit must be between 1 and 100');
+    if (page < 1) throw new BadRequestException('Page must be greater than 0');
+    if (limit < 1 || limit > 100)
+      throw new BadRequestException('Limit must be between 1 and 100');
 
     // Only apply the boolean filter when the param was explicitly sent
     const isActive: boolean | undefined =
-      isActiveRaw === 'true'  ? true  :
-      isActiveRaw === 'false' ? false :
-      undefined;
+      isActiveRaw === 'true'
+        ? true
+        : isActiveRaw === 'false'
+          ? false
+          : undefined;
 
     const result = await this.addonServiceService.findAll({
       tenantId: this.scopeTenant(user, tenantId),
@@ -119,10 +142,10 @@ export class AddonServiceController {
       pagination: {
         page,
         limit,
-        total:      result.total,
+        total: result.total,
         totalPages: Math.ceil(result.total / limit),
-        hasNext:    page * limit < result.total,
-        hasPrev:    page > 1,
+        hasNext: page * limit < result.total,
+        hasPrev: page > 1,
       },
     });
   }
@@ -132,7 +155,10 @@ export class AddonServiceController {
   @ApiQuery({ name: 'tenantId', required: false })
   async findActive(@Query('tenantId') tenantId?: string) {
     const services = await this.addonServiceService.findActive(tenantId);
-    return new ResponseDto('Active addon services retrieved successfully', services);
+    return new ResponseDto(
+      'Active addon services retrieved successfully',
+      services,
+    );
   }
 
   @Get('by-category')
@@ -143,9 +169,16 @@ export class AddonServiceController {
     @Query('category') category: string,
     @Query('tenantId') tenantId?: string,
   ) {
-    if (!category) throw new BadRequestException('Category parameter is required');
-    const services = await this.addonServiceService.findByCategory(category, tenantId);
-    return new ResponseDto('Addon services by category retrieved successfully', services);
+    if (!category)
+      throw new BadRequestException('Category parameter is required');
+    const services = await this.addonServiceService.findByCategory(
+      category,
+      tenantId,
+    );
+    return new ResponseDto(
+      'Addon services by category retrieved successfully',
+      services,
+    );
   }
 
   @Get(':id')
@@ -176,7 +209,10 @@ export class AddonServiceController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete addon service' })
   @ApiParam({ name: 'id' })
-  async remove(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+  async remove(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.assertOwned(user, id);
     await this.addonServiceService.remove(id);
     return new ResponseDto('Addon service deleted successfully');
@@ -186,7 +222,10 @@ export class AddonServiceController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Activate addon service' })
   @ApiParam({ name: 'id' })
-  async activate(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+  async activate(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.assertOwned(user, id);
     const service = await this.addonServiceService.activate(id);
     return new ResponseDto('Addon service activated successfully', service);
@@ -196,7 +235,10 @@ export class AddonServiceController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Deactivate addon service' })
   @ApiParam({ name: 'id' })
-  async deactivate(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+  async deactivate(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.assertOwned(user, id);
     const service = await this.addonServiceService.deactivate(id);
     return new ResponseDto('Addon service deactivated successfully', service);

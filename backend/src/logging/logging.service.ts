@@ -27,7 +27,7 @@ export class LoggingService {
   constructor(private configService: ConfigurationService) {
     this.logFile = configService.logFile;
     this.logLevel = this.getLogLevel(configService.logLevel);
-    
+
     // Ensure log directory exists
     this.ensureLogDirectory();
   }
@@ -51,7 +51,13 @@ export class LoggingService {
   }
 
   private shouldLog(level: LogLevel): boolean {
-    const levels: LogLevel[] = ['debug' as LogLevel, 'verbose' as LogLevel, 'info' as LogLevel, 'warn' as LogLevel, 'error' as LogLevel];
+    const levels: LogLevel[] = [
+      'debug' as LogLevel,
+      'verbose' as LogLevel,
+      'info' as LogLevel,
+      'warn' as LogLevel,
+      'error' as LogLevel,
+    ];
     const currentLevelIndex = levels.indexOf(this.logLevel);
     const messageLevelIndex = levels.indexOf(level);
     return messageLevelIndex >= currentLevelIndex;
@@ -83,7 +89,12 @@ export class LoggingService {
     }
   }
 
-  private log(level: LogLevel, message: string, context?: string, metadata?: Record<string, any>): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     if (!this.shouldLog(level)) {
       return;
     }
@@ -121,28 +132,52 @@ export class LoggingService {
     }
   }
 
-  debug(message: string, context?: string, metadata?: Record<string, any>): void {
+  debug(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.log('debug' as LogLevel, message, context, metadata);
   }
 
-  verbose(message: string, context?: string, metadata?: Record<string, any>): void {
+  verbose(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.log('verbose' as LogLevel, message, context, metadata);
   }
 
-  info(message: string, context?: string, metadata?: Record<string, any>): void {
+  info(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.log('info' as LogLevel, message, context, metadata);
   }
 
-  warn(message: string, context?: string, metadata?: Record<string, any>): void {
+  warn(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.log('warn' as LogLevel, message, context, metadata);
   }
 
-  error(message: string, context?: string, metadata?: Record<string, any>): void {
+  error(
+    message: string,
+    context?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.log('error' as LogLevel, message, context, metadata);
   }
 
   // Structured logging methods
-  logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
+  logUserAction(
+    action: string,
+    userId: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.info(`User action: ${action}`, 'USER_ACTION', {
       userId,
       action,
@@ -150,7 +185,12 @@ export class LoggingService {
     });
   }
 
-  logApiRequest(method: string, url: string, userId?: string, metadata?: Record<string, any>): void {
+  logApiRequest(
+    method: string,
+    url: string,
+    userId?: string,
+    metadata?: Record<string, any>,
+  ): void {
     this.info(`${method} ${url}`, 'API_REQUEST', {
       method,
       url,
@@ -175,7 +215,11 @@ export class LoggingService {
     });
   }
 
-  logPerformance(operation: string, duration: number, metadata?: Record<string, any>): void {
+  logPerformance(
+    operation: string,
+    duration: number,
+    metadata?: Record<string, any>,
+  ): void {
     this.info(`Performance: ${operation} took ${duration}ms`, 'PERFORMANCE', {
       operation,
       duration,
@@ -187,15 +231,17 @@ export class LoggingService {
   async cleanOldLogs(daysToKeep: number = 30): Promise<void> {
     try {
       const stats = fs.statSync(this.logFile);
-      const cutoffTime = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
-      
+      const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000;
+
       if (stats.mtime.getTime() < cutoffTime) {
         const archiveFile = `${this.logFile}.${stats.mtime.toISOString().split('T')[0]}`;
         fs.renameSync(this.logFile, archiveFile);
         this.info(`Log file rotated to ${archiveFile}`, 'LOG_ROTATION');
       }
     } catch (error) {
-      this.error('Failed to rotate log file', 'LOG_ROTATION', { error: error.message });
+      this.error('Failed to rotate log file', 'LOG_ROTATION', {
+        error: error.message,
+      });
     }
   }
 

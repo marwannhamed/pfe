@@ -2,7 +2,7 @@
 
 export const DEFAULT_CURRENCY = 'QAR';
 
-export const DOHA_CENTER = { lat: 25.2854, lng: 51.5310 } as const;
+export const DOHA_CENTER = { lat: 25.2854, lng: 51.531 } as const;
 
 export const QATAR_ZONES = [
   'West Bay',

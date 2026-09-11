@@ -78,19 +78,37 @@ export class BillingController {
 
   @Get('invoices/overdue')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+  )
   @ApiOperation({ summary: 'Factures en retard de paiement' })
   @ApiQuery({ name: 'tenantId', required: false })
-  getOverdueInvoices(@CurrentUser() user: AuthUser, @Query('tenantId') tenantId?: string) {
+  getOverdueInvoices(
+    @CurrentUser() user: AuthUser,
+    @Query('tenantId') tenantId?: string,
+  ) {
     return this.billingService.getOverdueInvoices(user, tenantId);
   }
 
   @Get('invoices/summary')
   @UseGuards(RolesGuard)
-  @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER, USER_ROLE.TENANT_ADMIN)
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.FINANCE,
+    USER_ROLE.MANAGER,
+    USER_ROLE.TENANT_ADMIN,
+  )
   @ApiOperation({ summary: 'Résumé financier' })
   @ApiQuery({ name: 'tenantId', required: false })
-  getFinancialSummary(@CurrentUser() user: AuthUser, @Query('tenantId') tenantId?: string) {
+  getFinancialSummary(
+    @CurrentUser() user: AuthUser,
+    @Query('tenantId') tenantId?: string,
+  ) {
     return this.billingService.getFinancialSummary(user, tenantId);
   }
 
@@ -175,10 +193,7 @@ export class BillingController {
 
   @Post('payments')
   @ApiOperation({ summary: 'Enregistrer un paiement' })
-  createPayment(
-    @Body() dto: CreatePaymentDto,
-    @CurrentUser() user: AuthUser,
-  ) {
+  createPayment(@Body() dto: CreatePaymentDto, @CurrentUser() user: AuthUser) {
     return this.billingService.createPayment(dto, user);
   }
 
