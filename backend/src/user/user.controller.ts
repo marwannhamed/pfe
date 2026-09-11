@@ -84,8 +84,8 @@ export class UserController {
   @Roles(...R_USER_LIST)
   @ApiOperation({ summary: 'Récupérer un utilisateur' })
   @ApiParam({ name: 'id' })
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(id);
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.userService.findOneForUser(user, id);
   }
 
   @Patch(':id')
@@ -104,8 +104,8 @@ export class UserController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.TENANT_ADMIN)
   @ApiOperation({ summary: 'Supprimer un utilisateur' })
   @ApiParam({ name: 'id' })
-  remove(@Param('id') id: string) {
-    return this.userService.remove(id);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.userService.removeForUser(user, id);
   }
 
   @Patch(':id/change-password')

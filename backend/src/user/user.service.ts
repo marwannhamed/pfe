@@ -28,10 +28,60 @@ export class UserService {
     private readonly authService: AuthService,
   ) {}
 
+  /**
+   * Strip everything that authenticates the user. This used to remove only
+   * `password`, so the refresh tokens went out with every user payload —
+   * including the session token that mints access tokens for that account.
+   */
   private exclude(user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...rest } = user;
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const { password, refreshToken, session_refresh_token, ...rest } = user;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return rest;
+  }
+
+  /**
+   * Who may see or act on a given user. Mirrors updateForUser: the platform
+   * owner reaches everyone, client and renter admins stay inside their own
+   * organisation, and a manager is limited to the staff roles it supervises.
+   */
+  private assertCanReach(
+    actor: AuthUser,
+    target: { tenant_id: string; role: string },
+  ) {
+    const actorRole = normalizeUserRole(actor.role);
+    if (actorRole === USER_ROLE.SUPER_ADMIN) return;
+
+    if (target.tenant_id !== actor.tenant_id) {
+      throw new ForbiddenException(
+        'Cannot access users outside your organization',
+      );
+    }
+
+    if (actorRole === USER_ROLE.CLIENT_ADMIN) return;
+
+    if (actorRole === USER_ROLE.MANAGER) {
+      const manageable: string[] = [
+        USER_ROLE.FINANCE,
+        USER_ROLE.MAINTENANCE,
+        USER_ROLE.RECEPTIONIST,
+      ];
+      if (!manageable.includes(normalizeUserRole(target.role))) {
+        throw new ForbiddenException(
+          'Managers can only access finance, maintenance, or reception staff',
+        );
+      }
+      return;
+    }
+
+    if (actorRole === USER_ROLE.TENANT_ADMIN) {
+      if (normalizeUserRole(target.role) !== USER_ROLE.TENANT_EMPLOYEE) {
+        throw new ForbiddenException('Tenant admins can only access employees');
+      }
+      return;
+    }
+
+    throw new ForbiddenException('You cannot access this user');
   }
 
   async create(dto: CreateUserDto, options?: { skipWelcomeEmail?: boolean }) {
@@ -216,10 +266,24 @@ export class UserService {
     return users.map(this.exclude);
   }
 
+  /**
+   * Internal lookup — returns the full row including credentials, so it must
+   * never be handed to a controller. Use findOneForUser for anything reachable
+   * over HTTP.
+   */
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User #${id} introuvable`);
     return user;
+  }
+
+  /** Scoped, credential-free lookup for the HTTP layer. */
+  async findOneForUser(actor: AuthUser, id: string) {
+    const target = await this.findOne(id);
+    if (actor.id !== id) {
+      this.assertCanReach(actor, target);
+    }
+    return this.exclude(target);
   }
 
   async findByEmail(email: string) {
@@ -313,6 +377,31 @@ export class UserService {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
     return { message: 'Utilisateur supprimé' };
+  }
+
+  /**
+   * Deleting an account cascades to its bookings, notifications and sessions,
+   * so it is the most destructive call in the module. It previously took no
+   * actor at all: any client or renter admin could delete any account on the
+   * platform, including other organisations' admins and the platform owner.
+   */
+  async removeForUser(actor: AuthUser, id: string) {
+    const target = await this.findOne(id);
+
+    if (actor.id === id) {
+      throw new ForbiddenException('You cannot delete your own account');
+    }
+    if (
+      normalizeUserRole(target.role) === USER_ROLE.SUPER_ADMIN &&
+      normalizeUserRole(actor.role) !== USER_ROLE.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException(
+        'You cannot delete a platform administrator',
+      );
+    }
+
+    this.assertCanReach(actor, target);
+    return this.remove(id);
   }
 
   async updateLastLogin(id: string) {

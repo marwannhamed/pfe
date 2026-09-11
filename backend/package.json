@@ -120,13 +120,15 @@
     "collectCoverageFrom": [
       "auth/auth.service.ts",
       "billing/billing.service.ts",
-      "booking/booking.service.ts",
       "booking-application/booking-application.service.ts",
+      "booking/booking.service.ts",
       "common/services/access-policy.service.ts",
       "forms/tenant-application.service.ts",
       "notification/notification.service.ts",
       "promotion-code/promotion-code.service.ts",
-      "upload/upload.service.ts"
+      "tenant/tenant.service.ts",
+      "upload/upload.service.ts",
+      "user/user.service.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",

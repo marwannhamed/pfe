@@ -15,6 +15,7 @@ import {
   ORGANIZATION_TYPE,
   TENANT_STATUS,
   USER_ROLE,
+  USER_STATUS,
 } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 import { MailService } from '../mail/mail.service';
@@ -373,7 +374,22 @@ export class TenantService {
   async getActiveUsersForUser(user: AuthUser, id: string) {
     await this.findOneForUser(user, id);
     return this.prisma.user.findMany({
-      where: { tenant_id: id },
+      // Selected explicitly: an unqualified findMany returns the password hash
+      // and both refresh tokens for every user in the organisation.
+      where: { tenant_id: id, status: USER_STATUS.ACTIVE },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        phone_number: true,
+        role: true,
+        status: true,
+        avatar_url: true,
+        last_login_at: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
     });
   }
 
