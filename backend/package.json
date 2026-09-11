@@ -116,6 +116,7 @@
     },
     "collectCoverageFrom": [
       "auth/auth.service.ts",
+      "common/services/access-policy.service.ts",
       "promotion-code/promotion-code.service.ts"
     ],
     "coverageDirectory": "../coverage",

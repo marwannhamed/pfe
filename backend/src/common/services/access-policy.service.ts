@@ -89,6 +89,28 @@ export class AccessPolicyService {
     return floor;
   }
 
+  /**
+   * Writing to a floor (its plan image, its metadata) is limited to the
+   * platform owner and the client operators of the owning organisation.
+   * Readability is wider — see assertFloorReadable — because portal users
+   * browse floors they can book on.
+   */
+  async assertFloorMutable(user: AuthUser, floorId: string) {
+    const floor = await this.prisma.floor.findUnique({
+      where: { id: floorId },
+      include: { building: true },
+    });
+    if (!floor) throw new NotFoundException(`Floor #${floorId} not found`);
+    if (user.role === USER_ROLE.SUPER_ADMIN) return floor;
+    if (this.isClientOperator(user.role)) {
+      if (floor.building.tenant_id !== user.tenant_id) {
+        throw new ForbiddenException('You cannot modify this floor');
+      }
+      return floor;
+    }
+    throw new ForbiddenException('You cannot modify floors');
+  }
+
   async assertSpaceMutable(user: AuthUser, spaceId: string) {
     const space = await this.prisma.space.findUnique({
       where: { id: spaceId },

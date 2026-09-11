@@ -27,6 +27,7 @@ import {
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
+import { AccessPolicyService } from '../common/services/access-policy.service';
 
 @Controller('upload')
 @ApiTags('upload')
@@ -36,6 +37,7 @@ export class UploadController {
   constructor(
     private readonly uploadService: UploadService,
     private readonly prisma: PrismaService,
+    private readonly access: AccessPolicyService,
   ) {}
 
   // ── SPACE PHOTOS ─────────────────────────────────────────────────────
@@ -52,9 +54,13 @@ export class UploadController {
   })
   @UseInterceptors(FilesInterceptor('files', 10, { storage: memoryStorage() }))
   async uploadSpacePhotos(
+    @CurrentUser() user: AuthUser,
     @Param('id') spaceId: string,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
+    // Check ownership before touching storage, so a rejected request never
+    // leaves an orphaned file behind.
+    await this.access.assertSpaceMutable(user, spaceId);
     const results = await this.uploadService.uploadSpacePhotos(files, spaceId);
     const space = await this.prisma.space.findUnique({
       where: { id: spaceId },
@@ -72,9 +78,11 @@ export class UploadController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a specific space photo by URL' })
   async deleteSpacePhoto(
+    @CurrentUser() user: AuthUser,
     @Param('id') spaceId: string,
     @Body('url') url: string,
   ) {
+    await this.access.assertSpaceMutable(user, spaceId);
     const publicId = this.uploadService.extractPublicId(url);
     if (publicId) await this.uploadService.deleteFile(publicId);
     const space = await this.prisma.space.findUnique({
@@ -102,75 +110,17 @@ export class UploadController {
   })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async uploadFloorPlan(
+    @CurrentUser() user: AuthUser,
     @Param('id') floorId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    await this.access.assertFloorMutable(user, floorId);
     const result = await this.uploadService.uploadFloorPlan(file, floorId);
     await this.prisma.floor.update({
       where: { id: floorId },
       data: { floor_plan_url: result.url } as any,
     });
     return { url: result.url, public_id: result.public_id };
-  }
-
-  // ── CONTRACT DOCUMENT ────────────────────────────────────────────────
-  @Post('contract/:id/document')
-  @ApiOperation({ summary: 'Upload contract PDF document' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } },
-    },
-  })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadContractDocument(
-    @Param('id') contractId: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    const result = await this.uploadService.uploadContractDocument(
-      file,
-      contractId,
-    );
-    await this.prisma.leaseContract.update({
-      where: { id: contractId },
-      data: { document_url: result.url } as any,
-    });
-    return {
-      url: result.url,
-      public_id: result.public_id,
-      bytes: result.bytes,
-    };
-  }
-
-  // ── INVOICE DOCUMENT ─────────────────────────────────────────────────
-  @Post('invoice/:id/document')
-  @ApiOperation({ summary: 'Upload invoice PDF document' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } },
-    },
-  })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadInvoiceDocument(
-    @Param('id') invoiceId: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    const result = await this.uploadService.uploadInvoiceDocument(
-      file,
-      invoiceId,
-    );
-    await this.prisma.invoice.update({
-      where: { id: invoiceId },
-      data: { document_url: result.url } as any,
-    });
-    return {
-      url: result.url,
-      public_id: result.public_id,
-      bytes: result.bytes,
-    };
   }
 
   // ── USER AVATAR ──────────────────────────────────────────────────────

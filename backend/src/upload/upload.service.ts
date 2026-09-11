@@ -168,42 +168,6 @@ export class UploadService {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // CONTRACT DOCUMENT — PDF
-  // ══════════════════════════════════════════════════════════════
-  async uploadContractDocument(
-    file: Express.Multer.File,
-    contractId: string,
-  ): Promise<UploadResult> {
-    this.validatePDF(file);
-    const result = await this.uploadFromBuffer(file.buffer, {
-      folder: `leasemgr/contracts/${contractId}`,
-      resource_type: 'raw',
-      format: 'pdf',
-      use_filename: true,
-      unique_filename: true,
-    });
-    return this.formatResult(result);
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  // INVOICE DOCUMENT — PDF
-  // ══════════════════════════════════════════════════════════════
-  async uploadInvoiceDocument(
-    file: Express.Multer.File,
-    invoiceId: string,
-  ): Promise<UploadResult> {
-    this.validatePDF(file);
-    const result = await this.uploadFromBuffer(file.buffer, {
-      folder: `leasemgr/invoices/${invoiceId}`,
-      resource_type: 'raw',
-      format: 'pdf',
-      use_filename: true,
-      unique_filename: true,
-    });
-    return this.formatResult(result);
-  }
-
-  // ══════════════════════════════════════════════════════════════
   // USER AVATAR — auto-cropped to square
   // ══════════════════════════════════════════════════════════════
   async uploadUserAvatar(
