@@ -36,7 +36,7 @@
     "db:ps": "docker compose ps"
   },
   "dependencies": {
-    "@nestjs-modules/mailer": "^1.6.1",
+    "@nestjs-modules/mailer": "^2.3.7",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^10.4.22",
     "@nestjs/config": "^3.1.1",
@@ -62,10 +62,10 @@
     "exceljs": "^4.4.0",
     "express-rate-limit": "^8.3.2",
     "google-auth-library": "^9.15.1",
-    "handlebars": "^4.7.8",
+    "handlebars": "^4.7.9",
     "helmet": "^8.1.0",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.1",
+    "nodemailer": "^8.0.11",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",

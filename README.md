@@ -222,7 +222,7 @@ Optional integrations stay dormant until their keys are present:
 | Typeform | `TYPEFORM_FORM_ID`, `TYPEFORM_WEBHOOK_SECRET` | Disabled |
 | AI assistant | `OPENAI_API_KEY`, `OPENAI_MODEL` | Disabled |
 | Marketplaces | `LIQUIDSPACE_API_TOKEN`, `COWORKER_API_TOKEN` | Disabled |
-| Media uploads | `CLOUDINARY_*` | Local disk under `UPLOAD_DIR` |
+| Media uploads | `CLOUDINARY_*` | Avatars fall back to local disk; space photos and floor plans need Cloudinary |
 
 All three webhook endpoints verify an HMAC signature with `timingSafeEqual` before doing any work.
 
