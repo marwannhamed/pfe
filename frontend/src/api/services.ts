@@ -387,22 +387,6 @@ export const notificationApi = {
     api.put('/notifications/preferences/me', data),
 };
 
-// ─── PRICE PLANS ──────────────────────────────────────────────────────
-export const pricePlanApi = {
-  getAll: (params?: any) => dedupedGet('/price-plans', params),
-  getOne: (id: string) => api.get(`/price-plans/${id}`),
-  create: (data: any) => api.post('/price-plans', data),
-  update: (id: string, data: any) => api.patch(`/price-plans/${id}`, data),
-  remove: (id: string) => api.delete(`/price-plans/${id}`),
-};
-
-// ─── REPORTS ──────────────────────────────────────────────────────────
-export const reportApi = {
-  getAll: (params?: any) => dedupedGet('/reports', params),
-  getOne: (id: string) => api.get(`/reports/${id}`),
-  remove: (id: string) => api.delete(`/reports/${id}`),
-};
-
 // ─── AUDIT ────────────────────────────────────────────────────────────
 export const auditApi = {
   getAll: (params?: any) => dedupedGet('/audit', params),
@@ -539,46 +523,6 @@ export const spaceFeatureApi = {
   create: (data: any) => api.post('/space-features', data),
   update: (id: string, data: any) => api.patch(`/space-features/${id}`, data),
   remove: (id: string) => api.delete(`/space-features/${id}`),
-};
-
-// ─── CONTRACT ITEMS ───────────────────────────────────────────────────────────
-export const contractItemApi = {
-  getAll: (contractId?: string) =>
-    dedupedGet('/contract-items', contractId ? { contractId } : undefined),
-  getOne: (id: string) => api.get(`/contract-items/${id}`),
-  create: (data: any) => api.post('/contract-items', data),
-  update: (id: string, data: any) => api.patch(`/contract-items/${id}`, data),
-  remove: (id: string) => api.delete(`/contract-items/${id}`),
-};
-
-// ─── DEPOSITS ─────────────────────────────────────────────────────────────────
-export const depositApi = {
-  getAll: (contractId?: string) =>
-    dedupedGet('/deposits', contractId ? { contractId } : undefined),
-  getOne: (id: string) => api.get(`/deposits/${id}`),
-  create: (data: any) => api.post('/deposits', data),
-  update: (id: string, data: any) => api.patch(`/deposits/${id}`, data),
-  remove: (id: string) => api.delete(`/deposits/${id}`),
-};
-
-// ─── INVOICE LINE ITEMS ───────────────────────────────────────────────────────
-export const invoiceLineItemApi = {
-  getAll: (invoiceId?: string) =>
-    dedupedGet('/invoice-line-items', invoiceId ? { invoiceId } : undefined),
-  getOne: (id: string) => api.get(`/invoice-line-items/${id}`),
-  create: (data: any) => api.post('/invoice-line-items', data),
-  update: (id: string, data: any) => api.patch(`/invoice-line-items/${id}`, data),
-  remove: (id: string) => api.delete(`/invoice-line-items/${id}`),
-};
-
-// ─── BOOKING ADD-ON SERVICES ──────────────────────────────────────────────────
-export const bookingAddOnApi = {
-  getAll: (bookingId?: string) =>
-    dedupedGet('/booking-addons', bookingId ? { bookingId } : undefined),
-  getOne: (id: string) => api.get(`/booking-addons/${id}`),
-  create: (data: any) => api.post('/booking-addons', data),
-  update: (id: string, data: any) => api.patch(`/booking-addons/${id}`, data),
-  remove: (id: string) => api.delete(`/booking-addons/${id}`),
 };
 
 // ─── PROMOTION CODES ──────────────────────────────────────────────────────────
