@@ -11,8 +11,17 @@ import type { AuthUser } from '../../auth/types/auth-user';
 export class AccessPolicyService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Only the platform owner reads across organisations.
+   *
+   * FINANCE used to be listed here, which let a finance user of one client
+   * read every other client's buildings, floors, spaces and bookings. That
+   * contradicts role-groups.ts, where FINANCE sits in CLIENT_WORKSPACE —
+   * "roles that work inside a client workspace (scoped by tenant_id)" — and
+   * the seed, which places the finance account inside a client organisation.
+   */
   isCrossTenantReader(role: string): boolean {
-    return role === USER_ROLE.SUPER_ADMIN || role === USER_ROLE.FINANCE;
+    return role === USER_ROLE.SUPER_ADMIN;
   }
 
   isTenantScoped(role: string): boolean {

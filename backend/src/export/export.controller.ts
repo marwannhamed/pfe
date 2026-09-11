@@ -2,6 +2,8 @@ import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { ExportService, ExportFormat } from './export.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -56,6 +58,7 @@ export class ExportController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   async exportBookings(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
     @Query('from') from?: string,
@@ -64,6 +67,7 @@ export class ExportController {
   ) {
     const dates = this.parseDates(from, to);
     const result = await this.exportService.exportBookings(
+      user,
       format,
       dates.from,
       dates.to,
@@ -85,6 +89,7 @@ export class ExportController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   async exportInvoices(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
     @Query('from') from?: string,
@@ -93,6 +98,7 @@ export class ExportController {
   ) {
     const dates = this.parseDates(from, to);
     const result = await this.exportService.exportInvoices(
+      user,
       format,
       dates.from,
       dates.to,
@@ -114,6 +120,7 @@ export class ExportController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   async exportPayments(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
     @Query('from') from?: string,
@@ -122,6 +129,7 @@ export class ExportController {
   ) {
     const dates = this.parseDates(from, to);
     const result = await this.exportService.exportPayments(
+      user,
       format,
       dates.from,
       dates.to,
@@ -135,10 +143,11 @@ export class ExportController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.FINANCE)
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   async exportTenants(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
   ) {
-    const result = await this.exportService.exportTenants(format);
+    const result = await this.exportService.exportTenants(user, format);
     await this.sendFile(res, result, format);
   }
 
@@ -147,10 +156,11 @@ export class ExportController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   async exportSpaces(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
   ) {
-    const result = await this.exportService.exportSpaces(format);
+    const result = await this.exportService.exportSpaces(user, format);
     await this.sendFile(res, result, format);
   }
 
@@ -167,6 +177,7 @@ export class ExportController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   async exportMaintenance(
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('format') format: ExportFormat = 'xlsx',
     @Query('from') from?: string,
@@ -175,6 +186,7 @@ export class ExportController {
   ) {
     const dates = this.parseDates(from, to);
     const result = await this.exportService.exportMaintenance(
+      user,
       format,
       dates.from,
       dates.to,

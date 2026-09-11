@@ -24,11 +24,12 @@ export class AnalyticsService {
 
   // ─── Overview KPIs ────────────────────────────────────────────────────────
   @Cache(300000) // 5 minutes cache
-  async getOverview(from: Date, to: Date, tenantId?: string) {
+  async getOverview(user: AuthUser, from: Date, to: Date, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
     const diffMs = to.getTime() - from.getTime();
     const prevFrom = new Date(from.getTime() - diffMs);
     const prevTo = new Date(from);
-    const tFilter = tenantId ? { tenant_id: tenantId } : {};
+    const tFilter = scope;
 
     const [rev, prevRev] = await Promise.all([
       this.prisma.invoice.aggregate({
@@ -140,10 +141,16 @@ export class AnalyticsService {
   }
 
   // ─── Revenue trend (monthly) ──────────────────────────────────────────────
-  async getRevenueTrend(from: Date, to: Date, tenantId?: string) {
+  async getRevenueTrend(
+    user: AuthUser,
+    from: Date,
+    to: Date,
+    tenantId?: string,
+  ) {
+    const scope = this.tenantFilter(user, tenantId);
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
+        ...scope,
         status: 'PAID',
         created_at: { gte: from, lte: to },
       },
@@ -169,10 +176,16 @@ export class AnalyticsService {
   }
 
   // ─── Bookings trend (daily) ───────────────────────────────────────────────
-  async getBookingsTrend(from: Date, to: Date, tenantId?: string) {
+  async getBookingsTrend(
+    user: AuthUser,
+    from: Date,
+    to: Date,
+    tenantId?: string,
+  ) {
+    const scope = this.tenantFilter(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
+        ...scope,
         created_at: { gte: from, lte: to },
       },
       select: { created_at: true },
@@ -216,7 +229,13 @@ export class AnalyticsService {
   }
 
   // ─── Bookings by status ───────────────────────────────────────────────────
-  async getBookingsByStatus(from: Date, to: Date, tenantId?: string) {
+  async getBookingsByStatus(
+    user: AuthUser,
+    from: Date,
+    to: Date,
+    tenantId?: string,
+  ) {
+    const scope = this.tenantFilter(user, tenantId);
     const statuses = [
       'CONFIRMED',
       'PENDING_APPROVAL',
@@ -225,7 +244,7 @@ export class AnalyticsService {
       'CHECKED_IN',
       'NO_SHOW',
     ];
-    const filter = tenantId ? { tenant_id: tenantId } : {};
+    const filter = scope;
     const counts = await Promise.all(
       statuses.map(async (status) => ({
         status,
@@ -242,7 +261,8 @@ export class AnalyticsService {
   }
 
   // ─── Space utilization ────────────────────────────────────────────────────
-  async getSpaceUtilization() {
+  async getSpaceUtilization(user: AuthUser) {
+    const scope = this.tenantFilter(user);
     const spaces = await this.prisma.space.findMany({
       select: { type: true, status: true },
     });
@@ -283,7 +303,13 @@ export class AnalyticsService {
   }
 
   // ─── Maintenance stats ────────────────────────────────────────────────────
-  async getMaintenanceStats(from: Date, to: Date, tenantId?: string) {
+  async getMaintenanceStats(
+    user: AuthUser,
+    from: Date,
+    to: Date,
+    tenantId?: string,
+  ) {
+    const scope = this.tenantFilter(user, tenantId);
     const tickets = await this.prisma.maintenanceTicket.findMany({
       where: {
         created_at: { gte: from, lte: to },
@@ -335,7 +361,8 @@ export class AnalyticsService {
   }
 
   // ─── Top spaces ───────────────────────────────────────────────────────────
-  async getTopSpaces(from: Date, to: Date, tenantId?: string) {
+  async getTopSpaces(user: AuthUser, from: Date, to: Date, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
         created_at: { gte: from, lte: to },
@@ -375,7 +402,8 @@ export class AnalyticsService {
   }
 
   // ─── Revenue by tenant ────────────────────────────────────────────────────
-  async getRevenueByTenant(from: Date, to: Date) {
+  async getRevenueByTenant(user: AuthUser, from: Date, to: Date) {
+    const scope = this.tenantFilter(user);
     const invoices = await this.prisma.invoice.findMany({
       where: { status: 'PAID', created_at: { gte: from, lte: to } },
       include: { tenant: { select: { name: true } } },
@@ -397,14 +425,12 @@ export class AnalyticsService {
       .map((t) => ({ ...t, revenue: Math.round(t.revenue) }));
   }
 
+  /** See AccessPolicyService.isCrossTenantReader — FINANCE is client-scoped. */
   private tenantFilter(
     user: AuthUser,
     tenantId?: string,
   ): { tenant_id?: string } {
-    if (
-      user.role === USER_ROLE.SUPER_ADMIN ||
-      user.role === USER_ROLE.FINANCE
-    ) {
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
       return tenantId ? { tenant_id: tenantId } : {};
     }
     return { tenant_id: user.tenant_id };

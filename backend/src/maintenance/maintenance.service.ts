@@ -497,6 +497,62 @@ export class MaintenanceService {
   }
 
   // ─── FIND ONE ─────────────────────────────────────────────────
+  /**
+   * Confines a ticket to the caller's organisation. assertTicketActor only
+   * governs who may act on a ticket (assignee, creator) and returns early when
+   * no user is supplied — it never checked which organisation the ticket
+   * belongs to, so reads and writes by id crossed tenants freely.
+   */
+  private assertTicketReadable(
+    user: AuthUser,
+    ticket: { tenant_id?: string | null },
+  ) {
+    if (user.role === USER_ROLE.SUPER_ADMIN) return;
+    if (!ticket.tenant_id || ticket.tenant_id !== user.tenant_id) {
+      throw new ForbiddenException('You cannot access this ticket');
+    }
+  }
+
+  /** Scoped lookup for anything reachable over HTTP. */
+  async findOneForUser(user: AuthUser, id: string) {
+    const ticket = await this.prisma.maintenanceTicket.findUnique({
+      where: { id },
+      include: this.ticketInclude,
+    });
+    if (!ticket) throw new NotFoundException(`Ticket #${id} introuvable`);
+    this.assertTicketReadable(user, ticket as { tenant_id?: string | null });
+    return this.mapTicket(ticket);
+  }
+
+  async updateForUser(
+    user: AuthUser,
+    id: string,
+    dto: UpdateMaintenanceTicketDto,
+  ) {
+    await this.findOneForUser(user, id);
+    return this.update(id, dto);
+  }
+
+  async removeForUser(user: AuthUser, id: string) {
+    await this.findOneForUser(user, id);
+    return this.remove(id);
+  }
+
+  async updateStatusForUser(user: AuthUser, id: string, status: string) {
+    await this.findOneForUser(user, id);
+    return this.updateStatus(id, status, user.id);
+  }
+
+  async assignForUser(user: AuthUser, id: string, assignedToUserId: string) {
+    await this.findOneForUser(user, id);
+    return this.assign(id, assignedToUserId);
+  }
+
+  async resolveForUser(user: AuthUser, id: string, cost?: number) {
+    await this.findOneForUser(user, id);
+    return this.resolve(id, cost, user);
+  }
+
   async findOne(id: string) {
     const ticket = await this.prisma.maintenanceTicket.findUnique({
       where: { id },

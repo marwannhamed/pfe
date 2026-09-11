@@ -102,6 +102,41 @@ describe('AccessPolicyService.assertFloorMutable', () => {
   });
 });
 
+describe('AccessPolicyService — who reads across organisations', () => {
+  const service = new AccessPolicyService(prismaWith({}) as any);
+
+  it('grants only the platform owner', () => {
+    expect(service.isCrossTenantReader(USER_ROLE.SUPER_ADMIN)).toBe(true);
+  });
+
+  it('does not grant FINANCE', () => {
+    // FINANCE sits in CLIENT_WORKSPACE in role-groups.ts — "roles that work
+    // inside a client workspace (scoped by tenant_id)" — and the seed places
+    // the finance account inside a client organisation. Listing it here let a
+    // finance user of one client read every other client's buildings, floors,
+    // spaces and bookings.
+    expect(service.isCrossTenantReader(USER_ROLE.FINANCE)).toBe(false);
+  });
+
+  it.each([
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.MAINTENANCE,
+    USER_ROLE.RECEPTIONIST,
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+  ])('does not grant %s', (role) => {
+    expect(service.isCrossTenantReader(role)).toBe(false);
+  });
+
+  it('confines a finance user’s building list to their organisation', () => {
+    const where = service.buildingWhereForList(
+      userWith(USER_ROLE.FINANCE, 'tenant-a'),
+    );
+    expect(where).toMatchObject({ tenant_id: 'tenant-a' });
+  });
+});
+
 describe('AccessPolicyService.assertSpaceMutable', () => {
   const spaceOfTenantA = {
     id: 'space-1',

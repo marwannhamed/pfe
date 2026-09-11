@@ -1,12 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
+import { USER_ROLE } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
 
 export type ExportFormat = 'xlsx' | 'csv';
 
 @Injectable()
 export class ExportService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * The organisation an export is confined to.
+   *
+   * `tenantId` arrived as an optional query filter, so omitting it exported
+   * every row on the platform — one request downloaded every organisation's
+   * bookings, invoices or payments as a spreadsheet. It is now derived from
+   * the caller: only the platform owner may export across organisations, and
+   * may narrow to one.
+   */
+  private scopeFor(
+    user: AuthUser,
+    requestedTenantId?: string,
+  ): string | undefined {
+    if (user.role === USER_ROLE.SUPER_ADMIN) return requestedTenantId;
+    if (requestedTenantId && requestedTenantId !== user.tenant_id) {
+      throw new ForbiddenException(
+        'You cannot export another organization’s data',
+      );
+    }
+    if (!user.tenant_id) {
+      throw new ForbiddenException(
+        'No organization associated with this account',
+      );
+    }
+    return user.tenant_id;
+  }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   private fmtDate(d: Date | string | null): string {
@@ -126,14 +155,16 @@ export class ExportService {
   // BOOKINGS
   // ═══════════════════════════════════════════════════════════════════════════
   async exportBookings(
+    user: AuthUser,
     format: ExportFormat,
     from?: Date,
     to?: Date,
     tenantId?: string,
   ) {
+    const scoped = this.scopeFor(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
-        ...(tenantId && { tenant_id: tenantId }),
+        ...(scoped && { tenant_id: scoped }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -185,14 +216,16 @@ export class ExportService {
   // INVOICES
   // ═══════════════════════════════════════════════════════════════════════════
   async exportInvoices(
+    user: AuthUser,
     format: ExportFormat,
     from?: Date,
     to?: Date,
     tenantId?: string,
   ) {
+    const scoped = this.scopeFor(user, tenantId);
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        ...(tenantId && { tenant_id: tenantId }),
+        ...(scoped && { tenant_id: scoped }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -249,14 +282,16 @@ export class ExportService {
   // PAYMENTS
   // ═══════════════════════════════════════════════════════════════════════════
   async exportPayments(
+    user: AuthUser,
     format: ExportFormat,
     from?: Date,
     to?: Date,
     tenantId?: string,
   ) {
+    const scoped = this.scopeFor(user, tenantId);
     const payments = await this.prisma.payment.findMany({
       where: {
-        ...(tenantId && { tenant_id: tenantId }),
+        ...(scoped && { tenant_id: scoped }),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -303,8 +338,12 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // TENANTS
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportTenants(format: ExportFormat) {
+  async exportTenants(user: AuthUser, format: ExportFormat) {
+    // Listing every organisation is a platform-owner view; a client may only
+    // export its own record.
+    const scoped = this.scopeFor(user, undefined);
     const tenants = await this.prisma.tenant.findMany({
+      ...(scoped ? { where: { id: scoped } } : {}),
       include: {
         _count: {
           select: {
@@ -355,8 +394,12 @@ export class ExportService {
   // ═══════════════════════════════════════════════════════════════════════════
   // SPACES
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportSpaces(format: ExportFormat) {
+  async exportSpaces(user: AuthUser, format: ExportFormat) {
+    const scoped = this.scopeFor(user, undefined);
     const spaces = await (this.prisma as any).space.findMany({
+      ...(scoped
+        ? { where: { floor: { building: { tenant_id: scoped } } } }
+        : {}),
       include: {
         floor: {
           select: {
@@ -422,18 +465,20 @@ export class ExportService {
   // MAINTENANCE TICKETS
   // ═══════════════════════════════════════════════════════════════════════════
   async exportMaintenance(
+    user: AuthUser,
     format: ExportFormat,
     from?: Date,
     to?: Date,
     tenantId?: string,
   ) {
+    const scoped = this.scopeFor(user, tenantId);
     const tickets = await (this.prisma as any).maintenanceTicket.findMany({
       where: {
         ...(from && to && { created_at: { gte: from, lte: to } }),
-        ...(tenantId && {
+        ...(scoped && {
           OR: [
-            { user: { tenant_id: tenantId } },
-            { createdBy: { tenant_id: tenantId } },
+            { user: { tenant_id: scoped } },
+            { createdBy: { tenant_id: scoped } },
           ],
         }),
       },

@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { USER_ROLE } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
 import { CreateReportDto } from './dto/create-report.dto';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import {
@@ -89,36 +95,75 @@ export class ReportService {
     });
   }
 
-  getDownloadPayload(id: string) {
-    return this.findOne(id).then((report) => {
-      const payload = {
-        id: report.id,
-        title: report.title,
-        type: report.type,
-        format: report.format,
-        status: report.status,
-        parameters: report.parameters,
-        payload: report.payload,
-        created_at: report.created_at,
-      };
-      return {
-        filename: `report-${report.id}.json`,
-        content: JSON.stringify(payload, null, 2),
-        mimeType: 'application/json',
-      };
-    });
+  private buildDownloadPayload(report: {
+    id: string;
+    title: string;
+    type: string;
+    format: string;
+    status: string;
+    parameters: unknown;
+    payload: unknown;
+    created_at: Date;
+  }) {
+    const payload = {
+      id: report.id,
+      title: report.title,
+      type: report.type,
+      format: report.format,
+      status: report.status,
+      parameters: report.parameters,
+      payload: report.payload,
+      created_at: report.created_at,
+    };
+    return {
+      filename: `report-${report.id}.json`,
+      content: JSON.stringify(payload, null, 2),
+      mimeType: 'application/json',
+    };
   }
 
   // ─── FIND ALL ─────────────────────────────────────────────────
-  async findAll(userId?: string, type?: string) {
+  /**
+   * A report has an owner but no organisation, so ownership is the boundary:
+   * you see the reports you generated. `userId` used to be an optional query
+   * filter, which meant omitting it listed every report on the platform.
+   */
+  private ownerScope(user: AuthUser, requestedUserId?: string) {
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
+      return requestedUserId ? { user_id: requestedUserId } : {};
+    }
+    return { user_id: user.id };
+  }
+
+  async findAllForUser(user: AuthUser, userId?: string, type?: string) {
     return this.prisma.report.findMany({
       where: {
-        ...(userId && { user_id: userId }),
+        ...this.ownerScope(user, userId),
         ...(type && { type: this.resolveReportType(type) }),
       },
       include: { user: true },
       orderBy: { created_at: 'desc' },
     });
+  }
+
+  /** Scoped lookup for anything reachable over HTTP. */
+  async findOneForUser(user: AuthUser, id: string) {
+    const report = await this.findOne(id);
+    if (user.role !== USER_ROLE.SUPER_ADMIN && report.user_id !== user.id) {
+      throw new ForbiddenException('You cannot access this report');
+    }
+    return report;
+  }
+
+  async removeForUser(user: AuthUser, id: string) {
+    await this.findOneForUser(user, id);
+    return this.remove(id);
+  }
+
+  getDownloadPayloadForUser(user: AuthUser, id: string) {
+    return this.findOneForUser(user, id).then((report) =>
+      this.buildDownloadPayload(report),
+    );
   }
 
   // ─── FIND ONE ─────────────────────────────────────────────────

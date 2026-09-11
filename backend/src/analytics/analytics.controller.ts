@@ -46,12 +46,18 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getOverview(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getOverview(dates.from, dates.to, tenantId);
+    return this.analyticsService.getOverview(
+      user,
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('revenue-trend')
@@ -59,12 +65,14 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getRevenueTrend(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
     return this.analyticsService.getRevenueTrend(
+      user,
       dates.from,
       dates.to,
       tenantId,
@@ -76,12 +84,14 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getBookingsTrend(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
     return this.analyticsService.getBookingsTrend(
+      user,
       dates.from,
       dates.to,
       tenantId,
@@ -93,12 +103,14 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getBookingsByStatus(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
     return this.analyticsService.getBookingsByStatus(
+      user,
       dates.from,
       dates.to,
       tenantId,
@@ -106,8 +118,8 @@ export class AnalyticsController {
   }
 
   @Get('space-utilization')
-  getSpaceUtilization() {
-    return this.analyticsService.getSpaceUtilization();
+  getSpaceUtilization(@CurrentUser() user: AuthUser) {
+    return this.analyticsService.getSpaceUtilization(user);
   }
 
   @Get('maintenance')
@@ -115,12 +127,14 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getMaintenanceStats(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
     return this.analyticsService.getMaintenanceStats(
+      user,
       dates.from,
       dates.to,
       tenantId,
@@ -132,20 +146,30 @@ export class AnalyticsController {
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'tenantId', required: false })
   getTopSpaces(
+    @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('tenantId') tenantId?: string,
   ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getTopSpaces(dates.from, dates.to, tenantId);
+    return this.analyticsService.getTopSpaces(
+      user,
+      dates.from,
+      dates.to,
+      tenantId,
+    );
   }
 
   @Get('revenue-by-tenant')
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
-  getRevenueByTenant(@Query('from') from?: string, @Query('to') to?: string) {
+  getRevenueByTenant(
+    @CurrentUser() user: AuthUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
     const dates = this.parseDates(from, to);
-    return this.analyticsService.getRevenueByTenant(dates.from, dates.to);
+    return this.analyticsService.getRevenueByTenant(user, dates.from, dates.to);
   }
 
   @Get('occupancy-heatmap')

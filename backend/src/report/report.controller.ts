@@ -103,8 +103,12 @@ export class ReportController {
   @ApiOperation({ summary: 'Lister tous les rapports' })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'type', required: false, example: 'OCCUPANCY_RATE' })
-  findAll(@Query('userId') userId?: string, @Query('type') type?: string) {
-    return this.reportService.findAll(userId, type);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('userId') userId?: string,
+    @Query('type') type?: string,
+  ) {
+    return this.reportService.findAllForUser(user, userId, type);
   }
 
   @Get(':id/download')
@@ -116,9 +120,13 @@ export class ReportController {
   )
   @ApiOperation({ summary: 'Download report data as JSON' })
   @ApiParam({ name: 'id' })
-  async download(@Param('id') id: string, @Res() res: Response) {
+  async download(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
     const { filename, content, mimeType } =
-      await this.reportService.getDownloadPayload(id);
+      await this.reportService.getDownloadPayloadForUser(user, id);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(content);
@@ -133,8 +141,8 @@ export class ReportController {
   )
   @ApiOperation({ summary: 'Récupérer un rapport' })
   @ApiParam({ name: 'id' })
-  findOne(@Param('id') id: string) {
-    return this.reportService.findOne(id);
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.reportService.findOneForUser(user, id);
   }
 
   @Delete(':id')
@@ -142,7 +150,7 @@ export class ReportController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.MANAGER, USER_ROLE.FINANCE)
   @ApiOperation({ summary: 'Supprimer un rapport' })
   @ApiParam({ name: 'id' })
-  remove(@Param('id') id: string) {
-    return this.reportService.remove(id);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.reportService.removeForUser(user, id);
   }
 }

@@ -118,14 +118,18 @@
       "node_modules/(?!(uuid)/)"
     ],
     "collectCoverageFrom": [
+      "analytics/analytics.service.ts",
       "auth/auth.service.ts",
       "billing/billing.service.ts",
       "booking-application/booking-application.service.ts",
       "booking/booking.service.ts",
       "common/services/access-policy.service.ts",
+      "export/export.service.ts",
       "forms/tenant-application.service.ts",
+      "maintenance/maintenance.service.ts",
       "notification/notification.service.ts",
       "promotion-code/promotion-code.service.ts",
+      "report/report.service.ts",
       "tenant/tenant.service.ts",
       "upload/upload.service.ts",
       "user/user.service.ts"

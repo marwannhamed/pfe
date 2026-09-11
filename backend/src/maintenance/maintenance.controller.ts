@@ -95,8 +95,8 @@ export class MaintenanceController {
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un ticket' })
   @ApiParam({ name: 'id' })
-  findOne(@Param('id') id: string) {
-    return this.maintenanceService.findOne(id);
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.maintenanceService.findOneForUser(user, id);
   }
 
   @Delete(':id')
@@ -105,8 +105,8 @@ export class MaintenanceController {
   @Roles(USER_ROLE.SUPER_ADMIN, USER_ROLE.CLIENT_ADMIN, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Supprimer un ticket' })
   @ApiParam({ name: 'id' })
-  remove(@Param('id') id: string) {
-    return this.maintenanceService.remove(id);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.maintenanceService.removeForUser(user, id);
   }
 
   // ─── ACTIONS (before generic :id PATCH so paths match correctly) ─
@@ -117,8 +117,12 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'Assigner un ticket à un technicien' })
   @ApiParam({ name: 'id' })
   @ApiQuery({ name: 'userId', required: true })
-  assign(@Param('id') id: string, @Query('userId') userId: string) {
-    return this.maintenanceService.assign(id, userId);
+  assign(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('userId') userId: string,
+  ) {
+    return this.maintenanceService.assignForUser(user, id, userId);
   }
 
   @Patch(':id/accept')
@@ -162,10 +166,10 @@ export class MaintenanceController {
     @Query('cost') cost: string | undefined,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.maintenanceService.resolve(
+    return this.maintenanceService.resolveForUser(
+      user,
       id,
       cost ? Number(cost) : undefined,
-      user,
     );
   }
 
@@ -204,17 +208,23 @@ export class MaintenanceController {
   @ApiQuery({ name: 'status', required: true })
   @ApiQuery({ name: 'userId', required: false })
   updateStatus(
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Query('status') status: string,
-    @Query('userId') userId?: string,
   ) {
-    return this.maintenanceService.updateStatus(id, status as any, userId);
+    // The actor comes from the token; it used to be a query parameter the
+    // caller could set to any user id.
+    return this.maintenanceService.updateStatusForUser(user, id, status);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Mettre à jour un ticket' })
   @ApiParam({ name: 'id' })
-  update(@Param('id') id: string, @Body() dto: UpdateMaintenanceTicketDto) {
-    return this.maintenanceService.update(id, dto);
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateMaintenanceTicketDto,
+  ) {
+    return this.maintenanceService.updateForUser(user, id, dto);
   }
 }
