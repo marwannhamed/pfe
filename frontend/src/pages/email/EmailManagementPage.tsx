@@ -353,6 +353,20 @@ export default function EmailManagementPage() {
             ),
             children: (
               <>
+                {/*
+                  Delivery is not recorded anywhere: MailDeliveryService sends
+                  through Brevo or SMTP and logs the outcome, but nothing is
+                  persisted, so there are no real figures to show. The numbers
+                  below are illustrative and labelled as such rather than
+                  presented as measurements.
+                */}
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  message="Sample data"
+                  description="Delivery tracking is not implemented yet — outgoing mail is sent and logged but not recorded. The figures and activity below are placeholders illustrating the intended view."
+                />
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={8}>
                     <Card>

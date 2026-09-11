@@ -7,7 +7,10 @@ import {
 } from '@nestjs/swagger';
 import { MailService } from './mail.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ResponseDto } from 'src/utils/response.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { USER_ROLE } from '../constants/enums';
+import { ResponseDto } from '../utils/response.dto';
 import {
   EmailDTO,
   BookingEmailDTO,
@@ -21,7 +24,12 @@ import {
 @Controller('mail')
 @ApiTags('mail')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+// Every route here either sends mail to a caller-supplied address or exposes
+// delivery configuration, so the whole controller is platform-owner only.
+// Without this any authenticated user — including a renter's employee — could
+// send templated mail from this domain to any recipient they chose.
+@Roles(USER_ROLE.SUPER_ADMIN)
 @ApiOkResponse({ description: 'mail response', type: ResponseDto })
 export class MailController {
   constructor(private readonly mailService: MailService) {}
@@ -62,22 +70,6 @@ export class MailController {
     return this.mailService.sendPasswordReset(dto);
   }
 
-  // Email management endpoints
-  @Get('stats')
-  @ApiResponse({
-    status: 200,
-    description: 'Email statistics retrieved successfully',
-  })
-  getStats() {
-    // Mock stats - in real implementation, this would query the database
-    return new ResponseDto('Email statistics retrieved successfully', {
-      sent: 1247,
-      delivered: 1198,
-      failed: 23,
-      pending: 26,
-    });
-  }
-
   @Get('settings')
   @ApiResponse({
     status: 200,
@@ -88,45 +80,5 @@ export class MailController {
       'Email settings retrieved successfully',
       this.mailService.getDeliveryStatus(),
     );
-  }
-
-  @Post('settings')
-  @ApiResponse({
-    status: 200,
-    description: 'Email settings updated successfully',
-  })
-  updateSettings(@Body() settings: any) {
-    // In real implementation, this would update the email configuration
-    return new ResponseDto('Email settings updated successfully', settings);
-  }
-
-  @Get('logs')
-  @ApiResponse({
-    status: 200,
-    description: 'Email logs retrieved successfully',
-  })
-  getLogs() {
-    // Mock logs - in real implementation, this would query the email logs
-    return new ResponseDto('Email logs retrieved successfully', {
-      logs: [
-        {
-          id: '1',
-          to: 'test@example.com',
-          subject: 'Booking Confirmed',
-          template: 'booking-confirmed',
-          status: 'delivered',
-          sentAt: '2026-04-17T10:30:00Z',
-        },
-        {
-          id: '2',
-          to: 'user@example.com',
-          subject: 'Invoice Created',
-          template: 'invoice-created',
-          status: 'failed',
-          sentAt: '2026-04-17T09:15:00Z',
-          error: 'SMTP connection timeout',
-        },
-      ],
-    });
   }
 }

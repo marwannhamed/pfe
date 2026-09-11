@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Cache } from '../common/decorators/cache.decorator';
+import { USER_ROLE } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
 
 export interface SearchQuery {
   query: string;
@@ -47,13 +48,14 @@ export class SearchService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cache(60000) // 1 minute cache
-  async search(searchQuery: SearchQuery): Promise<{
+  async search(
+    user: AuthUser,
+    searchQuery: SearchQuery,
+  ): Promise<{
     results: SearchResult[];
     total: number;
     page: number;
     limit: number;
-    facets: any;
   }> {
     const {
       query,
@@ -67,8 +69,10 @@ export class SearchService {
       const results: SearchResult[] = [];
       let total = 0;
 
-      // Build search conditions
+      // Build search conditions. The tenant comes from the token, so a
+      // request cannot widen its own scope.
       const searchConditions = this.buildSearchConditions(query, filters);
+      searchConditions.tenantId = this.tenantScopeFor(user, filters);
 
       // Search different entity types based on type filter
       if (type === 'all' || type === 'bookings') {
@@ -134,9 +138,6 @@ export class SearchService {
       // Apply pagination to combined results
       const paginatedResults = this.applyPagination(sortedResults, pagination);
 
-      // Generate facets
-      const facets = await this.generateFacets(searchConditions);
-
       this.logger.log(`Search completed: "${query}" - ${total} results found`);
 
       return {
@@ -144,7 +145,6 @@ export class SearchService {
         total,
         page: pagination.page,
         limit: pagination.limit,
-        facets,
       };
     } catch (error) {
       this.logger.error('Search failed:', error);
@@ -193,12 +193,18 @@ export class SearchService {
       conditions.siteId = filters.siteId;
     }
 
-    // Tenant filter
-    if (filters.tenantId) {
-      conditions.tenantId = filters.tenantId;
-    }
-
     return conditions;
+  }
+
+  /**
+   * The tenant every query is confined to. Taken from the caller's token, not
+   * from the request body — a client-supplied tenantId would let anyone read
+   * another organisation's bookings, spaces and company records. SUPER_ADMIN
+   * is the only role that may search across tenants, and may narrow to one.
+   */
+  private tenantScopeFor(user: AuthUser, filters: any): string | undefined {
+    if (user.role === USER_ROLE.SUPER_ADMIN) return filters?.tenantId;
+    return user.tenant_id;
   }
 
   private async searchBookings(conditions: any, sort: any, pagination: any) {
@@ -215,7 +221,9 @@ export class SearchService {
     }
 
     if (conditions.dateRange) {
-      where.start_datetime = {
+      // The column is start_time; start_datetime is the frontend's name for it
+      // and made any date-filtered search fail at the database.
+      where.start_time = {
         gte: conditions.dateRange.start,
         lte: conditions.dateRange.end,
       };
@@ -280,8 +288,14 @@ export class SearchService {
       };
     }
 
-    if (conditions.buildingId) {
-      where.floor = { building_id: conditions.buildingId };
+    // A space belongs to a tenant through floor → building.
+    if (conditions.buildingId || conditions.tenantId) {
+      where.floor = {
+        ...(conditions.buildingId && { building_id: conditions.buildingId }),
+        ...(conditions.tenantId && {
+          building: { tenant_id: conditions.tenantId },
+        }),
+      };
     }
 
     const [spaces, total] = await Promise.all([
@@ -319,6 +333,13 @@ export class SearchService {
 
     if (conditions.status) {
       where.status = { in: conditions.status };
+    }
+
+    // Organisations are only searchable within your own scope: without this a
+    // client could enumerate every other company on the platform by name and
+    // contact email.
+    if (conditions.tenantId) {
+      where.id = conditions.tenantId;
     }
 
     const [tenants, total] = await Promise.all([
@@ -462,7 +483,10 @@ export class SearchService {
         hourly_rate: { hourly_rate: sort.order },
       },
       tenants: {
-        relevance: { company_name: sort.order },
+        // Tenant has `name`; company_name belongs to the application models,
+        // and sorting by it made every organisation search fail with a Prisma
+        // validation error.
+        relevance: { name: sort.order },
         created_at: { created_at: sort.order },
       },
       contracts: {
@@ -560,61 +584,25 @@ export class SearchService {
     return results.slice(start, end);
   }
 
-  private async generateFacets(conditions: any): Promise<any> {
-    const facets: any = {};
-
-    // Generate status facets
-    facets.status = await this.generateStatusFacets(conditions);
-
-    // Generate type facets
-    facets.type = await this.generateTypeFacets(conditions);
-
-    // Generate priority facets for maintenance
-    facets.priority = await this.generatePriorityFacets(conditions);
-
-    return facets;
-  }
-
-  private async generateStatusFacets(conditions: any): Promise<any[]> {
-    // Implementation for status facets
-    return [
-      { value: 'ACTIVE', count: 100 },
-      { value: 'INACTIVE', count: 20 },
-      { value: 'PENDING', count: 15 },
-    ];
-  }
-
-  private async generateTypeFacets(conditions: any): Promise<any[]> {
-    // Implementation for type facets
-    return [
-      { value: 'MEETING_ROOM', count: 50 },
-      { value: 'OFFICE', count: 30 },
-      { value: 'DESK', count: 45 },
-    ];
-  }
-
-  private async generatePriorityFacets(conditions: any): Promise<any[]> {
-    // Implementation for priority facets
-    return [
-      { value: 'LOW', count: 25 },
-      { value: 'MEDIUM', count: 40 },
-      { value: 'HIGH', count: 15 },
-      { value: 'CRITICAL', count: 5 },
-    ];
-  }
-
   // Additional methods for search controller
-  async getSuggestions(query: string, type?: string): Promise<string[]> {
-    // Simple implementation for search suggestions
+  async getSuggestions(
+    user: AuthUser,
+    query: string,
+    type?: string,
+  ): Promise<string[]> {
     const suggestions: string[] = [];
 
     if (query.length < 2) return suggestions;
 
-    // Get suggestions from different entity types
+    // Same tenant confinement as search(): suggestions would otherwise leak
+    // the names of other organisations and their spaces.
+    const tenantId = this.tenantScopeFor(user, undefined);
+
     const [spaces, tenants] = await Promise.all([
       (this.prisma as any).space.findMany({
         where: {
-          OR: [{ name: { contains: query, mode: 'insensitive' } }],
+          name: { contains: query, mode: 'insensitive' },
+          ...(tenantId && { floor: { building: { tenant_id: tenantId } } }),
         },
         select: { name: true },
         take: 5,
@@ -625,6 +613,7 @@ export class SearchService {
             { name: { contains: query, mode: 'insensitive' } },
             { contact_email: { contains: query, mode: 'insensitive' } },
           ],
+          ...(tenantId && { id: tenantId }),
         },
         select: { name: true },
         take: 5,
@@ -635,53 +624,5 @@ export class SearchService {
     tenants.forEach((tenant) => suggestions.push(tenant.name));
 
     return [...new Set(suggestions)].slice(0, 10);
-  }
-
-  async getRecentSearches(limit: number = 10): Promise<any[]> {
-    // Implementation for recent searches - would need search history table
-    return [];
-  }
-
-  async getPopularSearches(limit: number = 10): Promise<any[]> {
-    // Implementation for popular searches - would need search analytics
-    return [
-      { query: 'meeting room', count: 45 },
-      { query: 'office space', count: 32 },
-      { query: 'conference room', count: 28 },
-    ];
-  }
-
-  async getFacets(type?: string): Promise<any> {
-    return {
-      status: [
-        { value: 'ACTIVE', count: 100 },
-        { value: 'INACTIVE', count: 20 },
-      ],
-      type: [
-        { value: 'MEETING_ROOM', count: 50 },
-        { value: 'OFFICE', count: 30 },
-        { value: 'DESK', count: 45 },
-      ],
-      priority: [
-        { value: 'LOW', count: 25 },
-        { value: 'MEDIUM', count: 40 },
-        { value: 'HIGH', count: 15 },
-        { value: 'CRITICAL', count: 5 },
-      ],
-    };
-  }
-
-  async saveSearch(name: string, query: SearchQuery): Promise<any> {
-    // Implementation for saving searches - would need saved_searches table
-    return { id: Date.now().toString(), name, query };
-  }
-
-  async getSavedSearches(): Promise<any[]> {
-    // Implementation for getting saved searches
-    return [];
-  }
-
-  async deleteSavedSearch(id: string): Promise<void> {
-    // Implementation for deleting saved searches
   }
 }

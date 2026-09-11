@@ -5,7 +5,9 @@ import {
   NOTIFICATION_CHANNEL,
   NOTIFICATION_PRIORITY,
   NOTIFICATION_TYPE,
+  USER_ROLE,
 } from '../constants/enums';
+import type { AuthUser } from '../auth/types/auth-user';
 
 @Injectable()
 export class NotificationService {
@@ -106,8 +108,26 @@ export class NotificationService {
     return merged;
   }
 
+  /**
+   * Notifications are personal: you read and manage your own. SUPER_ADMIN is
+   * the only role that reaches across users, and may narrow to one with an
+   * explicit id. Everyone else is pinned to their own regardless of what the
+   * request asks for.
+   */
+  private scopeFor(user: AuthUser, requestedUserId?: string) {
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
+      return requestedUserId ? { user_id: requestedUserId } : {};
+    }
+    return { user_id: user.id };
+  }
+
   // ─── FIND ALL ─────────────────────────────────────────────────
-  async findAll(userId?: string, isRead?: string, type?: string) {
+  async findAll(
+    user: AuthUser,
+    userId?: string,
+    isRead?: string,
+    type?: string,
+  ) {
     const readFilter =
       isRead === undefined
         ? undefined
@@ -117,7 +137,7 @@ export class NotificationService {
 
     return this.prisma.notification.findMany({
       where: {
-        ...(userId && { user_id: userId }),
+        ...this.scopeFor(user, userId),
         ...(readFilter && readFilter),
         ...(type && { type }),
       },
@@ -127,46 +147,50 @@ export class NotificationService {
   }
 
   // ─── FIND ONE ─────────────────────────────────────────────────
-  async findOne(id: string) {
-    const notif = await (this.prisma as any).notification.findUnique({
-      where: { id },
-      include: { user: true } as any,
+  async findOne(user: AuthUser, id: string) {
+    // Scoped lookup: someone else's notification reads as "not found" rather
+    // than confirming the id exists.
+    const notif = await this.prisma.notification.findFirst({
+      where: { id, ...this.scopeFor(user) },
+      include: { user: true },
     });
     if (!notif) throw new NotFoundException(`Notification #${id} introuvable`);
     return notif;
   }
 
   // ─── MARK AS READ ─────────────────────────────────────────────
-  async markAsRead(id: string) {
-    await this.findOne(id);
-    const now = new Date();
+  async markAsRead(user: AuthUser, id: string) {
+    const notif = await this.findOne(user, id);
     return this.prisma.notification.update({
-      where: { id },
-      data: { is_read: true, read_at: now },
+      where: { id: notif.id },
+      data: { is_read: true, read_at: new Date() },
     });
   }
 
   // ─── MARK ALL AS READ ─────────────────────────────────────────
-  async markAllAsRead(userId: string) {
-    const now = new Date();
+  async markAllAsRead(user: AuthUser, userId?: string) {
     return this.prisma.notification.updateMany({
-      where: { user_id: userId, is_read: false },
-      data: { is_read: true, read_at: now },
+      where: { ...this.scopeFor(user, userId), is_read: false },
+      data: { is_read: true, read_at: new Date() },
     });
   }
 
   // ─── DELETE ──────────────────────────────────────────────────
-  async remove(id: string) {
-    await this.findOne(id);
-    return (this.prisma as any).notification.delete({ where: { id } });
+  async remove(user: AuthUser, id: string) {
+    const notif = await this.findOne(user, id);
+    return this.prisma.notification.delete({ where: { id: notif.id } });
   }
 
   // ─── GET UNREAD COUNT ─────────────────────────────────────────
-  async getUnreadCount(userId: string) {
+  async getUnreadCount(user: AuthUser, userId?: string) {
+    const scope = this.scopeFor(user, userId);
     const count = await this.prisma.notification.count({
-      where: { user_id: userId, is_read: false },
+      where: { ...scope, is_read: false },
     });
-    return { user_id: userId, unread_count: count };
+    return {
+      user_id: (scope as { user_id?: string }).user_id ?? null,
+      unread_count: count,
+    };
   }
 
   // ─── SEND SYSTEM NOTIFICATION ─────────────────────────────────
