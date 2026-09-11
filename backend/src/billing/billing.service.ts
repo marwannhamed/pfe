@@ -271,8 +271,8 @@ export class BillingService {
     return invoice;
   }
 
-  async updateInvoice(id: string, dto: UpdateInvoiceDto) {
-    await this.findOneInvoice(id);
+  async updateInvoice(user: AuthUser, id: string, dto: UpdateInvoiceDto) {
+    await this.findOneInvoiceForUser(user, id);
     return this.prisma.invoice.update({
       where: { id },
       data: {
@@ -283,13 +283,13 @@ export class BillingService {
     });
   }
 
-  async removeInvoice(id: string) {
-    await this.findOneInvoice(id);
+  async removeInvoice(user: AuthUser, id: string) {
+    await this.findOneInvoiceForUser(user, id);
     return this.prisma.invoice.delete({ where: { id } });
   }
 
-  async sendInvoice(id: string) {
-    const invoice = await this.findOneInvoice(id);
+  async sendInvoice(user: AuthUser, id: string) {
+    const invoice = await this.findOneInvoiceForUser(user, id);
     if (
       invoice.status !== INVOICE_STATUS.ISSUED &&
       invoice.status !== INVOICE_STATUS.DRAFT
@@ -335,8 +335,8 @@ export class BillingService {
     return updated;
   }
 
-  async cancelInvoice(id: string) {
-    const invoice = await this.findOneInvoice(id);
+  async cancelInvoice(user: AuthUser, id: string) {
+    const invoice = await this.findOneInvoiceForUser(user, id);
     const status = invoice.status;
     if (status === INVOICE_STATUS.PAID || status === INVOICE_STATUS.CANCELLED) {
       throw new BadRequestException(
@@ -486,8 +486,12 @@ export class BillingService {
   // INVOICE LINES
   // ════════════════════════════════════════════════════════════
 
-  async addInvoiceLine(invoiceId: string, dto: CreateInvoiceLineDto) {
-    await this.findOneInvoice(invoiceId);
+  async addInvoiceLine(
+    user: AuthUser,
+    invoiceId: string,
+    dto: CreateInvoiceLineDto,
+  ) {
+    await this.findOneInvoiceForUser(user, invoiceId);
 
     const line_total = dto.quantity * dto.unit_price;
     const tax = line_total * ((dto.tax_rate ?? 0) / 100);
@@ -519,8 +523,8 @@ export class BillingService {
     return line;
   }
 
-  async removeInvoiceLine(invoiceId: string, lineId: string) {
-    await this.findOneInvoice(invoiceId);
+  async removeInvoiceLine(user: AuthUser, invoiceId: string, lineId: string) {
+    await this.findOneInvoiceForUser(user, invoiceId);
     return this.prisma.invoiceLine.delete({ where: { id: lineId } });
   }
 
@@ -539,8 +543,21 @@ export class BillingService {
     return this.isClientBilling(user);
   }
 
+  /**
+   * Client-side roles that see their own organisation's portfolio.
+   *
+   * FINANCE was missing here, and it is the role whose whole job is invoices
+   * and payments. It matched neither this nor isTenantUser, so it fell through
+   * every scoping branch: the invoice list came back unfiltered across all
+   * organisations, assertInvoiceReadable did nothing, and the financial
+   * summary and overdue queries were platform-wide.
+   */
   private isClientOps(role?: string) {
-    return role === USER_ROLE.CLIENT_ADMIN || role === USER_ROLE.MANAGER;
+    return (
+      role === USER_ROLE.CLIENT_ADMIN ||
+      role === USER_ROLE.MANAGER ||
+      role === USER_ROLE.FINANCE
+    );
   }
 
   private portfolioInvoiceWhere(clientTenantId: string) {
@@ -853,8 +870,8 @@ export class BillingService {
     });
   }
 
-  async refundPayment(id: string) {
-    const payment = await this.findOnePayment(id);
+  async refundPayment(user: AuthUser, id: string) {
+    const payment = await this.findOnePaymentForUser(user, id);
     const status = payment.status;
     if (status !== PAYMENT_STATUS.COMPLETED) {
       throw new BadRequestException(

@@ -119,6 +119,8 @@
     ],
     "collectCoverageFrom": [
       "auth/auth.service.ts",
+      "billing/billing.service.ts",
+      "booking/booking.service.ts",
       "booking-application/booking-application.service.ts",
       "common/services/access-policy.service.ts",
       "forms/tenant-application.service.ts",

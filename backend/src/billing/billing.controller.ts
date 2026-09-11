@@ -133,8 +133,12 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Mettre à jour une facture' })
   @ApiParam({ name: 'id' })
-  updateInvoice(@Param('id') id: string, @Body() dto: UpdateInvoiceDto) {
-    return this.billingService.updateInvoice(id, dto);
+  updateInvoice(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateInvoiceDto,
+  ) {
+    return this.billingService.updateInvoice(user, id, dto);
   }
 
   @Patch('invoices/:id/send')
@@ -142,8 +146,8 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Envoyer une facture (→ SENT)' })
   @ApiParam({ name: 'id' })
-  sendInvoice(@Param('id') id: string) {
-    return this.billingService.sendInvoice(id);
+  sendInvoice(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.sendInvoice(user, id);
   }
 
   @Patch('invoices/:id/cancel')
@@ -151,8 +155,8 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Annuler une facture (→ CANCELLED)' })
   @ApiParam({ name: 'id' })
-  cancelInvoice(@Param('id') id: string) {
-    return this.billingService.cancelInvoice(id);
+  cancelInvoice(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.cancelInvoice(user, id);
   }
 
   @Delete('invoices/:id')
@@ -161,8 +165,8 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE)
   @ApiOperation({ summary: 'Supprimer une facture' })
   @ApiParam({ name: 'id' })
-  removeInvoice(@Param('id') id: string) {
-    return this.billingService.removeInvoice(id);
+  removeInvoice(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.removeInvoice(user, id);
   }
 
   // ─── INVOICE LINES ────────────────────────────────────────────
@@ -172,8 +176,12 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Ajouter une ligne à la facture' })
   @ApiParam({ name: 'id' })
-  addInvoiceLine(@Param('id') id: string, @Body() dto: CreateInvoiceLineDto) {
-    return this.billingService.addInvoiceLine(id, dto);
+  addInvoiceLine(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateInvoiceLineDto,
+  ) {
+    return this.billingService.addInvoiceLine(user, id, dto);
   }
 
   @Delete('invoices/:id/lines/:lineId')
@@ -183,8 +191,12 @@ export class BillingController {
   @ApiOperation({ summary: 'Supprimer une ligne de facture' })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'lineId' })
-  removeInvoiceLine(@Param('id') id: string, @Param('lineId') lineId: string) {
-    return this.billingService.removeInvoiceLine(id, lineId);
+  removeInvoiceLine(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('lineId') lineId: string,
+  ) {
+    return this.billingService.removeInvoiceLine(user, id, lineId);
   }
 
   // ════════════════════════════════════════════════════════════
@@ -260,7 +272,7 @@ export class BillingController {
   @Roles(USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.MANAGER)
   @ApiOperation({ summary: 'Rembourser un paiement (→ REFUNDED)' })
   @ApiParam({ name: 'id' })
-  refundPayment(@Param('id') id: string) {
-    return this.billingService.refundPayment(id);
+  refundPayment(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.billingService.refundPayment(user, id);
   }
 }
