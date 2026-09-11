@@ -1,0 +1,5 @@
+# Bulk reformatting commits — skipped by `git blame`.
+# Enable once per clone:  git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: apply Prettier to the backend
+dd07d418d4ed2bb8be1ca89fff6415357ade5284
