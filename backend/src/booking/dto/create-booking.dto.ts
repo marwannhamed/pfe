@@ -57,11 +57,6 @@ export class CreateBookingDto {
   @IsOptional()
   status?: string;
 
-  @ApiPropertyOptional({ example: 'uuid-du-price-plan' })
-  @IsUUID()
-  @IsOptional()
-  price_plan_id?: string;
-
   @ApiPropertyOptional({ example: 'uuid-du-code-promo' })
   @IsUUID()
   @IsOptional()

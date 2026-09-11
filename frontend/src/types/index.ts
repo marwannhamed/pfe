@@ -208,7 +208,6 @@ export interface Booking {
   start_datetime:       string;
   end_datetime:         string;
   status:               BookingStatus;
-  price_plan_id?:       string;
   promotion_code_id?:   string;
   total_price:          string;
   currency:             string;
@@ -225,7 +224,6 @@ export interface Booking {
   space?:               Space;
   createdBy?:           User;
   approvedBy?:          User;
-  pricePlan?:           PricePlan;
   promotionCode?:       PromotionCode;
   parentBooking?:       Booking;
   childBookings?:       Booking[];
@@ -349,21 +347,6 @@ export interface AuditLog {
   user?:         User;
 }
 
-export interface PricePlan {
-  id:            string;
-  site_id:       string;
-  name:          string;
-  space_type:    SpaceType;
-  billing_cycle: BillingCycle;
-  price:         string;
-  currency:      string;
-  tax_rate:      string;
-  is_active:     boolean;
-  valid_from:    string;
-  valid_to?:     string;
-  created_at:    string;
-}
-
 // ─── Auth DTOs ────────────────────────────────────────────────────────────────
 
 export interface LoginDto {
@@ -423,7 +406,6 @@ export interface CreateBookingDto {
   total_price:        number;
   currency?:          string;
   attendee_count?:    number;
-  price_plan_id?:     string;
   status?:            BookingStatus;
 }
 

@@ -23,7 +23,6 @@ import { BuildingModule } from './building/building.module';
 import { FloorModule } from './floor/floor.module';
 import { SpaceModule } from './space/space.module';
 import { SpaceFeatureModule } from './space-feature/space-feature.module';
-import { PricePlanModule } from './price-plan/price-plan.module';
 import { AddonServiceModule } from './addon-service/addon-service.module';
 import { PromotionCodeModule } from './promotion-code/promotion-code.module';
 import { BookingModule } from './booking/booking.module';
@@ -122,7 +121,6 @@ import { resolveMailTemplateDir } from './mail/mail-template.util';
     FloorModule,
     SpaceModule,
     SpaceFeatureModule,
-    PricePlanModule,
     AddonServiceModule,
     PromotionCodeModule,
     BookingModule,
