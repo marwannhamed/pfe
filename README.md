@@ -1,198 +1,276 @@
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://www.linkedin.com/in/hassenamri005/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-yellow)](https://github.com/your-profile/your-repo/releases)
-
 <div align="center">
-  <h1> Nest JS React TS Boilerplate 🚀</h1>
-  <p>A full-stack boilerplate integrating <b>Nest JS</b> and <b>React TS</b> with <b>Authentication</b>, <br/><b>Docker</b>, and <b>Docker Compose</b> for seamless development and production environments.</p>
-  <img src="https://github.com/user-attachments/assets/2eb031ff-fdb7-42e2-90c6-74d893ed3943" alt="9ZR6vmf"/>
+
+# LeaseManager
+
+**A multi-tenant SaaS platform for managing office space — from the first enquiry to the signed lease, the monthly invoice and the maintenance ticket.**
+
+[![CI](https://github.com/marwannhamed/pfe/actions/workflows/ci.yml/badge.svg)](https://github.com/marwannhamed/pfe/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+
 </div>
 
 ---
 
+## What this is
+
+Office landlords and coworking operators juggle buildings, floors, desks and meeting rooms across
+several client companies, each with their own staff, bookings, contracts and invoices. LeaseManager
+is the system that holds all of it: one platform, many client organisations, strictly separated.
+
+The interesting part is the **three-level tenancy model**. Most SaaS products have one notion of
+"tenant". This one has two, stacked:
+
+```
+Level 1 — Platform owner  (SUPER_ADMIN)
+          the company that operates LeaseManager itself
+                    │
+                    ▼
+Level 2 — Client organisation  (CLIENT)
+          a property manager: owns buildings, floors, spaces, price lists
+                    │  rents space to
+                    ▼
+Level 3 — Renter organisation  (RENTER)
+          a company leasing desks or offices, with its own employees
+```
+
+A `Tenant` row is either a **CLIENT** (a property manager) or a **RENTER** (a company renting from
+one), distinguished by `organization_type`. Every user belongs to a tenant, and every query that
+touches tenant-owned data is scoped by it — centralised in
+[`AccessPolicyService`](backend/src/common/services/access-policy.service.ts) rather than
+re-implemented per module.
+
 ## Features
 
-### Frontend (React TS)
+| Area | What it does |
+|---|---|
+| **Property** | Buildings → floors → spaces, with per-space features, photos, virtual tours and map coordinates |
+| **Booking** | Availability checks, booking applications with approval workflow, a reception desk view, calendar and floor-map booking |
+| **Leasing** | Lease contracts generated from approved bookings, with line items and expiry tracking |
+| **Billing** | Invoices, line items, payments, cheque documents, and tenant-scoped promotion codes |
+| **Maintenance** | Tickets with category, priority, assignment and status workflow |
+| **Analytics** | Occupancy heatmaps, revenue and utilisation reporting, optional Power BI / Tableau embeds |
+| **Notifications** | In-app, email and WebSocket delivery with per-user channel and category preferences |
+| **Audit** | Every sensitive action recorded with actor, IP, user agent and severity |
+| **Public site** | Marketing pages, a searchable space map and a guest booking flow that needs no account |
 
-- **React TS v18**: Modern React with TypeScript for type-safe development.
-- **Routing Handling**: Efficient routing with role-based authentication.
-  - **Role-Based Auth Routing**: Separate routes for **User** and **Admin** roles.
-- **Persistent Redux Store**: State management with Redux for a consistent user experience.
-- **Ant Design (Antd)**: UI library with a custom theme for a polished look.
-- **Prebuilt Pages**:
-  - Landing Page
-  - Login Page
-  - Admin Dashboard
-  - User Dashboard
-- **Docker Integration**:
-  - `Dockerfile.dev`: For a fast and easy development environment.
-  - `Dockerfile.prod`: For an optimized production environment.
-- **Docker Compose**:
-  - `docker-compose.yaml`: Simplifies setup for both development and production environments. Choose between `dev` or `prod` profiles.
+### Roles
 
-### Backend (Nest JS)
+| Level | Role | Scope |
+|---|---|---|
+| 1 | `SUPER_ADMIN` | Platform owner — reads across all organisations |
+| 2 | `CLIENT_ADMIN` | Owns a client organisation and its users |
+| 2 | `MANAGER` | Spaces, bookings, contracts |
+| 2 | `FINANCE` | Invoicing and payments |
+| 2 | `MAINTENANCE` | Maintenance tickets |
+| 2 | `RECEPTIONIST` | Front-desk check-in, supervised by a manager |
+| 3 | `TENANT_ADMIN` | Renter company admin — books space, manages their staff |
+| 3 | `TENANT_EMPLOYEE` | Books space for themselves |
+| — | `GUEST` | Public map and guest booking applications |
 
-- **Nest.js v10**: A progressive Node.js framework for building efficient and scalable server-side applications.
-- **PostgreSQL**: A powerful, open-source relational database.
-- **Prisma**: Modern ORM for database management.
-- **JWT Authentication**: Secure authentication using access and refresh tokens.
-- **Role-Based Access Control**: Guards for roles like **SUPERADMIN**, **ADMIN**, **USER**, and **OTHER**.
-- **Swagger Integration**: Automatically generates API documentation and TypeScript client.
-- **Docker Integration**:
-  - `Dockerfile.dev`: For a fast and easy development environment.
-  - `Dockerfile.prod`: For an optimized production environment.
-- **Docker Compose**:
-  - `docker-compose.dev.yaml`: For development.
-  - `docker-compose.prod.yaml`: For production.
+Role groupings live in [`role-groups.ts`](backend/src/constants/role-groups.ts) so controllers
+declare intent (`CLIENT_BILLING`) rather than listing roles by hand.
 
----
+## Tech stack
 
-## Project Structure
+| | |
+|---|---|
+| **Backend** | NestJS 10 · Prisma 5 · PostgreSQL 13 · Passport JWT · Socket.IO · Swagger |
+| **Frontend** | React 19 · Vite 7 · TypeScript · Ant Design 6 · TanStack Query · Zustand · Recharts · React-Leaflet |
+| **Tooling** | Docker Compose · ESLint · Prettier · Jest · Vitest · GitHub Actions |
+
+## Quick start
+
+**Prerequisites:** Node.js 20+, Docker Desktop.
+
+```bash
+git clone https://github.com/marwannhamed/pfe.git
+cd pfe
+
+# 1. Install
+npm install --prefix backend
+npm install --prefix frontend
+
+# 2. Configure — the defaults work for local development
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+
+# 3. Start PostgreSQL (port 5433) and apply migrations
+npm run db:up
+
+# 4. Seed demo data
+npm run db:seed --prefix backend
+
+# 5. Run both apps
+npm run dev
+```
+
+| | |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API | http://localhost:6001 |
+| Swagger | http://localhost:6001/api |
+| Health | http://localhost:6001/health |
+| Adminer (DB UI) | http://localhost:8081 |
+
+The Vite dev server proxies API routes to the backend, so the frontend makes same-origin requests
+and you do not need CORS configured for local work.
+
+### Demo accounts
+
+All seeded users share the password `Password123!`.
+
+| Email | Role | Organisation | Level |
+|---|---|---|---|
+| `admin@leasemanager.com` | `SUPER_ADMIN` | LeaseManager Platform | 1 |
+| `client@demo.test` | `CLIENT_ADMIN` | Demo Property Client | 2 |
+| `manager@leasemanager.com` | `MANAGER` | Demo Property Client | 2 |
+| `finance@leasemanager.com` | `FINANCE` | Demo Property Client | 2 |
+| `maint@leasemanager.com` | `MAINTENANCE` | Demo Property Client | 2 |
+| `tenant.admin@acme-corp.test` | `TENANT_ADMIN` | Acme Corp | 3 |
+| `employee@acme-corp.test` | `TENANT_EMPLOYEE` | Acme Corp | 3 |
+
+Signing in as a level-2 role and then a level-3 role is the quickest way to see the tenancy
+boundary in action — the same pages expose different data and different actions.
+
+## Project structure
 
 ```
-nest-react-boilerplate/
-├── frontend/              # React TS Frontend
-│   ├── src/
-│   ├── docker/
-│   │    ├── Dockerfile.dev
-│   │    └── Dockerfile.prod
-│   ├── docker-compose.yaml
-│   └── ...
-├── backend/               # Nest JS Backend
-│   ├── src/
-│   ├── Dockerfile.dev
-│   ├── Dockerfile.prod
-│   ├── docker-compose.dev.yaml
-│   ├── docker-compose.prod.yaml
-│   └── ...
-└── README.md
+├── backend/                 NestJS API
+│   ├── prisma/
+│   │   ├── schema.prisma    25 models
+│   │   ├── migrations/      replayable from empty — see note below
+│   │   └── seed.ts
+│   └── src/
+│       ├── auth/            JWT strategy, sessions, password reset
+│       ├── common/          guards, interceptors, filters, access policy
+│       ├── config/          typed configuration with startup validation
+│       ├── constants/       roles, enums, role groups
+│       └── <domain>/        one module per domain: building, space, booking,
+│                            billing, maintenance, analytics, …
+├── frontend/                React SPA
+│   └── src/
+│       ├── api/             axios client, interceptors, service layer
+│       ├── components/      shared UI
+│       ├── pages/           one folder per feature area
+│       ├── permissions/     client-side role gating
+│       └── store/           Zustand auth and theme state
+└── docs/                    runbook, workflow, demo script
 ```
 
----
+### Request pipeline
 
-## Getting Started
+Every API request passes through the same chain, wired in
+[`main.ts`](backend/src/main.ts):
 
-### Prerequisites
+```
+Helmet → compression → CORS → rate limit → JwtAuthGuard → RolesGuard
+       → ValidationPipe (whitelist + forbidNonWhitelisted)
+       → controller → service → Prisma
+       → ResponseInterceptor → HttpExceptionFilter
+```
 
-- Docker and Docker Compose installed.
-- Node.js and npm/yarn installed (for local development).
+Responses are wrapped in a `{ success, data }` envelope, which the frontend axios client unwraps
+transparently.
 
-### Installation
+## Scripts
 
-1. Clone the repository:
+Run from the repository root:
 
-   ```bash
-   https://github.com/Hassenamri005/nest-react-boilerplate
+| Command | Does |
+|---|---|
+| `npm run dev` | Backend and frontend together, colour-tagged |
+| `npm run dev:api` | Backend only |
+| `npm run dev:web` | Frontend only |
+| `npm run db:up` | Start PostgreSQL and apply migrations |
 
-   cd nest-react-boilerplate
-   ```
+From `backend/`:
 
-2. Start all:
+| Command | Does |
+|---|---|
+| `npm run db:seed` | Seed demo organisations, users and spaces |
+| `npm run db:migrate` | Create a migration from schema changes |
+| `npm run db:migrate:deploy` | Apply pending migrations (CI / production) |
+| `npm run db:studio` | Prisma Studio |
+| `npm run db:down` | Stop the database container |
+| `npm run test:cov` | Jest with coverage |
+| `npm run lint` | ESLint — **note: runs with `--fix`, so it rewrites files** |
 
-   - [**Gitpod**](https://www.gitpod.io/) :
+From `frontend/`:
 
-     ```bash
-     ./start_all_in_gitpod.sh
-     ```
+| Command | Does |
+|---|---|
+| `npm run build` | Type-check (`tsc -b`) then bundle |
+| `npm run test:coverage` | Vitest with coverage |
+| `npm run lint` | ESLint |
 
-   - [**Github Codespace**](https://github.com/features/codespaces) :
+## Configuration
 
-     ```bash
-     ./start_all_in_git_workspace.sh
-     ```
+`backend/.env.example` documents every variable. The defaults run the app locally without any
+external account. Required in production: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`,
+`SESSION_SECRET` — the app refuses to boot if a secret is left at its placeholder value.
 
-3. Or manual local setup:
+Optional integrations stay dormant until their keys are present:
 
-   **a. Backend**
+| Integration | Variables | Falls back to |
+|---|---|---|
+| Email | `MAIL_HOST`, `MAIL_USER`, `MAIL_PASSWORD` | Logging the message to the console |
+| Brevo | `BREVO_API_KEY` | Skipping contact sync |
+| Crisp chat | `CRISP_WEBHOOK_SECRET` | Disabled |
+| Typeform | `TYPEFORM_FORM_ID`, `TYPEFORM_WEBHOOK_SECRET` | Disabled |
+| AI assistant | `OPENAI_API_KEY`, `OPENAI_MODEL` | Disabled |
+| Marketplaces | `LIQUIDSPACE_API_TOKEN`, `COWORKER_API_TOKEN` | Disabled |
+| Media uploads | `CLOUDINARY_*` | Local disk under `UPLOAD_DIR` |
 
-   ```bash
-   cd backend
-   cp .env.example .env
-   npm install
-   docker-compose up --build -d
-   npx prisma generate
-   npx prisma migrate deploy
-   npm run start:dev
-   ```
+All three webhook endpoints verify an HMAC signature with `timingSafeEqual` before doing any work.
 
-   **b. Frontend**
+## Testing and CI
 
-   ```bash
-   cd ../frontend
-   cp .env.example .env
-   npm install
-   npm run dev
-   ```
+[GitHub Actions](.github/workflows/ci.yml) runs on every push and pull request: lint, type check,
+tests with coverage, and a production build for both projects, plus a dependency audit.
 
-   Frontend API URL env key:
+```bash
+npm run test:cov        --prefix backend     # Jest
+npm run test:coverage   --prefix frontend    # Vitest
+```
 
-   ```bash
-   VITE_API_URL=http://localhost:6001
-   ```
+Two notes on the current state, so the numbers are not mistaken for more than they are:
 
-## Frontend Routes
+- **Coverage is scoped, not global.** It is measured over the modules that have meaningful tests —
+  `auth.service` and `promotion-code.service` on the backend, the API client on the frontend —
+  rather than reported across untested code.
+- **Lint rules are staged.** `no-explicit-any` and `no-unused-vars` have several hundred
+  pre-existing violations and currently report as warnings, so genuine correctness rules are the
+  ones that fail a build. The config notes say to burn them down and promote them back to errors.
 
-- `/`: Landing page.
-- `/login`: Login page for authentication.
-- `/user/dashboard`: Dashboard for authenticated users with the `user` role.
-- `/admin/dashboard`: Dashboard for authenticated admins with the `admin` role.
-- `*`: Fallback route for unhandled or incorrect paths.
+### A note on migrations
 
-### How to Create a New Route (Frontend)
+The migration chain replays cleanly onto an empty database, and `prisma migrate diff` against
+`schema.prisma` afterwards reports no difference. If you are bringing an **existing** database that
+was built with `prisma db push` under migration control, baseline it rather than migrating it:
 
-1. **Create Your Page**:
+```bash
+npx prisma migrate resolve --applied <migration_name>   # for each existing migration
+```
 
-   - Add your new page component in the `src/pages` directory.
+## Documentation
 
-2. **Update Routing**:
+| Document | Contents |
+|---|---|
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Lease lifecycle and status transitions |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Production operations |
+| [docs/MANUAL_STEPS.md](docs/MANUAL_STEPS.md) | Local setup steps done by hand |
+| [docs/PFE_DEMO_SCRIPT.md](docs/PFE_DEMO_SCRIPT.md) | Walkthrough for the demo |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Branching and commit conventions |
+| [CHANGELOG.md](CHANGELOG.md) | Notable changes |
 
-   - Open `App.tsx`.
-   - Add your new route to either:
-     - **Public Routes**: Accessible to all users.
-     - **Private Routes**: Protected by role-based authentication.
+## About
 
-3. **Role Guard**:
-   - Ensure the route is protected by the appropriate role guard logic.
-
----
-
-## Backend Features
-
-### Swagger-TS Integration
-
-- Used Library: [swagger-typescript-api](https://www.npmjs.com/package/swagger-typescript-api)
-- Generates a TypeScript API client from the OpenAPI specification.
-- Run the following command to generate the API client:
-  ```bash
-  npm run swagger:ts
-  ```
-- Copy the generated `src/api/myApi.ts` file to your frontend folder.
-
-### Database Migrations
-
-- Create a new migration:
-  ```bash
-  npx prisma migrate dev --name "init"
-  ```
-- Deploy migrations to the database:
-  ```bash
-  npx prisma migrate deploy
-  ```
-- Seed dummy data to the database:
-  ```bash
-  npx prisma db seed
-  ```
-
----
+Final-year engineering project (*Projet de Fin d'Études*) by
+[**@marwannhamed**](https://github.com/marwannhamed).
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Additional Documentation
-
-- Contribution guide: `CONTRIBUTING.md`
-- Changelog policy: `CHANGELOG.md`
-- Operations runbook: `docs/RUNBOOK.md`
+[MIT](LICENSE)
