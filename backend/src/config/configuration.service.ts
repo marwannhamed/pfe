@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
+import type { SignOptions } from 'jsonwebtoken';
+
+/** What jsonwebtoken accepts for `expiresIn`: seconds, or "15m" / "7d" style. */
+type JwtExpiry = NonNullable<SignOptions['expiresIn']>;
+
 @Injectable()
 export class ConfigurationService {
   // Server Configuration
@@ -49,12 +54,29 @@ export class ConfigurationService {
     return secret;
   }
 
-  get jwtExpirationTime(): string {
-    return process.env.JWT_EXP_IN || '1h';
+  /**
+   * jsonwebtoken types `expiresIn` as a template-literal union ("1h", "7d", …)
+   * or a number of seconds. An environment variable is an ordinary string, so
+   * it cannot satisfy that type statically. Validate the shape here and assert
+   * once, rather than casting at each call site — a malformed value now fails
+   * at startup instead of silently producing a token with the wrong lifetime.
+   */
+  private jwtExpiry(raw: string | undefined, fallback: JwtExpiry): JwtExpiry {
+    const value = raw?.trim();
+    if (!value) return fallback;
+    if (/^\d+$/.test(value)) return Number(value);
+    if (/^\d+\s*(ms|s|m|h|d|w|y)$/i.test(value)) return value as JwtExpiry;
+    throw new Error(
+      `Invalid JWT expiry "${value}". Use seconds (3600) or a duration such as 15m, 1h, 7d.`,
+    );
   }
 
-  get jwtRefreshExpirationTime(): string {
-    return process.env.JWT_REFRESH_EXP_IN || '7d';
+  get jwtExpirationTime(): JwtExpiry {
+    return this.jwtExpiry(process.env.JWT_EXP_IN, '1h');
+  }
+
+  get jwtRefreshExpirationTime(): JwtExpiry {
+    return this.jwtExpiry(process.env.JWT_REFRESH_EXP_IN, '7d');
   }
 
   // Frontend Configuration

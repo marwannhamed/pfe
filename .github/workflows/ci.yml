@@ -100,11 +100,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Reports but does not block. The frontend is clean at this level; the
-      # backend still carries ~48 high advisories that can only be cleared by
-      # major upgrades (@nestjs/* 10 -> 12, nodemailer 8 -> 10), which is a
-      # migration in its own right. Drop continue-on-error once that is done
-      # so regressions fail the build again.
+      # Reports but does not block. The frontend is clean at this level. The
+      # backend is down to three high advisories after the Nest 11 upgrade,
+      # all of them in multer by way of @nestjs/platform-express, with no fix
+      # published upstream — `npm audit fix` cannot move them. Drop
+      # continue-on-error once a fixed platform-express lands, so regressions
+      # fail the build again.
       - name: Run npm audit (high/critical)
         run: npm audit --audit-level=high
         continue-on-error: true
