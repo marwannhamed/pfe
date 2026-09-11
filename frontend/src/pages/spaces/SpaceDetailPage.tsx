@@ -340,8 +340,7 @@ export default function SpaceDetailPage() {
 
   const sm                = STATUS_META[space.status as SpaceStatus] ?? STATUS_META.AVAILABLE;
   const tm                = TYPE_META[space.type as SpaceType]       ?? TYPE_META.DEDICATED_OFFICE;
-  const allFeatures       = (space.features ?? []) as SpaceFeature[];
-  const availableFeatures = allFeatures.filter(f => f.is_available);
+  const allFeatures       = space.features ?? [];
   const currSym           = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
   const canBook           = space.status === 'AVAILABLE' && isAuthenticated;
 
@@ -455,7 +454,7 @@ export default function SpaceDetailPage() {
             { label: 'Monthly Rent', value: space.price_per_month ? `${currSym}${parseFloat(space.price_per_month).toLocaleString()}` : '—', sub: 'Per month',          color: '#2563eb', bg: '#eff6ff' },
             { label: 'Area',         value: `${parseFloat(space.area_sqm).toFixed(0)} m²`,                                                    sub: 'Square meters',     color: '#059669', bg: '#f0fdf4' },
             { label: 'Capacity',     value: space.capacity,                                                                                    sub: `${space.capacity === 1 ? 'person' : 'people'} max`, color: '#d97706', bg: '#fffbeb' },
-            { label: 'Features',     value: availableFeatures.length,                                                                          sub: 'Available features', color: '#7c3aed', bg: '#f5f3ff' },
+            { label: 'Features',     value: allFeatures.length,                                                                                sub: 'Listed features', color: '#7c3aed', bg: '#f5f3ff' },
           ].map(k => (
             <div key={k.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '14px 16px' }}>
               <p style={{ margin: '0 0 4px', fontSize: 11, color: th.textSub }}>{k.label}</p>
@@ -506,17 +505,17 @@ export default function SpaceDetailPage() {
                       </div>
                       <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>
-                          Features & Amenities ({availableFeatures.length})
+                          Features & Amenities ({allFeatures.length})
                         </div>
-                        {availableFeatures.length === 0 ? (
+                        {allFeatures.length === 0 ? (
                           <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>No features listed.</p>
                         ) : (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            {availableFeatures.map((f: SpaceFeature) => (
+                            {allFeatures.map((f: SpaceFeature) => (
                               <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
                                 <CheckCircleOutlined style={{ color: '#22c55e', fontSize: 13, flexShrink: 0 }} />
-                                <span>{f.feature_name}</span>
-                                {f.quantity > 1 && <span style={{ color: '#94a3b8', fontSize: 11 }}>×{f.quantity}</span>}
+                                <span>{f.name}</span>
+                                {f.description && <span style={{ color: '#94a3b8', fontSize: 11 }}>{f.description}</span>}
                               </div>
                             ))}
                           </div>
@@ -610,7 +609,7 @@ export default function SpaceDetailPage() {
             // ── Features tab ──────────────────────────────────────
             {
               key: 'features',
-              label: <Badge count={availableFeatures.length} size="small" color="#059669">Features</Badge>,
+              label: <Badge count={allFeatures.length} size="small" color="#059669">Features</Badge>,
               children: (
                 <div style={{ paddingBottom: 24 }}>
                   {allFeatures.length === 0 ? (
@@ -619,40 +618,24 @@ export default function SpaceDetailPage() {
                       <p style={{ margin: 0, fontSize: 14 }}>No features added yet.</p>
                     </div>
                   ) : (
-                    Array.from(new Set(allFeatures.map(f => f.feature_type).filter(Boolean))).map(featureType => {
-                      const items = allFeatures.filter(f => f.feature_type === featureType);
-                      const label = String(featureType).replace(/_/g, ' ').toLowerCase();
-                      return (
-                        <div key={featureType} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px', marginBottom: 14 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12, textTransform: 'capitalize' }}>
-                            {label}
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                        {allFeatures.map((f: SpaceFeature) => (
+                          <div
+                            key={f.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}
+                          >
+                            <CheckCircleOutlined style={{ color: '#16a34a', fontSize: 13, flexShrink: 0 }} />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 500 }}>{f.name}</div>
+                              {f.description && (
+                                <div style={{ fontSize: 11, color: '#64748b' }}>{f.description}</div>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-                            {items.map((f: SpaceFeature) => (
-                              <div
-                                key={f.id}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: f.is_available ? '#f0fdf4' : '#f8fafc', borderRadius: 8, border: `1px solid ${f.is_available ? '#bbf7d0' : '#e5e7eb'}` }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  {f.is_available
-                                    ? <CheckCircleOutlined style={{ color: '#16a34a', fontSize: 13 }} />
-                                    : <ClockCircleOutlined style={{ color: '#94a3b8', fontSize: 13 }} />
-                                  }
-                                  <span style={{ fontSize: 13, color: f.is_available ? '#0f172a' : '#94a3b8', fontWeight: 500 }}>
-                                    {f.feature_name}
-                                  </span>
-                                </div>
-                                {f.quantity > 1 && (
-                                  <span style={{ fontSize: 11, background: '#e5e7eb', color: '#64748b', padding: '1px 6px', borderRadius: 10 }}>
-                                    ×{f.quantity}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               ),

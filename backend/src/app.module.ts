@@ -22,7 +22,6 @@ import { UserModule } from './user/user.module';
 import { BuildingModule } from './building/building.module';
 import { FloorModule } from './floor/floor.module';
 import { SpaceModule } from './space/space.module';
-import { SpaceFeatureModule } from './space-feature/space-feature.module';
 import { AddonServiceModule } from './addon-service/addon-service.module';
 import { PromotionCodeModule } from './promotion-code/promotion-code.module';
 import { BookingModule } from './booking/booking.module';
@@ -120,7 +119,6 @@ import { resolveMailTemplateDir } from './mail/mail-template.util';
     BuildingModule,
     FloorModule,
     SpaceModule,
-    SpaceFeatureModule,
     AddonServiceModule,
     PromotionCodeModule,
     BookingModule,

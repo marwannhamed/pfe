@@ -150,10 +150,9 @@ export interface Floor {
 export interface SpaceFeature {
   id:           string;
   space_id:     string;
-  feature_type: string;
-  feature_name: string;
-  quantity:     number;
-  is_available: boolean;
+  name:         string;
+  description?: string | null;
+  created_at:   string;
 }
 
 export interface Space {

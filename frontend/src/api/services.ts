@@ -472,16 +472,6 @@ export const uploadApi = {
     form.append('file', file);
     return api.post(`/upload/floor/${floorId}/plan`, form, multipartConfig);
   },
-  uploadContractDocument: (contractId: string, file: File) => {
-    const form = new FormData();
-    form.append('file', file);
-    return api.post(`/upload/contract/${contractId}/document`, form, multipartConfig);
-  },
-  uploadInvoiceDocument: (invoiceId: string, file: File) => {
-    const form = new FormData();
-    form.append('file', file);
-    return api.post(`/upload/invoice/${invoiceId}/document`, form, multipartConfig);
-  },
   uploadAvatar: (userId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -513,16 +503,6 @@ export const addonServiceApi = {
     api.post(`/addon-services/${id}/deactivate`),
   getActive: (tenantId?: string) =>
     dedupedGet('/addon-services/active', tenantId ? { tenantId } : undefined),
-};
-
-// ─── SPACE FEATURES ───────────────────────────────────────────────────────────
-export const spaceFeatureApi = {
-  getAll: (siteId?: string) =>
-    dedupedGet('/space-features', siteId ? { siteId } : undefined),
-  getOne: (id: string) => api.get(`/space-features/${id}`),
-  create: (data: any) => api.post('/space-features', data),
-  update: (id: string, data: any) => api.patch(`/space-features/${id}`, data),
-  remove: (id: string) => api.delete(`/space-features/${id}`),
 };
 
 // ─── PROMOTION CODES ──────────────────────────────────────────────────────────
