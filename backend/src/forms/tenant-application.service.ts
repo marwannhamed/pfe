@@ -21,10 +21,24 @@ export class TenantApplicationService {
     private readonly auth: AuthService,
   ) {}
 
+  /**
+   * Roles that review applications sent to their own organisation. The
+   * controller admits CLIENT_ADMIN alongside MANAGER, so both must be handled
+   * here: previously CLIENT_ADMIN was rejected when reviewing and unfiltered
+   * when listing — able to see every landlord's applicants but act on none.
+   */
+  private isClientReviewer(role: string) {
+    return role === USER_ROLE.CLIENT_ADMIN || role === USER_ROLE.MANAGER;
+  }
+
   private assertReviewer(user: AuthUser, landlordTenantId: string) {
     if (user.role === USER_ROLE.SUPER_ADMIN) return;
-    if (user.role === USER_ROLE.MANAGER && user.tenant_id === landlordTenantId)
+    if (
+      this.isClientReviewer(user.role) &&
+      user.tenant_id === landlordTenantId
+    ) {
       return;
+    }
     throw new ForbiddenException(
       'You cannot review applications for this organization',
     );
@@ -36,7 +50,10 @@ export class TenantApplicationService {
       applicant_tenant_id: { not: null },
       applicant_tenant: { status: TENANT_STATUS.PENDING },
     };
-    if (user.role === USER_ROLE.MANAGER) {
+    // Anyone who is not the platform owner sees only applications addressed to
+    // their own organisation. Applications carry the applicant's company name,
+    // contact email, profile answers and uploaded documents.
+    if (user.role !== USER_ROLE.SUPER_ADMIN) {
       where.landlord_tenant_id = user.tenant_id;
     }
     return this.prisma.tenantApplication.findMany({

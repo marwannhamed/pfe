@@ -487,11 +487,25 @@ export class BookingApplicationService {
       },
     });
     if (!app) throw new NotFoundException('Application not found');
+
     const isOwner =
       app.user_id === user.id ||
       (!!app.guest_email &&
         app.guest_email.toLowerCase() === user.email.toLowerCase());
-    if (!this.isManager(user.role) && !isOwner) {
+
+    // A manager may only act on applications for spaces their own
+    // organisation owns. findAllForUser already filters the list this way;
+    // without the same check here a manager of one client could read — and
+    // through accept()/refuse(), act on — another client's application,
+    // creating a confirmed booking against someone else's space.
+    const ownerTenantId = app.space?.floor?.building?.tenant_id;
+    const isPlatformOwner = user.role === USER_ROLE.SUPER_ADMIN;
+    const isOwningManager =
+      this.isManager(user.role) &&
+      !!ownerTenantId &&
+      ownerTenantId === user.tenant_id;
+
+    if (!isPlatformOwner && !isOwningManager && !isOwner) {
       throw new ForbiddenException('Access denied');
     }
     return app;

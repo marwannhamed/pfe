@@ -14,8 +14,11 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RateLimitGuard } from '../common/guards/rate-limit.guard';
+import { RateLimit } from '../common/decorators/rate-limit.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user';
 import { BookingApplicationService } from './booking-application.service';
@@ -29,9 +32,16 @@ export class BookingApplicationController {
   constructor(private readonly service: BookingApplicationService) {}
 
   @Post('guest')
+  // The only unauthenticated write in the application. Each accepted request
+  // creates a Tenant and a User for the applicant and sends them an email, so
+  // it is capped per IP: without a limit one caller could fill the tenants
+  // table and use the mail provider as an outbound relay.
+  @UseGuards(RateLimitGuard)
+  @RateLimit(5, 60_000) // 5 applications per minute per IP
   @ApiOperation({
     summary: 'Guest submits a booking application (no account required)',
   })
+  @ApiResponse({ status: 429, description: 'Too many applications' })
   createGuest(@Body() dto: CreateGuestBookingApplicationDto) {
     return this.service.createGuest(dto);
   }

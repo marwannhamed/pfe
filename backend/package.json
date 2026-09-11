@@ -114,10 +114,17 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid)/)"
+    ],
     "collectCoverageFrom": [
       "auth/auth.service.ts",
+      "booking-application/booking-application.service.ts",
       "common/services/access-policy.service.ts",
-      "promotion-code/promotion-code.service.ts"
+      "forms/tenant-application.service.ts",
+      "notification/notification.service.ts",
+      "promotion-code/promotion-code.service.ts",
+      "upload/upload.service.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
