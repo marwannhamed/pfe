@@ -42,7 +42,7 @@ export const useNotifications = () => {
   // ─── WebSocket connection ──────────────────────────────────────────────────
   // FIX: added access_token to deps (was missing) and kept user.id stable via ref.
   useEffect(() => {
-    if (!user || !access_token) return;
+    if (!user?.id || !access_token) return;
 
     const socketBase = API_BASE_URL || window.location.origin;
     const socket = io(`${socketBase}/notifications`, {
@@ -100,7 +100,7 @@ export const useNotifications = () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [user?.id, access_token]); // FIX: depend on user.id (primitive) not the whole user object
+  }, [user?.id, access_token, message]); // FIX: depend on user.id (primitive) not the whole user object
 
   // ─── Load notifications ────────────────────────────────────────────────────
   // FIX: removed `user` from useCallback deps — access via ref instead.
@@ -125,7 +125,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, []); // stable — no deps needed
+  }, [message]); // otherwise stable — App.useApp()'s message never changes
 
   // ─── Load stats ───────────────────────────────────────────────────────────
   // FIX: same pattern — use ref, empty dep array keeps reference stable.
@@ -154,7 +154,7 @@ export const useNotifications = () => {
       console.error('Failed to mark notification as read:', error);
       message.error('Failed to mark notification as read');
     }
-  }, []);
+  }, [message]);
 
   // ─── Mark all as read ─────────────────────────────────────────────────────
   const markAllAsRead = useCallback(async () => {
@@ -166,7 +166,7 @@ export const useNotifications = () => {
       console.error('Failed to mark all notifications as read:', error);
       message.error('Failed to mark all notifications as read');
     }
-  }, []); // FIX: was [user?.id] — now reads from ref, keeping reference stable
+  }, [message]); // FIX: was [user?.id] — now reads from ref, keeping reference stable
 
   // ─── Delete notification ──────────────────────────────────────────────────
   const deleteNotification = useCallback(async (notificationId: string) => {
@@ -183,7 +183,7 @@ export const useNotifications = () => {
       console.error('Failed to delete notification:', error);
       message.error('Failed to delete notification');
     }
-  }, []); // FIX: was [notifications] — caused new fn ref on every list change
+  }, [message]); // FIX: was [notifications] — caused new fn ref on every list change
 
   // ─── Room helpers ─────────────────────────────────────────────────────────
   const joinRoom = useCallback((room: string) => {
@@ -201,11 +201,11 @@ export const useNotifications = () => {
   // previously they depended on `user`, got recreated whenever user changed,
   // and triggered this effect repeatedly — causing a flood of API requests.
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       loadNotifications();
       loadStats();
     }
-  }, [user?.id]); // only re-run when the user's identity actually changes
+  }, [user?.id, loadNotifications, loadStats]); // only re-runs when the user's identity actually changes
 
   return {
     notifications,

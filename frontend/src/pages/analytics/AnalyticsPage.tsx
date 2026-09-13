@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
   const [topSpaces, setTopSpaces] = useState<TopSpace[]>([]);
   const [revenueByTenant, setRevenueByTenant] = useState<RevenueByTenant[]>([]);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const [from, to] = dateRange;
@@ -111,11 +111,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, showLandlordCharts, tenantScope]);
 
   useEffect(() => {
     loadAnalytics();
-  }, [dateRange]);
+  }, [loadAnalytics]);
 
   const handleExport = async (type: string, format: 'xlsx' | 'csv') => {
     try {

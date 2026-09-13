@@ -152,7 +152,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
 
   useEffect(() => { setSelectedAddons([]); }, [selectedSpaceId]);
 
-  useEffect(() => { if (selectedSpace?.currency) setF('currency', selectedSpace.currency); }, [selectedSpace?.id]);
+  useEffect(() => { if (selectedSpace?.currency) setF('currency', selectedSpace.currency); }, [selectedSpace?.id, selectedSpace?.currency]);
 
   const mutation = useMutation({
     mutationFn: (d: any) => bookingApi.create(d),

@@ -38,7 +38,7 @@ export default function OccupancyHeatmapPage() {
       .then((list) => {
         const sites = Array.isArray(list) ? list : [];
         setSites(sites.map((s: any) => ({ id: s.id, name: s.name })));
-        if (!siteId && sites.length === 1) setSiteId(sites[0].id);
+        if (sites.length === 1) setSiteId((prev) => prev || sites[0].id);
       })
       .catch(() => setSites([]));
   }, []);

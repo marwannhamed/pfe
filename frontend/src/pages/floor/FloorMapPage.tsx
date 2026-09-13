@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Select, Skeleton } from 'antd';
 import { message } from '../../utils/feedback';
@@ -247,14 +247,26 @@ export default function FloorMapPage() {
     enabled: true,
   });
 
-  const buildings = Array.isArray(buildingsRaw) ? buildingsRaw : (buildingsRaw as any)?.data ?? [];
-  const floors    = Array.isArray(floorsRaw)    ? floorsRaw    : (floorsRaw as any)?.data    ?? [];
-  const spaces: MapSpace[] = Array.isArray(spacesRaw) ? spacesRaw : (spacesRaw as any)?.data ?? [];
+  // Memoized because the `?? []` branch produces a fresh array on every render
+  // while the query is still loading, which made the effects below re-run each
+  // pass and setPositions churn.
+  const buildings = useMemo(
+    () => (Array.isArray(buildingsRaw) ? buildingsRaw : (buildingsRaw as any)?.data ?? []),
+    [buildingsRaw],
+  );
+  const floors = useMemo(
+    () => (Array.isArray(floorsRaw) ? floorsRaw : (floorsRaw as any)?.data ?? []),
+    [floorsRaw],
+  );
+  const spaces: MapSpace[] = useMemo(
+    () => (Array.isArray(spacesRaw) ? spacesRaw : (spacesRaw as any)?.data ?? []),
+    [spacesRaw],
+  );
 
   // Set default floor
   useEffect(() => {
-    if (floors.length > 0 && !selectedFloorId) {
-      setSelectedFloorId(floors[0].id);
+    if (floors.length > 0) {
+      setSelectedFloorId((prev: string) => prev || floors[0].id);
     }
   }, [floors]);
 

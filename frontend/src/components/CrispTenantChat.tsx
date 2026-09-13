@@ -72,16 +72,7 @@ export function CrispTenantChat() {
     return () => {
       cancelled = true;
     };
-  }, [
-    websiteId,
-    user?.id,
-    user?.role,
-    user?.email,
-    user?.first_name,
-    user?.last_name,
-    tenantName,
-    tenantPlan,
-  ]);
+  }, [websiteId, user, tenantName, tenantPlan]);
 
   return null;
 }

@@ -335,9 +335,9 @@ function RecordPaymentModal({
   });
 
   useEffect(() => {
-    if (!invoice || form.amount) return;
-    setForm((f) => ({ ...f, amount: String(invoiceRemaining(invoice)) }));
-  }, [invoice?.id]);
+    if (!invoice) return;
+    setForm((f) => (f.amount ? f : { ...f, amount: String(invoiceRemaining(invoice)) }));
+  }, [invoice]);
 
   const validate = () => {
     const e: Record<string, string> = {};

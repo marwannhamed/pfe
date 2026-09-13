@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert, Button, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm,
   Row, Select, Space, Switch, Table, Tag,
@@ -71,7 +71,7 @@ export default function AddonServicesPage() {
   const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm] = Form.useForm();
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [servicesRes, bookingsRes] = await Promise.all([
@@ -90,9 +90,9 @@ export default function AddonServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSuperAdmin, user?.tenant_id]);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     if (!serviceModalOpen) return;

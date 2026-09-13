@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, Modal } from 'antd';
 import { message } from '../../utils/feedback';
 
@@ -39,7 +39,7 @@ export default function BookingAddOnServicesPage() {
     return [];
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [servicesRes, bookingsRes] = await Promise.all([
@@ -55,11 +55,11 @@ export default function BookingAddOnServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const bookingAddOns = useMemo(() => {
     return bookings.flatMap((booking: any) => {

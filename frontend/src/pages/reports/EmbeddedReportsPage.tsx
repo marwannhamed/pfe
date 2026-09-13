@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Form, Input, Select, Space, Typography } from 'antd';
 import { message } from '../../utils/feedback';
 import { BarChartOutlined, LineChartOutlined, ExportOutlined } from '@ant-design/icons';
@@ -42,12 +42,15 @@ export default function EmbeddedReportsPage() {
             name: t.name,
           }));
           setTenants(mapped);
-          if (!tenantId && mapped.length > 0) {
+          if (mapped.length > 0) {
             const preferred =
               mapped.find((t) => t.name.toLowerCase().includes('acme')) ??
               mapped.find((t) => !t.name.toLowerCase().includes('leasemanager')) ??
               mapped[0];
-            setTenantId(preferred.id);
+            // Functional form keeps the "only if nothing is chosen yet" rule
+            // without reading tenantId here — depending on it would refetch
+            // the whole tenant list every time the selection changed.
+            setTenantId((prev) => prev || preferred.id);
           }
         })
         .catch(() => setTenants([]));
@@ -61,7 +64,7 @@ export default function EmbeddedReportsPage() {
     role === 'MANAGER' ||
     role === 'TENANT_ADMIN';
 
-  const load = async (tid: string) => {
+  const load = useCallback(async (tid: string) => {
     if (!tid) return;
     setLoading(true);
     try {
@@ -82,12 +85,12 @@ export default function EmbeddedReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [canEdit, form]);
 
   useEffect(() => {
     const tid = canPickTenant ? tenantId : defaultTenant;
     if (tid) load(tid);
-  }, [tenantId, defaultTenant, canPickTenant, canEdit]);
+  }, [tenantId, defaultTenant, canPickTenant, load]);
 
   const save = async () => {
     const tid = canPickTenant ? tenantId : defaultTenant;
