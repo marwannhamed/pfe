@@ -68,6 +68,7 @@ type RawReport = Record<string, unknown> & {
   title?: string;      name?: string;
   created_at?: string; createdAt?: string;
   type?: string;       reportType?: string;
+  format?: string;     status?: string;
 };
 
 type ReportRow = RawReport & {
@@ -87,7 +88,7 @@ export default function ReportGenerationPage() {
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<(typeof REPORT_TEMPLATES)[number] | null>(null);
   const [form] = Form.useForm();
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '');
@@ -295,7 +296,7 @@ export default function ReportGenerationPage() {
       title: 'Report Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: any) => (
+      render: (name: string, record: ReportRow) => (
         <Space orientation="vertical" size="small">
           <Text strong>{name}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>

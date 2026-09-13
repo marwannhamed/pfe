@@ -31,9 +31,10 @@ const LABEL: React.CSSProperties   = { fontSize: 12, fontWeight: 600, color: '#3
 function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
-  if (Array.isArray((raw as any)?.data)) return (raw as any).data;
-  if (Array.isArray((raw as any)?.items)) return (raw as any).items;
-  if (Array.isArray((raw as any)?.results)) return (raw as any).results;
+  const wrapper = raw as { data?: unknown; items?: unknown; results?: unknown };
+  if (Array.isArray(wrapper.data)) return wrapper.data as T[];
+  if (Array.isArray(wrapper.items)) return wrapper.items as T[];
+  if (Array.isArray(wrapper.results)) return wrapper.results as T[];
   return [];
 }
 

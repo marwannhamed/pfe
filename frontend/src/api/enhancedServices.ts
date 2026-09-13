@@ -16,7 +16,7 @@ class APIError extends Error {
     message: string,
     public status?: number,
     public code?: string,
-    public response?: any,
+    public response?: unknown,
   ) {
     super(message);
     this.name = 'APIError';

@@ -11,7 +11,7 @@ import {
   billingApi, spaceApi, maintenanceApi,
 } from '../api/services';
 import { useAuthStore } from '../store/authStore';
-import type { Booking, Invoice, LeaseContract, Space, Tenant } from '../types';
+import type { Booking, Invoice, LeaseContract, MaintenanceTicket, Space, Tenant } from '../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: unknown): T[] {
@@ -242,7 +242,7 @@ export default function GlobalSearch() {
       meta:     s.price_per_month ? `$${parseFloat(s.price_per_month).toLocaleString()}/mo` : undefined,
     }));
 
-  toArray<any>(maintenanceRaw)
+  toArray<MaintenanceTicket>(maintenanceRaw)
     .filter(m => m.title?.toLowerCase().includes(q) || m.ticket_number?.toLowerCase().includes(q))
     .slice(0, 3)
     .forEach(m => results.push({

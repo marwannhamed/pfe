@@ -42,7 +42,7 @@ const SPACE_IMAGES: Partial<Record<SpaceType, string>> = {
 };
 
 // ─── Price Calculator ─────────────────────────────────────────────────────────
-function calcPrice(space: any, startDate: string, startTime: string, endDate: string, endTime: string): number {
+function calcPrice(space: Space, startDate: string, startTime: string, endDate: string, endTime: string): number {
   if (!space || !startDate || !endDate) return 0;
   const start   = new Date(`${startDate}T${startTime}`);
   const end     = new Date(`${endDate}T${endTime}`);

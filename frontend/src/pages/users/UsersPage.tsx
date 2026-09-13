@@ -15,6 +15,7 @@ import type { User, UserRole, UserStatus } from '../../types';
 import UserAvatar from '../../components/UserAvatar';
 import { formatUserName } from '../../utils/user';
 import { CLIENT_TEAM_ROLES, PHONE_E164_PATTERN, PHONE_PLACEHOLDER } from '../../constants/team';
+import { errorMessage } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<UserStatus, { label: string; bg: string; color: string }> = {
@@ -94,7 +95,7 @@ function UserModal({
         }
         if (inviteByEmail) {
           const res = await userApi.invite(payload);
-          const sent = (res as any)?.data?.invite_email_sent ?? (res as any)?.invite_email_sent;
+          const sent = (res as { data?: { invite_email_sent?: boolean } })?.data?.invite_email_sent;
           message.success(
             sent
               ? 'Invitation sent — they will receive an email to set their password'
@@ -111,7 +112,7 @@ function UserModal({
       onClose();
       form.resetFields();
     } catch (e) {
-      const msg = (e as any)?.response?.data?.message ?? (e as any)?.message ?? 'Something went wrong';
+      const msg = errorMessage(e, 'Something went wrong');
       message.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);

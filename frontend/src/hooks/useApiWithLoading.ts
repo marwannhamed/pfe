@@ -15,7 +15,7 @@ interface ApiState<T> {
   error: string | null;
 }
 
-export const useApiWithLoading = <T = any>(options: UseApiWithLoadingOptions = {}) => {
+export const useApiWithLoading = <T = unknown>(options: UseApiWithLoadingOptions = {}) => {
   const [state, setState] = useState<ApiState<T>>({
     data: null,
     loading: false,
@@ -97,7 +97,7 @@ export const useApiCall = () => {
   return { execute };
 };
 
-export const useApiMutation = <T = any>(
+export const useApiMutation = <T = unknown>(
   apiCall: (data) => Promise<T>,
   options: UseApiWithLoadingOptions & { onSuccess?: (data: T) => void } = {}
 ) => {
@@ -124,7 +124,7 @@ export const useApiMutation = <T = any>(
   optionsRef.current = options;
 
   // ─── mutate is permanently stable ─────────────────────────────────────────
-  const mutate = useCallback(async (data: any): Promise<T | null> => {
+  const mutate = useCallback(async (data: unknown): Promise<T | null> => {
     const {
       loadingMessage = 'Processing...',
       showSuccessMessage = true,

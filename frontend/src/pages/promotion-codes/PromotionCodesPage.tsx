@@ -402,7 +402,7 @@ export default function PromotionCodesPage() {
                 label="Discount Value"
                 rules={[{ required: true, message: 'Please enter discount value' }]}
               >
-                <InputNumber
+                <InputNumber<number>
                   placeholder="0"
                   min={0}
                   max={100}
@@ -411,7 +411,7 @@ export default function PromotionCodesPage() {
                   parser={(value) => {
                     const parsed = value?.replace('%', '');
                     const num = parsed ? Math.min(100, Math.max(0, Number(parsed))) : 0;
-                    return num as any;
+                    return num;
                   }}
                 />
               </Form.Item>
@@ -461,7 +461,7 @@ export default function PromotionCodesPage() {
                 name="min_booking_amount"
                 label="Min Booking Amount"
               >
-                <InputNumber
+                <InputNumber<number>
                   placeholder="0"
                   min={0}
                   style={{ width: '100%' }}
@@ -469,7 +469,7 @@ export default function PromotionCodesPage() {
                   parser={(value) => {
                     const parsed = value?.replace(/\$\s?|(,*)/g, '');
                     const num = parsed ? Math.max(0, Number(parsed)) : 0;
-                    return num as any;
+                    return num;
                   }}
                 />
               </Form.Item>

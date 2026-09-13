@@ -109,7 +109,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
       const res = await contractApi.getAll(
         canManage ? undefined : tenantId ? { tenantId } : undefined,
       );
-      const list = toArray<any>(res?.data ?? res);
+      const list = toArray<Invoice>(res?.data ?? res);
       return list.filter((c) => ['ACTIVE', 'DRAFT'].includes(c.status));
     },
   });

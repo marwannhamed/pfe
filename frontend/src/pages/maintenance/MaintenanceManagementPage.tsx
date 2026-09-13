@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { maintenanceApi } from '../../api/services';
 import dayjs from 'dayjs';
+import type { PresetStatusColorType } from 'antd/es/_util/colors';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -215,12 +216,12 @@ export default function MaintenanceManagementPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): PresetStatusColorType => {
     switch (status) {
-      case 'OPEN': return 'red';
-      case 'ASSIGNED': return 'orange';
-      case 'IN_PROGRESS': return 'blue';
-      case 'COMPLETED': return 'green';
+      case 'OPEN': return 'error';
+      case 'ASSIGNED': return 'warning';
+      case 'IN_PROGRESS': return 'processing';
+      case 'COMPLETED': return 'success';
       case 'CANCELLED': return 'default';
       default: return 'default';
     }
@@ -265,7 +266,7 @@ export default function MaintenanceManagementPage() {
       key: 'status',
       render: (status: string) => (
         <Badge
-          status={getStatusColor(status) as any}
+          status={getStatusColor(status)}
           text={status.replace('_', ' ')}
         />
       ),
@@ -596,7 +597,7 @@ export default function MaintenanceManagementPage() {
               </Descriptions.Item>
               <Descriptions.Item label="Status">
                 <Badge
-                  status={getStatusColor(selectedTicket.status) as any}
+                  status={getStatusColor(selectedTicket.status)}
                   text={selectedTicket.status.replace('_', ' ')}
                 />
               </Descriptions.Item>

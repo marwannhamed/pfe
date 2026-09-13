@@ -25,7 +25,7 @@ export default function TenantAiChatDrawer({ open, onClose }: { open: boolean; o
       const res = await aiApi.tenantAssistant(
         next.map((m) => ({ role: m.role, content: m.content })),
       );
-      const reply = (res.data as any)?.reply as string;
+      const reply = (res.data as { reply?: string })?.reply ?? '';
       setMessages([...next, { role: 'assistant', content: reply || '(empty)' }]);
     } catch (e) {
       message.error(errorMessage(e, 'Assistant unavailable'));
