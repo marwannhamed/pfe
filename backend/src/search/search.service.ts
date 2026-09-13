@@ -105,12 +105,15 @@ export class SearchService {
         total += tenantResults.total;
       }
 
-      // Skip contracts for now as model doesn't exist
-      // if (type === 'all' || type === 'contracts') {
-      //   const contractResults = await this.searchContracts(searchConditions, sort, pagination);
-      //   results.push(...contractResults.items);
-      //   total += contractResults.total;
-      // }
+      if (type === 'all' || type === 'contracts') {
+        const contractResults = await this.searchContracts(
+          searchConditions,
+          sort,
+          pagination,
+        );
+        results.push(...contractResults.items);
+        total += contractResults.total;
+      }
 
       if (type === 'all' || type === 'invoices') {
         const invoiceResults = await this.searchInvoices(
@@ -366,8 +369,50 @@ export class SearchService {
   }
 
   private async searchContracts(conditions: any, sort: any, pagination: any) {
-    // Contract model doesn't exist in Prisma schema - return empty results
-    return { items: [], total: 0 };
+    const where: any = {};
+
+    if (conditions.search) {
+      where.OR = [
+        { contract_number: { contains: conditions.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (conditions.dateRange) {
+      where.start_date = {
+        gte: conditions.dateRange.start,
+        lte: conditions.dateRange.end,
+      };
+    }
+
+    if (conditions.status) {
+      where.status = { in: conditions.status };
+    }
+
+    if (conditions.tenantId) {
+      where.tenant_id = conditions.tenantId;
+    }
+
+    const [contracts, total] = await Promise.all([
+      (this.prisma as any).leaseContract.findMany({
+        where,
+        orderBy: this.buildOrderBy(sort, 'contracts'),
+        take: pagination.limit,
+        skip: (pagination.page - 1) * pagination.limit,
+      }),
+      (this.prisma as any).leaseContract.count({ where }),
+    ]);
+
+    const items = contracts.map((contract) => ({
+      type: 'contract',
+      id: contract.id,
+      title: contract.contract_number,
+      description: `${contract.status}`,
+      data: contract,
+      score: this.calculateRelevance(contract, conditions.search),
+      highlights: this.generateHighlights(contract, conditions.search),
+    }));
+
+    return { items, total };
   }
 
   private async searchInvoices(conditions: any, sort: any, pagination: any) {
@@ -397,6 +442,12 @@ export class SearchService {
         gte: conditions.priceRange.min,
         lte: conditions.priceRange.max,
       };
+    }
+
+    // Without this an invoice number typed into global search matched every
+    // organisation's invoices, unlike bookings/spaces/tenants which scope.
+    if (conditions.tenantId) {
+      where.tenant_id = conditions.tenantId;
     }
 
     const [invoices, total] = await Promise.all([
@@ -445,6 +496,10 @@ export class SearchService {
 
     if (conditions.priority) {
       where.priority = { in: conditions.priority };
+    }
+
+    if (conditions.tenantId) {
+      where.tenant_id = conditions.tenantId;
     }
 
     const [tickets, total] = await Promise.all([
