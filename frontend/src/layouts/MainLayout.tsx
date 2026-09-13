@@ -172,7 +172,7 @@ function getRoleLabel(role: string): { label: string; bg: string; color: string 
 export default function MainLayout() {
   const navigate      = useNavigate();
   const { pathname }  = useLocation();
-  const { user, logout } = useAuthStore() as any;
+  const { user, logout } = useAuthStore();
   const { isDark, t, toggle } = useThemeStore();
   const [collapsed, setCollapsed] = useState(false);
 

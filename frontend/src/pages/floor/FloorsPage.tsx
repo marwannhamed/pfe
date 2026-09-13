@@ -12,6 +12,7 @@ import AddBuildingModal from '../sites/AddBuildingModal';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { isClientOperatorRole, visibleClientBuildings } from '../../utils/propertyScope';
+import { errorMessage } from '../../utils/errors';
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   ACTIVE:           { bg: '#dcfce7', color: '#15803d' },
@@ -65,7 +66,7 @@ export default function FloorsPage() {
       qc.invalidateQueries({ queryKey: ['spaces'] });
     },
     onError: (err: unknown) => {
-      const msg = (err as any)?.response?.data?.message ?? 'Failed to delete floor';
+      const msg = errorMessage(err, 'Failed to delete floor');
       message.error(msg);
     },
   });
@@ -417,7 +418,7 @@ function EditFloorModal({ floor, buildings, onClose }: { floor: Floor; buildings
       onClose();
     },
     onError: (err: unknown) => {
-      const msg = (err as any)?.response?.data?.message ?? 'Failed to update floor';
+      const msg = errorMessage(err, 'Failed to update floor');
       message.error(msg);
     },
   });

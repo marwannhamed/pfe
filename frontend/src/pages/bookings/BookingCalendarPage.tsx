@@ -14,7 +14,7 @@ import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { isQatarWeekend } from '../../constants/qatar';
-import type { ApiError, Space } from '../../types';
+import type { ApiError, Booking, Space } from '../../types';
 import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string; dot
 function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   date:     Date;
   spaceId:  string;
-  spaces:   any[];
+  spaces:   Space[];
   onClose:  () => void;
   tenantId: string;
   userId:   string;
@@ -252,7 +252,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
 }
 
 // ─── Booking Detail Modal ─────────────────────────────────────────────────────
-function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () => void }) {
+function BookingDetailModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   const { card: CARD, btnSecondary, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const { user } = useAuthStore();
@@ -347,7 +347,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
 
 // ─── Calendar Grid ────────────────────────────────────────────────────────────
 function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }: {
-  year: number; month: number; bookings: any[];
+  year: number; month: number; bookings: Booking[];
   onDayClick: (d: Date) => void;
   onBookingClick: (b) => void;
   today: Date;
@@ -460,7 +460,7 @@ function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }:
 
 // ─── Week View ────────────────────────────────────────────────────────────────
 function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
-  weekStart: Date; bookings: any[];
+  weekStart: Date; bookings: Booking[];
   onDayClick: (d: Date) => void;
   onBookingClick: (b) => void;
   today: Date;
@@ -562,7 +562,7 @@ export default function BookingCalendarPage() {
   const [statusFilter,   setStatus]     = useState('');
   const [spaceFilter,    setSpaceFilter] = useState('');
   const [quickBookDate,  setQuickBook]  = useState<Date | null>(null);
-  const [detailBooking,  setDetail]     = useState<any | null>(null);
+  const [detailBooking,  setDetail]     = useState<Booking | null>(null);
 
   useEffect(() => {
     const preselect = searchParams.get('spaceId');

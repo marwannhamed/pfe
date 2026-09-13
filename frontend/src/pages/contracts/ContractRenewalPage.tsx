@@ -8,7 +8,7 @@ import {
   ClockCircleOutlined, SearchOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { contractApi } from '../../api/services';
-import type { ApiError } from '../../types';
+import type { ApiError, LeaseContract } from '../../types';
 import { asApiError } from '../../utils/errors';
 
 
@@ -58,7 +58,7 @@ function getUrgency(days: number): {
 }
 
 // ─── Renew Modal ──────────────────────────────────────────────────────────────
-function RenewModal({ contract, onClose }: { contract: any; onClose: () => void }) {
+function RenewModal({ contract, onClose }: { contract: LeaseContract; onClose: () => void }) {
   const qc       = useQueryClient();
   const days     = daysUntil(contract.end_date);
   const urgency  = getUrgency(days);
@@ -328,14 +328,14 @@ export default function ContractRenewalPage() {
   const navigate = useNavigate();
   const [daysFilter, setDaysFilter] = useState<30 | 60 | 90 | 'all'>(90);
   const [search,     setSearch]     = useState('');
-  const [renewingContract, setRenewing] = useState<any | null>(null);
+  const [renewingContract, setRenewing] = useState<LeaseContract | null>(null);
 
   const { data: raw, isLoading, refetch } = useQuery({
     queryKey: ['renewal-contracts'],
     queryFn:  () => contractApi.getExpiring(90).then(r => r.data),
   });
 
-  const all = toArray<any>(raw);
+  const all = toArray<LeaseContract>(raw);
 
   const contracts = useMemo(() => {
     return all

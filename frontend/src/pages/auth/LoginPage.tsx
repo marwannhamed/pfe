@@ -40,7 +40,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
 
-      const u = useAuthStore.getState().user as any;
+      const u = useAuthStore.getState().user;
       const pendingSpace = searchParams.get('space_id') ?? getPendingBookingSpace();
       if (pendingSpace && !u?.must_change_password) {
         navigate(`/apply/${pendingSpace}`, { replace: true });

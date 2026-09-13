@@ -630,7 +630,7 @@ export default function ContractsPage() {
     queryFn:  () => contractApi.getExpiring(30).then(r => r.data),
     enabled:  canManage,
   });
-  const expiring: any[] = toArray(expiringRaw);
+  const expiring: LeaseContract[] = toArray(expiringRaw);
 
   const signMut = useMutation({ mutationFn: (id: string) => contractApi.sign(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['contracts'] }); message.success('Signed!'); }, onError: () => message.error('Failed') });
   const terminateMut = useMutation({ mutationFn: (id: string) => contractApi.terminate(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['contracts'] }); message.success('Terminated'); }, onError: () => message.error('Failed') });

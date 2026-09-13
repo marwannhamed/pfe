@@ -130,7 +130,7 @@ export default function ProfilePage() {
   const { card: CARD, headerCard, input: INPUT, t: th } = usePageTheme();
   const LABEL: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: th.textSub, display: 'block', marginBottom: 5 };
   const qc       = useQueryClient();
-  const { user, setUser } = useAuthStore() as any;
+  const { user, setUser } = useAuthStore();
   const userId   = user?.id ?? '';
   const tenantId = user?.tenant_id ?? '';
   const roleMeta = ROLE_META[user?.role ?? ''] ?? ROLE_META.EMPLOYEE;

@@ -16,6 +16,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { isClientOperatorRole, visibleClientBuildings } from '../../utils/propertyScope';
+import { errorMessage } from '../../utils/errors';
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   ACTIVE:             { bg: '#dcfce7', color: '#15803d' },
@@ -58,7 +59,7 @@ export default function BuildingsPage() {
       qc.invalidateQueries({ queryKey: ['floors'] });
     },
     onError: (err: unknown) => {
-      const msg = (err as any)?.response?.data?.message ?? 'Failed to delete building';
+      const msg = errorMessage(err, 'Failed to delete building');
       message.error(msg);
     },
   });
@@ -325,7 +326,7 @@ function EditBuildingModal({ building, onClose }: { building: Building; onClose:
       onClose();
     },
     onError: (err: unknown) => {
-      const msg = (err as any)?.response?.data?.message ?? 'Failed to update building';
+      const msg = errorMessage(err, 'Failed to update building');
       message.error(msg);
     },
   });

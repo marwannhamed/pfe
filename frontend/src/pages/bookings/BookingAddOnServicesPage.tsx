@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { addonServiceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { AddOnService, Booking } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -26,8 +27,8 @@ export default function BookingAddOnServicesPage() {
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'services' | 'bookings'>('services');
-  const [services, setServices] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [services, setServices] = useState<AddOnService[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [serviceModalVisible, setServiceModalVisible] = useState(false);
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [serviceForm] = Form.useForm();

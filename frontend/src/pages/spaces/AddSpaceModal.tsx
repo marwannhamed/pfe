@@ -9,6 +9,7 @@ import SpaceLocationFields, { type SpaceLocationValues } from '../../components/
 import SpaceMediaFields, { type SpaceMediaValues } from '../../components/spaces/SpaceMediaFields';
 import SpaceAddonPicker, { type SelectedAddon } from '../../components/spaces/SpaceAddonPicker';
 import { validatePublishLocation } from '../../utils/spacePublish';
+import { errorMessage } from '../../utils/errors';
 
 const SPACE_TYPES = [
   { value: 'DEDICATED_OFFICE', label: '🏢 Dedicated Office' },
@@ -142,7 +143,7 @@ export default function AddSpaceModal({ onClose }: Props) {
       onClose();
     },
     onError: (err: unknown) => {
-      const msg = (err as any)?.response?.data?.message ?? 'Failed to create space';
+      const msg = errorMessage(err, 'Failed to create space');
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });

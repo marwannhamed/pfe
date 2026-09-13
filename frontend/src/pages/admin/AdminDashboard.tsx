@@ -123,7 +123,7 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading }: {
 }
 
 // ─── Contract Renewal Widget ───────────────────────────────────────────────────
-function ContractRenewalWidget({ contracts, loading, navigate }: { contracts: any[]; loading: boolean; navigate: (p: string) => void }) {
+function ContractRenewalWidget({ contracts, loading, navigate }: { contracts: LeaseContract[]; loading: boolean; navigate: (p: string) => void }) {
   const { t } = useThemeStore();
 
   const expiring = contracts

@@ -21,7 +21,16 @@ import { usePageTheme } from '../../hooks/usePageTheme';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const EMAIL_TEMPLATES = [
+/** The catalogue this page renders is local, not the API's EmailTemplate. */
+type TemplateCatalogEntry = {
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  variables: string[];
+};
+
+const EMAIL_TEMPLATES: TemplateCatalogEntry[] = [
   {
     key: 'booking-confirmed',
     name: 'Booking Confirmed',
@@ -92,9 +101,9 @@ export default function EmailManagementPage() {
   const [loading, setLoading] = useState(false);
   const [testModalVisible, setTestModalVisible] = useState(false);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateCatalogEntry | null>(null);
   const [previewContent, setPreviewContent] = useState<string>('');
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<TemplateCatalogEntry[]>([]);
   const [testForm] = Form.useForm();
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER'].includes(user?.role || '');

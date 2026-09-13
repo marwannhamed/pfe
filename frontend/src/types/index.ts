@@ -221,6 +221,7 @@ export interface Booking {
   documents?:           BookingDocument[];
   // relations
   space?:               Space;
+  tenant?:              Tenant;
   createdBy?:           User;
   approvedBy?:          User;
   promotionCode?:       PromotionCode;
