@@ -4,6 +4,8 @@ import { message } from '../../utils/feedback';
 import { CloseOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { buildingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { ApiError } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 const OVERLAY: React.CSSProperties = {
   position: 'fixed', inset: 0,
@@ -96,7 +98,7 @@ export default function AddBuildingModal({ onClose }: Props) {
   };
 
   const mutation = useMutation({
-    mutationFn: (payload: any) => buildingApi.create(payload),
+    mutationFn: (payload: unknown) => buildingApi.create(payload),
     onSuccess: () => {
       message.success('Building saved — now add the floor(s) you manage');
       // Invalidate both the site detail (which nests buildings) and buildings list
@@ -105,8 +107,8 @@ export default function AddBuildingModal({ onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['buildings-publish'] });
       onClose();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to create building';
+    onError: (err: ApiError) => {
+      const msg = asApiError(err).response?.data?.message ?? 'Failed to create building';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });

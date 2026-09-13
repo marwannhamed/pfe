@@ -5,6 +5,8 @@ import { message } from '../utils/feedback';
 import { GoogleOutlined, LinkOutlined, SyncOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { siteApi } from '../api/services';
 import { usePageTheme } from '../hooks/usePageTheme';
+import type { ApiError } from '../types';
+import { asApiError } from '../utils/errors';
 
 type GmbStatus = {
   oauthConfigured: boolean;
@@ -53,7 +55,7 @@ export function GoogleBusinessPanel({ siteId, oauthReturn }: Props) {
   const connectMut = useMutation({
     mutationFn: () => siteApi.gmbOAuthUrl(siteId).then(r => r.data as { url: string }),
     onSuccess: d => { if (d?.url) window.location.href = d.url; },
-    onError: (e: any) => message.error(e?.response?.data?.message ?? 'Could not start Google OAuth'),
+    onError: (e: ApiError) => message.error(asApiError(e).response?.data?.message ?? 'Could not start Google OAuth'),
   });
 
   const setLocationMut = useMutation({
@@ -63,13 +65,13 @@ export function GoogleBusinessPanel({ siteId, oauthReturn }: Props) {
       void qc.invalidateQueries({ queryKey: ['gmb-status', siteId] });
       void refetch();
     },
-    onError: (e: any) => message.error(e?.response?.data?.message ?? 'Failed to save location'),
+    onError: (e: ApiError) => message.error(asApiError(e).response?.data?.message ?? 'Failed to save location'),
   });
 
   const syncMut = useMutation({
     mutationFn: () => siteApi.gmbSync(siteId),
     onSuccess: () => message.success('Synced to Google Business Profile'),
-    onError: (e: any) => message.error(e?.response?.data?.message ?? 'Sync failed'),
+    onError: (e: ApiError) => message.error(asApiError(e).response?.data?.message ?? 'Sync failed'),
   });
 
   const disconnectMut = useMutation({
@@ -80,7 +82,7 @@ export function GoogleBusinessPanel({ siteId, oauthReturn }: Props) {
       void qc.invalidateQueries({ queryKey: ['gmb-status', siteId] });
       void refetch();
     },
-    onError: (e: any) => message.error(e?.response?.data?.message ?? 'Disconnect failed'),
+    onError: (e: ApiError) => message.error(asApiError(e).response?.data?.message ?? 'Disconnect failed'),
   });
 
   if (isLoading) return null;

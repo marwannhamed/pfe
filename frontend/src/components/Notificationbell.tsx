@@ -4,13 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { BellOutlined, CheckOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 import { useAuthStore } from '../store/authStore';
+import type { Notification } from '../types';
 import { notificationApi } from '../api/services'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -85,7 +87,7 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
     queryFn:  () => notificationApi.getAll({ userId }).then(r => r.data),
     enabled:  !!userId && open,
   });
-  const notifs = toArray<any>(notifsRaw).slice(0, 8);
+  const notifs = toArray<Notification>(notifsRaw).slice(0, 8);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const readMut = useMutation({

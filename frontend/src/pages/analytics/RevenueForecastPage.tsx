@@ -6,6 +6,7 @@ import { analyticsApi, tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { errorMessage } from '../../utils/errors';
 
 const { Title, Paragraph } = Typography;
 
@@ -27,7 +28,7 @@ export default function RevenueForecastPage() {
         .getAll()
         .then((r) => {
           const list = Array.isArray(r.data) ? r.data : (r.data as any)?.data ?? [];
-          setTenants(list.map((t: any) => ({ id: t.id, name: t.name })));
+          setTenants(list.map((t) => ({ id: t.id, name: t.name })));
         })
         .catch(() => setTenants([]));
     }
@@ -41,8 +42,8 @@ export default function RevenueForecastPage() {
         horizonMonths: horizon,
       });
       setData((res as { data?: unknown })?.data ?? res);
-    } catch (e: any) {
-      message.error(e?.userMessage || e?.message || 'Failed to load forecast');
+    } catch (e) {
+      message.error(errorMessage(e, 'Failed to load forecast'));
     } finally {
       setLoading(false);
     }

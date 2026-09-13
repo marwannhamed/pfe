@@ -11,6 +11,8 @@ import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { api } from '../../api/client';
+import type { ApiError } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface MapSpace {
@@ -80,15 +82,15 @@ function BookPanel({ space, tenantId, userId, onClose, onSuccess }: {
   const price = calcPrice();
 
   const mut = useMutation({
-    mutationFn: (d: any) => bookingApi.create(d),
+    mutationFn: (d: unknown) => bookingApi.create(d),
     onSuccess: () => {
       message.success('Booking created!');
       qc.invalidateQueries({ queryKey: ['bookings'] });
       qc.invalidateQueries({ queryKey: ['spaces'] });
       onSuccess();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed';
+    onError: (err: ApiError) => {
+      const msg = asApiError(err).response?.data?.message ?? 'Failed';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -361,15 +363,15 @@ export default function FloorMapPage() {
   };
 
   // ── Floor options ──────────────────────────────────────────────────────────
-  const floorOptions = buildings.flatMap((b: any) => {
-    const bFloors = floors.filter((f: any) => f.building_id === b.id);
-    return bFloors.map((f: any) => ({
+  const floorOptions = buildings.flatMap((b) => {
+    const bFloors = floors.filter((f) => f.building_id === b.id);
+    return bFloors.map((f) => ({
       value: f.id,
       label: `${b.name} — Floor ${f.floor_number} (${f.name})`,
     }));
   });
 
-  const selectedFloor = floors.find((f: any) => f.id === selectedFloorId);
+  const selectedFloor = floors.find((f) => f.id === selectedFloorId);
 
   return (
     <PageShell>

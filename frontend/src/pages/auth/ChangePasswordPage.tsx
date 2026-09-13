@@ -64,7 +64,7 @@ export default function ChangePasswordPage() {
       setUser({ ...user, ...updated, must_change_password: false });
       message.success('Password updated. Welcome!');
       navigate(resolvePostAuthPath({ ...user, must_change_password: false }), { replace: true });
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
       const text = Array.isArray(msg) ? msg[0] : msg;
       if (text?.toLowerCase().includes('incorrect')) {

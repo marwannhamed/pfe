@@ -9,6 +9,7 @@ import {
   isProfileComplete,
 } from '../utils/clientOnboarding';
 import { isClientTeamRole } from '../constants/team';
+import type { Space } from '../types';
 
 function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
@@ -43,7 +44,7 @@ export function useClientOnboarding() {
     enabled: enabled && !!user?.tenant_id,
   });
 
-  const spaces = toArray<any>(spacesRaw);
+  const spaces = toArray<Space>(spacesRaw);
   const teamMembers = toArray<{ id: string; role: string }>(teamRaw).filter(
     (u) => u.id !== user?.id && isClientTeamRole(u.role),
   );

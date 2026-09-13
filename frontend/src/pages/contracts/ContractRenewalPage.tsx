@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { contractApi } from '../../api/services';
 import type { ApiError } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ function RenewModal({ contract, onClose }: { contract: any; onClose: () => void 
       onClose();
     },
     onError: (err: ApiError) => {
-      const msg = err?.response?.data?.message ?? 'Failed to renew';
+      const msg = asApiError(err).response?.data?.message ?? 'Failed to renew';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });

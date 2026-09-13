@@ -15,6 +15,7 @@ import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { isQatarWeekend } from '../../constants/qatar';
 import type { ApiError, Space } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: unknown): T[] {
@@ -111,7 +112,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   const mutation = useMutation({
     mutationFn: (d: unknown) => bookingApi.create(d),
     onSuccess:  () => { message.success('Booking submitted for approval'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); qc.invalidateQueries({ queryKey: ['bookings'] }); onClose(); },
-    onError:    (err: ApiError) => { const m = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(m) ? m.join(', ') : m); },
+    onError:    (err: ApiError) => { const m = asApiError(err).response?.data?.message ?? 'Failed'; message.error(Array.isArray(m) ? m.join(', ') : m); },
   });
 
   const validate = () => {
@@ -267,7 +268,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
     mutationFn: () => bookingApi.approve(booking.id, user?.id ?? ''),
     onSuccess:  () => { message.success('Booking approved! ✅'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); onClose(); },
     onError: (err: ApiError) => {
-      const m = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to approve';
+      const m = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Failed to approve';
       message.error(Array.isArray(m) ? m[0] : m);
     },
   });

@@ -15,6 +15,7 @@ import { userApi, bookingApi, contractApi, billingApi, notificationApi } from '.
 import { useAuthStore } from '../../store/authStore';
 import { PHONE_E164_PATTERN, PHONE_PLACEHOLDER } from '../../constants/team';
 import type { ApiError, Booking, Invoice, LeaseContract, Notification } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: unknown): T[] {
@@ -175,7 +176,7 @@ export default function ProfilePage() {
       setEditing(false);
     },
     onError: (err: ApiError) => {
-      const msg = err?.response?.data?.message ?? 'Failed to update profile';
+      const msg = asApiError(err).response?.data?.message ?? 'Failed to update profile';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -198,7 +199,7 @@ export default function ProfilePage() {
       setTimeout(() => setPwSuccess(false), 4000);
     },
     onError: (err: ApiError) => {
-      const msg = err?.response?.data?.message ?? 'Failed';
+      const msg = asApiError(err).response?.data?.message ?? 'Failed';
       if (typeof msg === 'string' && msg.toLowerCase().includes('incorrect')) {
         setPwErrors(e => ({ ...e, current: 'Current password is incorrect' }));
       } else {

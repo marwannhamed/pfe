@@ -16,6 +16,8 @@ import { usePageTheme } from '../../hooks/usePageTheme';
 import { tenantApi } from '../../api/services';
 import { message } from '../../utils/feedback';
 import { QATAR_ZONES } from '../../constants/qatar';
+import type { ApiError } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 interface CompanyProfile {
   id: string;
@@ -156,8 +158,8 @@ export default function CompanyProfilePage() {
       qc.invalidateQueries({ queryKey: ['company-profile'] });
       qc.invalidateQueries({ queryKey: ['client-onboarding-spaces'] });
     },
-    onError: (err: any) => {
-      const msg = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to save';
+    onError: (err: ApiError) => {
+      const msg = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Failed to save';
       message.error(Array.isArray(msg) ? msg.join(', ') : String(msg));
     },
   });

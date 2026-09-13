@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { App, Button, Card, Input, Space, Typography, Alert } from 'antd';
 import { RobotOutlined } from '@ant-design/icons';
 import { aiApi } from '../api/services';
+import { asApiError, errorMessage } from '../utils/errors';
 
 const { Text, Paragraph } = Typography;
 
@@ -20,13 +21,13 @@ export default function LeaseAssistantCard() {
     try {
       const res = await aiApi.leaseAssistant([{ role: 'user', content: q.trim() }]);
       setReply((res.data as { reply?: string })?.reply ?? '');
-    } catch (e: any) {
-      const status = e?.response?.status;
+    } catch (e) {
+      const status = asApiError(e).response?.status;
       if (status === 503) {
         setNeedsApiKey(true);
         message.warning('AI assistant is not configured on the server yet.');
       } else {
-        message.error(e?.userMessage || e?.message || 'Assistant unavailable');
+        message.error(errorMessage(e, 'Assistant unavailable'));
       }
     } finally {
       setLoading(false);

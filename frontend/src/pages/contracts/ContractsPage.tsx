@@ -22,6 +22,7 @@ import {
   prefillFromBooking,
   type ContractPrefillFromBooking,
 } from '../../utils/contractFromBooking';
+import { asApiError } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<ContractStatus, { label: string; bg: string; color: string }> = {
@@ -124,7 +125,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
   const mutation = useMutation({
     mutationFn: (d: unknown) => contractApi.create(d),
     onSuccess: () => { message.success('Contract created!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: ApiError) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError:   (err: ApiError) => { const msg = asApiError(err).response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {
@@ -369,7 +370,7 @@ function RenewModal({ contract, onClose }: { contract: LeaseContract; onClose: (
   const mutation = useMutation({
     mutationFn: () => contractApi.renew(contract.id, new Date(newEndDate).toISOString()),
     onSuccess: () => { message.success('Contract renewed!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError:   (err: ApiError) => { message.error(asApiError(err).response?.data?.message ?? 'Failed'); },
   });
   const handleSubmit = () => {
     if (!newEndDate) { setError('Required'); return; }
@@ -527,7 +528,7 @@ function EditContractModal({ contract, onClose, isSuperAdmin }: { contract: Leas
   const mutation = useMutation({
     mutationFn: (d: unknown) => contractApi.update(contract.id, d),
     onSuccess: () => { message.success('Updated!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError:   (err: ApiError) => { message.error(asApiError(err).response?.data?.message ?? 'Failed'); },
   });
   const validate = () => {
     const e: Record<string, string> = {};

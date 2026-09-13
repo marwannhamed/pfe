@@ -659,5 +659,7 @@ export interface ApiError extends Error {
       statusCode?: number;
     };
   };
+  request?: unknown;
+  code?: string;
   userMessage?: string;
 }

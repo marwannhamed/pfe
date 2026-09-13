@@ -67,7 +67,7 @@ export const useApiWithLoading = <T = any>(options: UseApiWithLoadingOptions = {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       const errorMessage =
         error.response?.data?.message || error.message || 'An error occurred';
 
@@ -98,7 +98,7 @@ export const useApiCall = () => {
 };
 
 export const useApiMutation = <T = any>(
-  apiCall: (data: any) => Promise<T>,
+  apiCall: (data) => Promise<T>,
   options: UseApiWithLoadingOptions & { onSuccess?: (data: T) => void } = {}
 ) => {
   const [state, setState] = useState<ApiState<T>>({
@@ -146,7 +146,7 @@ export const useApiMutation = <T = any>(
 
       onSuccess?.(result);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       const errorMessage =
         error.response?.data?.message || error.message || 'An error occurred';
 

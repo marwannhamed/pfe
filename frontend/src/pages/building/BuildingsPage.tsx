@@ -318,7 +318,7 @@ function EditBuildingModal({ building, onClose }: { building: Building; onClose:
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const updateMut = useMutation({
-    mutationFn: (data: any) => buildingApi.update(building.id, data),
+    mutationFn: (data: unknown) => buildingApi.update(building.id, data),
     onSuccess: () => {
       message.success('Building updated successfully');
       qc.invalidateQueries({ queryKey: ['buildings'] });

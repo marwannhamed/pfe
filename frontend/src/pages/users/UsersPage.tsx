@@ -110,7 +110,7 @@ function UserModal({
       qc.invalidateQueries({ queryKey: ['client-onboarding-team'] });
       onClose();
       form.resetFields();
-    } catch (e: unknown) {
+    } catch (e) {
       const msg = (e as any)?.response?.data?.message ?? (e as any)?.message ?? 'Something went wrong';
       message.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {

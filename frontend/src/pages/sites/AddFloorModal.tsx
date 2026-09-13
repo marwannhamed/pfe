@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { message } from '../../utils/feedback';
 import { CloseOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { floorApi } from '../../api/services';
-import type { Building } from '../../types';
+import type { ApiError, Building } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 const OVERLAY: React.CSSProperties = {
   position: 'fixed', inset: 0,
@@ -97,7 +98,7 @@ export default function AddFloorModal({ buildings, defaultBuildingId, onClose, o
   };
 
   const mutation = useMutation({
-    mutationFn: (payload: any) => floorApi.create(payload),
+    mutationFn: (payload: unknown) => floorApi.create(payload),
     onSuccess: () => {
       message.success('Floor created successfully!');
       // Invalidate site detail (which nests buildings→floors) and floors list
@@ -107,8 +108,8 @@ export default function AddFloorModal({ buildings, defaultBuildingId, onClose, o
       qc.invalidateQueries({ queryKey: ['buildings'] });
       onClose();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to create floor';
+    onError: (err: ApiError) => {
+      const msg = asApiError(err).response?.data?.message ?? 'Failed to create floor';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });

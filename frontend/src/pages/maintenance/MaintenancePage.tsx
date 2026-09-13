@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 import type { MaintenanceTicket, TicketStatus, TicketPriority, TicketCategory } from '../../types';
 import UserAvatar from '../../components/UserAvatar';
 import { formatUserName } from '../../utils/user';
+import { asApiError } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<TicketStatus, { label: string; bg: string; color: string }> = {
@@ -95,9 +96,9 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
       qc.invalidateQueries({ queryKey: ['maintenance'] });
       onClose();
       form.resetFields();
-    } catch (e: unknown) {
+    } catch (e) {
       const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
-      const msg = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to create ticket';
+      const msg = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Failed to create ticket';
       message.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
@@ -181,7 +182,7 @@ function TicketDetailModal({
 
   const onActionError = (e: unknown) => {
     const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
-    const m = err?.userMessage ?? err?.response?.data?.message ?? 'Action failed';
+    const m = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Action failed';
     message.error(Array.isArray(m) ? m[0] : m);
   };
 
@@ -369,7 +370,7 @@ export default function MaintenancePage() {
     },
     onError: (e: unknown) => {
       const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
-      const m = err?.userMessage ?? err?.response?.data?.message ?? 'Could not accept ticket';
+      const m = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Could not accept ticket';
       message.error(Array.isArray(m) ? m[0] : m);
     },
   });

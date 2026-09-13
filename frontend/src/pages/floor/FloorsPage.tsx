@@ -308,7 +308,7 @@ function FloorCard({ floor: f, buildings, onNavigate, onEdit, onDelete }: { floo
               { status: 'RESERVED',  color: '#f59e0b' },
               { status: 'MAINTENANCE', color: '#ef4444' },
             ].map(({ status, color }) => {
-              const count = f.spaces!.filter((s: any) => s.status === status).length;
+              const count = f.spaces!.filter((s) => s.status === status).length;
               const pct   = (count / spaceCount) * 100;
               if (!pct) return null;
               return <div key={status} style={{ width: `${pct}%`, background: color, borderRadius: 3 }} title={`${status}: ${count}`} />;
@@ -410,7 +410,7 @@ function EditFloorModal({ floor, buildings, onClose }: { floor: Floor; buildings
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const updateMut = useMutation({
-    mutationFn: (data: any) => floorApi.update(floor.id, data),
+    mutationFn: (data: unknown) => floorApi.update(floor.id, data),
     onSuccess: () => {
       message.success('Floor updated successfully');
       qc.invalidateQueries({ queryKey: ['floors-page'] });

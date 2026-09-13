@@ -8,6 +8,7 @@ import {
   HomeOutlined, EyeOutlined, EyeInvisibleOutlined,
   UserOutlined, LockOutlined,
 } from '@ant-design/icons';
+import { asApiError } from '../../utils/errors';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -47,15 +48,22 @@ export default function LoginPage() {
       }
 
       navigate(resolvePostAuthPath(u), { replace: true });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Login failed. Please check your credentials.';
-      const data = err?.response?.data;
+      // A failed login can answer with the ResponseDto body or, from a proxy,
+      // a plain string — hence the unknown here before narrowing.
+      const data: unknown = asApiError(err).response?.data;
       if (data) {
-        if (typeof data === 'string' && data.length < 300) message = data;
-        else if (data?.message) message = Array.isArray(data.message) ? data.message[0] : String(data.message);
-        else if (data?.error) message = String(data.error);
-      } else if (err?.message && !err.message.includes('JSON')) {
-        message = err.message;
+        if (typeof data === 'string' && data.length < 300) {
+          message = data;
+        } else {
+          const body = data as { message?: string | string[]; error?: string };
+          if (body.message) message = Array.isArray(body.message) ? body.message[0] : String(body.message);
+          else if (body.error) message = String(body.error);
+        }
+      } else {
+        const plain = asApiError(err).message;
+        if (plain && !plain.includes('JSON')) message = plain;
       }
       setError(message);
     } finally {

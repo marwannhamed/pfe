@@ -10,9 +10,10 @@ import {
 } from '@ant-design/icons';
 import { spaceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Space, SpaceStatus, SpaceType, SpaceFeature } from '../../types';
+import type { ApiError, Space, SpaceFeature, SpaceStatus, SpaceType } from '../../types';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<SpaceStatus, { label: string; bg: string; color: string }> = {
@@ -95,14 +96,14 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
   const duration  = getDuration(form.start_date, form.start_time, form.end_date, form.end_time);
 
   const mutation = useMutation({
-    mutationFn: (d: any) => bookingApi.create(d),
+    mutationFn: (d: unknown) => bookingApi.create(d),
     onSuccess: () => {
       message.success('Booking created successfully!');
       qc.invalidateQueries({ queryKey: ['bookings'] });
       onSuccess();
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Failed to create booking';
+    onError: (err: ApiError) => {
+      const msg = asApiError(err).response?.data?.message ?? 'Failed to create booking';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });

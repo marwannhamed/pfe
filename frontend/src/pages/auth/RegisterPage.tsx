@@ -7,6 +7,7 @@ import {
   LockOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { authApi } from '../../api/services';
+import { asApiError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
 
@@ -221,8 +222,8 @@ export default function RegisterPage() {
         password:      v.password,
       });
       setIsSuccess(true);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
+    } catch (err) {
+      const msg = asApiError(err).response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Registration failed. Please try again.'));
     } finally {
       setIsLoading(false);

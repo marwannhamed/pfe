@@ -5,6 +5,7 @@ import { WarningOutlined, ReloadOutlined } from '@ant-design/icons';
 import { analyticsApi, siteApi } from '../../api/services';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { errorMessage } from '../../utils/errors';
 
 const { Title, Paragraph } = Typography;
 
@@ -20,7 +21,7 @@ export default function PredictiveMaintenancePage() {
       .getAll()
       .then((list) => {
         const sites = Array.isArray(list) ? list : [];
-        setSites(sites.map((s: any) => ({ id: s.id, name: s.name })));
+        setSites(sites.map((s) => ({ id: s.id, name: s.name })));
       })
       .catch(() => setSites([]));
   }, []);
@@ -33,8 +34,8 @@ export default function PredictiveMaintenancePage() {
       });
       const body = res.data as { tickets?: any[] };
       setRows(body.tickets ?? []);
-    } catch (e: any) {
-      message.error(e?.userMessage || e?.message || 'Failed to load');
+    } catch (e) {
+      message.error(errorMessage(e, 'Failed to load'));
       setRows([]);
     } finally {
       setLoading(false);

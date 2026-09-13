@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { message } from '../../utils/feedback';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import { asApiError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
 const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
@@ -52,7 +53,7 @@ export default function ReceptionStaffPage() {
       qc.invalidateQueries({ queryKey: ['client-onboarding-reception'] });
     },
     onError: (e: { userMessage?: string; response?: { data?: { message?: string } } }) => {
-      message.error(e?.userMessage ?? e?.response?.data?.message ?? 'Failed to create');
+      message.error(e?.userMessage ?? asApiError(e).response?.data?.message ?? 'Failed to create');
     },
   });
 

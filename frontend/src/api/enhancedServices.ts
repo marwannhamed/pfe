@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { EmailTestRequest } from '../types';
+import type { ApiError, EmailTestRequest } from '../types';
 
 /**
  * Report and email endpoints that surface errors to the caller as a typed
@@ -23,13 +23,14 @@ class APIError extends Error {
   }
 }
 
-const handleAPIError = (error: any) => {
+const handleAPIError = (error: ApiError) => {
   if (error.response) {
     const { status, data } = error.response;
+    const raw = data?.message;
     throw new APIError(
-      data.message || 'API request failed',
+      (Array.isArray(raw) ? raw[0] : raw) || 'API request failed',
       status,
-      data.code,
+      error.code,
       data,
     );
   } else if (error.request) {

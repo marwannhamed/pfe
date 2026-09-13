@@ -155,7 +155,7 @@ export default function MaintenanceManagementPage() {
     setModalVisible(true);
   };
 
-  const handleEdit = (record: any) => {
+  const handleEdit = (record) => {
     setEditingTicket(record);
     form.setFieldsValue({
       ...record,
@@ -165,7 +165,7 @@ export default function MaintenanceManagementPage() {
     setModalVisible(true);
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values) => {
     try {
       const payload = {
         ...values,
@@ -188,7 +188,7 @@ export default function MaintenanceManagementPage() {
     }
   };
 
-  const handleViewDetails = (record: any) => {
+  const handleViewDetails = (record) => {
     setSelectedTicket(record);
     setDetailModalVisible(true);
   };
@@ -290,7 +290,7 @@ export default function MaintenanceManagementPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           <Tooltip title="View Details">
             <Button

@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/authStore';
 import { InvoiceDownloadButton, InvoicePreviewModal } from '../../components/InvoicePDF';
 import type { ApiError, Invoice, InvoiceStatus, LeaseContract, Payment } from '../../types';
 import { currencySymbol, DEFAULT_CURRENCY } from '../../constants/qatar';
+import { asApiError, errorMessage } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const INVOICE_STATUS_META: Record<InvoiceStatus, { label: string; bg: string; color: string }> = {
@@ -130,7 +131,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
       qc.invalidateQueries({ queryKey: ['billing-summary'] });
       onClose();
     },
-    onError: (err: ApiError) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError: (err: ApiError) => { const msg = asApiError(err).response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {
@@ -247,7 +248,7 @@ function ChequeUploadButton({ paymentId, onDone }: { paymentId: string; onDone: 
   const uploadMut = useMutation({
     mutationFn: (file: File) => billingApi.uploadPaymentCheque(paymentId, file),
     onSuccess: () => { message.success('Cheque PDF uploaded'); onDone(); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message ?? 'Upload failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message ?? 'Upload failed'),
   });
   return (
     <>
@@ -330,7 +331,7 @@ function RecordPaymentModal({
         message.error('Cannot reach the API. Start the backend and try again.');
         return;
       }
-      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to record payment';
+      const msg = errorMessage(err, 'Failed to record payment');
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -500,7 +501,7 @@ function EditInvoiceModal({ invoice, onClose }: { invoice: Invoice; onClose: () 
   const mutation = useMutation({
     mutationFn: (d: unknown) => billingApi.updateInvoice(invoice.id, d),
     onSuccess: () => { message.success('Invoice updated!'); qc.invalidateQueries({ queryKey: ['invoices'] }); onClose(); },
-    onError: (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError: (err: ApiError) => { message.error(asApiError(err).response?.data?.message ?? 'Failed'); },
   });
 
   const submit = () => {
@@ -697,7 +698,7 @@ export default function BillingPage() {
   const cancelMut = useMutation({ mutationFn: (id: string) => billingApi.cancelInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Cancelled'); },    onError: () => message.error('Failed') });
   const deleteMut = useMutation({ mutationFn: (id: string) => billingApi.deleteInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Deleted'); },      onError: () => message.error('Failed') });
   const refundMut  = useMutation({ mutationFn: (id: string) => billingApi.refundPayment(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Refunded'); }, onError: () => message.error('Failed') });
-  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed — invoice marked as paid'); }, onError: (err: ApiError) => message.error(err?.response?.data?.message ?? 'Failed to confirm') });
+  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed — invoice marked as paid'); }, onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message ?? 'Failed to confirm') });
 
   const filteredInv = invoices.filter(inv => {
     if (q && !inv.invoice_number.toLowerCase().includes(q.toLowerCase()) &&

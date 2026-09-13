@@ -11,12 +11,14 @@ import {
   billingApi, spaceApi, maintenanceApi,
 } from '../api/services';
 import { useAuthStore } from '../store/authStore';
+import type { Booking, Invoice, LeaseContract, Space, Tenant } from '../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -173,7 +175,7 @@ export default function GlobalSearch() {
   // ── Build flat results array ──────────────────────────────────────────────
   const results: SearchResult[] = [];
 
-  toArray<any>(bookingsRaw)
+  toArray<Booking>(bookingsRaw)
     .filter(b => b.booking_number?.toLowerCase().includes(q) || b.space?.name?.toLowerCase().includes(q))
     .slice(0, 4)
     .forEach(b => results.push({
@@ -186,7 +188,7 @@ export default function GlobalSearch() {
       meta:     `$${parseFloat(b.total_price || '0').toLocaleString()}`,
     }));
 
-  toArray<any>(contractsRaw)
+  toArray<LeaseContract>(contractsRaw)
     .filter(c => c.contract_number?.toLowerCase().includes(q) || c.tenant?.name?.toLowerCase().includes(q))
     .slice(0, 4)
     .forEach(c => results.push({
@@ -201,7 +203,7 @@ export default function GlobalSearch() {
         : undefined,
     }));
 
-  toArray<any>(tenantsRaw)
+  toArray<Tenant>(tenantsRaw)
     .filter(t => t.name?.toLowerCase().includes(q) || t.contact_email?.toLowerCase().includes(q))
     .slice(0, 4)
     .forEach(t => results.push({
@@ -214,7 +216,7 @@ export default function GlobalSearch() {
       meta:     t.subscription_plan,
     }));
 
-  toArray<any>(invoicesRaw)
+  toArray<Invoice>(invoicesRaw)
     .filter(i => i.invoice_number?.toLowerCase().includes(q) || i.tenant?.name?.toLowerCase().includes(q))
     .slice(0, 4)
     .forEach(i => results.push({
@@ -227,7 +229,7 @@ export default function GlobalSearch() {
       meta:     `$${parseFloat(i.total_amount || '0').toLocaleString()}`,
     }));
 
-  toArray<any>(spacesRaw)
+  toArray<Space>(spacesRaw)
     .filter(s => s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q))
     .slice(0, 4)
     .forEach(s => results.push({

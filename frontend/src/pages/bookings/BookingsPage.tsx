@@ -21,6 +21,7 @@ import { PORTAL_MAP_PATH } from '../../constants/routes';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import { addonLineTotal, addonUnitPriceForLease } from '../../utils/addonPricing';
+import { asApiError } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<BookingStatus, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
@@ -162,7 +163,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
       qc.invalidateQueries({ queryKey: ['bookings'] });
       onClose();
     },
-    onError:   (err: ApiError) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError:   (err: ApiError) => { const msg = asApiError(err).response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {
@@ -284,17 +285,17 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
       message.success('Approved — create contract & record payment for the tenant');
       onClose();
     },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const rejectMut   = useMutation({
     mutationFn: (id: string) => bookingApi.reject(id, 'Rejected by manager'),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Booking rejected'); onClose(); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const cancelMut   = useMutation({
     mutationFn: (id: string) => bookingApi.cancel(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Cancelled'); onClose(); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const checkInMut  = useMutation({ mutationFn: (id: string) => bookingApi.checkIn(id),         onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked in!'); onClose(); }, onError: () => message.error('Failed') });
   const checkOutMut = useMutation({ mutationFn: (id: string) => bookingApi.checkOut(id),        onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked out!');onClose(); }, onError: () => message.error('Failed') });
@@ -448,21 +449,21 @@ export default function BookingsPage() {
   const cancelMut  = useMutation({
     mutationFn: (id: string) => bookingApi.cancel(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Cancelled'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const approveMut = useMutation({
     mutationFn: (id: string) => bookingApi.approve(id, userId),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Approved — create contract & record payment for the tenant'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const rejectMut  = useMutation({
     mutationFn: (id: string) => bookingApi.reject(id, 'Rejected by manager'),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Booking rejected'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const deleteMut  = useMutation({ mutationFn: (id: string) => bookingApi.remove(id),          onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Deleted'); },  onError: () => message.error('Failed') });
-  const checkInMut = useMutation({ mutationFn: (id: string) => bookingApi.checkIn(id),         onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked in!'); }, onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed') });
-  const checkOutMut= useMutation({ mutationFn: (id: string) => bookingApi.checkOut(id),        onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked out!'); }, onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed') });
+  const checkInMut = useMutation({ mutationFn: (id: string) => bookingApi.checkIn(id),         onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked in!'); }, onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed') });
+  const checkOutMut= useMutation({ mutationFn: (id: string) => bookingApi.checkOut(id),        onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Checked out!'); }, onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed') });
 
   const invalidateBookings = () => {
     qc.invalidateQueries({ queryKey: ['bookings'] });
@@ -471,17 +472,17 @@ export default function BookingsPage() {
   const confirmPhoneMut = useMutation({
     mutationFn: (id: string) => bookingApi.confirmPhone(id),
     onSuccess: () => { invalidateBookings(); message.success('Tenant confirmed — visit instructions emailed'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const phoneUnreachableMut = useMutation({
     mutationFn: (id: string) => bookingApi.phoneUnreachable(id, 'Could not reach tenant'),
     onSuccess: () => { invalidateBookings(); message.success('Booking cancelled — space released'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const visitCompleteMut = useMutation({
     mutationFn: (id: string) => bookingApi.markDocumentsPending(id),
     onSuccess: () => { invalidateBookings(); message.success('Visit complete — manager can upload documents'); },
-    onError: (err: ApiError) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
+    onError: (err: ApiError) => message.error(asApiError(err).response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
 
   const handleCreateContract = (booking: Booking) => {

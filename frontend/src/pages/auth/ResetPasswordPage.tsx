@@ -6,6 +6,7 @@ import {
   LockOutlined, HomeOutlined, ArrowLeftOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import api from '../../api/config';
+import { asApiError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
 
@@ -41,8 +42,8 @@ export default function ResetPasswordPage() {
       });
       message.success('Password reset successfully!');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
+    } catch (err) {
+      const msg = asApiError(err).response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Failed to reset password. The link may have expired.'));
     } finally {
       setLoading(false);

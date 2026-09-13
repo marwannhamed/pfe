@@ -21,6 +21,8 @@ import { authApi, notificationApi, userApi } from '../../api/services';
 import { message } from '../../utils/feedback';
 import { formatUserName } from '../../utils/user';
 import { isProfileComplete } from '../../utils/clientOnboarding';
+import type { ApiError } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 type SettingsTab = 'profile' | 'security' | 'notifications';
 
@@ -220,8 +222,8 @@ export default function SettingsPage() {
       setPwErrors({});
       if (setUser) setUser({ ...user!, must_change_password: false });
     },
-    onError: (err: any) => {
-      const msg = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to change password';
+    onError: (err: ApiError) => {
+      const msg = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Failed to change password';
       message.error(typeof msg === 'string' ? msg : 'Failed to change password');
     },
   });

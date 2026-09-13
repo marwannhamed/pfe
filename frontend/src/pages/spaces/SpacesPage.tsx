@@ -10,12 +10,13 @@ import {
 } from '@ant-design/icons';
 import { spaceApi, uploadApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Space, SpaceStatus, SpaceType } from '../../types';
+import type { ApiError, Space, SpaceStatus, SpaceType } from '../../types';
 import AddSpaceModal from '../../pages/spaces/AddSpaceModal';
 import { validatePublishLocation } from '../../utils/spacePublish';
 import SpaceLocationFields from '../../components/spaces/SpaceLocationFields';
 import SpaceMediaFields, { type SpaceMediaValues } from '../../components/spaces/SpaceMediaFields';
 import PageShell from '../../components/ui/PageShell';
+import { asApiError } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_LABEL: Record<SpaceStatus, string> = {
@@ -512,7 +513,7 @@ function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void 
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spaces'] }); qc.invalidateQueries({ queryKey: ['public-map-spaces'] }); onClose(); },
-    onError:   (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; alert(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError:   (err: ApiError) => { const msg = asApiError(err).response?.data?.message ?? 'Failed'; alert(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {

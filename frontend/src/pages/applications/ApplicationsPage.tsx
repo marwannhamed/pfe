@@ -3,7 +3,7 @@ import { useState } from 'react';
 function apiErrorMessage(e: unknown, fallback: string): string {
   const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
   if (err?.userMessage) return err.userMessage;
-  const msg = err?.response?.data?.message;
+  const msg = asApiError(err).response?.data?.message;
   if (Array.isArray(msg)) return msg[0] ?? fallback;
   if (typeof msg === 'string' && msg.length) return msg;
   return fallback;
@@ -16,6 +16,7 @@ import { CheckOutlined, CloseOutlined, ReloadOutlined, LinkOutlined, CopyOutline
 import { applicationFormsApi, spaceApi, tenantApplicationsApi } from '../../api/services';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import { asApiError } from '../../utils/errors';
 
 const { Text, Paragraph } = Typography;
 

@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { analyticsApi, siteApi } from '../../api/services';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { errorMessage } from '../../utils/errors';
 
 const { Title, Paragraph, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -37,7 +38,7 @@ export default function OccupancyHeatmapPage() {
       .getAll()
       .then((list) => {
         const sites = Array.isArray(list) ? list : [];
-        setSites(sites.map((s: any) => ({ id: s.id, name: s.name })));
+        setSites(sites.map((s) => ({ id: s.id, name: s.name })));
         if (sites.length === 1) setSiteId((prev) => prev || sites[0].id);
       })
       .catch(() => setSites([]));
@@ -55,8 +56,8 @@ export default function OccupancyHeatmapPage() {
       const res = await analyticsApi.getOccupancyHeatmap(siteId, from, to);
       const data = res.data as { spaces?: Row[] };
       setRows(data.spaces ?? []);
-    } catch (e: any) {
-      message.error(e?.userMessage || e?.message || 'Failed to load heatmap');
+    } catch (e) {
+      message.error(errorMessage(e, 'Failed to load heatmap'));
       setRows([]);
     } finally {
       setLoading(false);

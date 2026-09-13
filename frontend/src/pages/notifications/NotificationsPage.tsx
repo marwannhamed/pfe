@@ -9,12 +9,15 @@ import { notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import type { ApiError, Notification } from '../../types';
+import { errorMessage } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -145,7 +148,7 @@ export default function NotificationsPage() {
     refetchInterval: 30000, // auto-refresh every 30s
   });
 
-  const notifs = toArray<any>(notifsRaw);
+  const notifs = toArray<Notification>(notifsRaw);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const readMut = useMutation({
@@ -154,8 +157,8 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notif-count'] });
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to mark as read';
+    onError: (err: ApiError) => {
+      const msg = errorMessage(err, 'Failed to mark as read');
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -170,8 +173,8 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['notif-count'] });
       message.success('All notifications marked as read');
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to mark all as read';
+    onError: (err: ApiError) => {
+      const msg = errorMessage(err, 'Failed to mark all as read');
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -182,8 +185,8 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['notifications'] });
       qc.invalidateQueries({ queryKey: ['notif-count'] });
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? err?.userMessage ?? 'Failed to delete';
+    onError: (err: ApiError) => {
+      const msg = errorMessage(err, 'Failed to delete');
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
   });
@@ -333,7 +336,7 @@ export default function NotificationsPage() {
 
               {/* Items */}
               <div style={{ ...card, overflow: 'hidden' }}>
-                {grouped[group].map((notif: any) => (
+                {grouped[group].map((notif) => (
                   <NotifItem
                     key={notif.id}
                     notif={notif}

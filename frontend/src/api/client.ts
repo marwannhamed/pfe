@@ -14,7 +14,7 @@ export const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL ??
   ((import.meta as any).env?.DEV ? '' : 'http://localhost:6001');
 
-export const unwrapApiPayload = (payload: any) => {
+export const unwrapApiPayload = (payload) => {
   if (
     payload &&
     typeof payload === 'object' &&

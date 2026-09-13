@@ -59,6 +59,23 @@ const REPORT_TEMPLATES = [
   },
 ];
 
+/**
+ * The list endpoint has been seen returning either naming convention, which is
+ * why loadReports reads each field twice. The rows held in state are the
+ * normalised result, not the shared Report entity.
+ */
+type RawReport = Record<string, unknown> & {
+  title?: string;      name?: string;
+  created_at?: string; createdAt?: string;
+  type?: string;       reportType?: string;
+};
+
+type ReportRow = RawReport & {
+  name?: string;
+  createdAt?: string;
+  reportType?: string;
+};
+
 interface ReportRequest {
   type: string;
   parameters: Record<string, any>;
@@ -68,7 +85,7 @@ interface ReportRequest {
 export default function ReportGenerationPage() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportRow[]>([]);
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [form] = Form.useForm();
@@ -83,7 +100,7 @@ export default function ReportGenerationPage() {
     setLoading(true);
     try {
       const list = await enhancedReportApi.getAll();
-      const normalized = (Array.isArray(list) ? list : []).map((r: any) => ({
+      const normalized = ((Array.isArray(list) ? list : []) as RawReport[]).map((r) => ({
         ...r,
         name: r.title ?? r.name,
         createdAt: r.created_at ?? r.createdAt,
@@ -97,7 +114,7 @@ export default function ReportGenerationPage() {
     }
   };
 
-  const handleGenerateReport = (template: any) => {
+  const handleGenerateReport = (template) => {
     setSelectedTemplate(template);
     form.resetFields();
     form.setFieldsValue({
@@ -170,7 +187,7 @@ export default function ReportGenerationPage() {
   const renderParameterInputs = () => {
     if (!selectedTemplate) return null;
 
-    return selectedTemplate.parameters.map((param: any) => {
+    return selectedTemplate.parameters.map((param) => {
       switch (param.type) {
         case 'dateRange':
           return (
@@ -226,7 +243,7 @@ export default function ReportGenerationPage() {
     {
       title: 'Template',
       key: 'template',
-      render: (template: any) => (
+      render: (template) => (
         <Space orientation="vertical" size="small">
           <Text strong>{template.name}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -246,7 +263,7 @@ export default function ReportGenerationPage() {
     {
       title: 'Formats',
       key: 'formats',
-      render: (template: any) => (
+      render: (template) => (
         <Space>
           {template.formats.map((format: string) => (
             <Tooltip key={format} title={format}>
@@ -259,7 +276,7 @@ export default function ReportGenerationPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (template: any) => (
+      render: (template) => (
         <Button
           type="primary"
           size="small"
@@ -306,7 +323,7 @@ export default function ReportGenerationPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {(record as any).status === 'COMPLETED' && (
             <Tooltip title="Download">

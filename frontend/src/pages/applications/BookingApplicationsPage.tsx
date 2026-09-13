@@ -16,6 +16,7 @@ import { message, modal } from '../../utils/feedback';
 import { bookingApplicationApi } from '../../api/services';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import { asApiError } from '../../utils/errors';
 
 function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
@@ -220,7 +221,7 @@ export default function BookingApplicationsPage() {
       qc.invalidateQueries({ queryKey: ['bookings'] });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      message.error(e?.response?.data?.message ?? 'Failed'),
+      message.error(asApiError(e).response?.data?.message ?? 'Failed'),
   });
 
   const refuseMut = useMutation({
@@ -233,7 +234,7 @@ export default function BookingApplicationsPage() {
       qc.invalidateQueries({ queryKey: ['booking-applications'] });
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
-      message.error(e?.response?.data?.message ?? 'Failed'),
+      message.error(asApiError(e).response?.data?.message ?? 'Failed'),
   });
 
   return (

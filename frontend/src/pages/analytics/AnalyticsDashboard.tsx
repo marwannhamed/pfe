@@ -443,7 +443,7 @@ export default function AnalyticsDashboard() {
                 <Col xs={24} sm={8}>
                   <Statistic
                     title="Open Tickets"
-                    value={maintenanceStats.byStatus?.find((s: any) => s.status === 'OPEN')?.count || 0}
+                    value={maintenanceStats.byStatus?.find((s) => s.status === 'OPEN')?.count || 0}
                     styles={{ content: { color: '#faad14' } }}
                   />
                 </Col>

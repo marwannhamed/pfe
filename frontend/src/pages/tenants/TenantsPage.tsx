@@ -12,7 +12,8 @@ import {
   CreditCardOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import { tenantApi } from '../../api/services';
-import type { Tenant, TenantStatus } from '../../types';
+import type { ApiError, Tenant, TenantStatus } from '../../types';
+import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<TenantStatus, { label: string; bg: string; color: string }> = {
@@ -77,7 +78,7 @@ function CreateClientModal({
       onCreated(payload as ProvisionResult);
       onClose();
       form.resetFields();
-    } catch (e: unknown) {
+    } catch (e) {
       const msg = (e as { response?: { data?: { message?: string } }; userMessage?: string })?.response?.data?.message
         ?? (e as { userMessage?: string })?.userMessage
         ?? 'Failed to create client account';
@@ -555,9 +556,9 @@ function EditTenantModal({ tenant, onClose }: { tenant: Tenant; onClose: () => v
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
 
   const mutation = useMutation({
-    mutationFn: (d: any) => tenantApi.update(tenant.id, d),
+    mutationFn: (d: unknown) => tenantApi.update(tenant.id, d),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tenants'] }); onClose(); },
-    onError:   (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError:   (err: ApiError) => { const msg = asApiError(err).response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {

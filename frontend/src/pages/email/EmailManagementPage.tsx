@@ -115,7 +115,7 @@ export default function EmailManagementPage() {
     }
   };
 
-  const handleTestEmail = (template: any) => {
+  const handleTestEmail = (template) => {
     setSelectedTemplate(template);
     testForm.resetFields();
     testForm.setFieldsValue({
@@ -125,7 +125,7 @@ export default function EmailManagementPage() {
     setTestModalVisible(true);
   };
 
-  const handlePreview = async (template: any) => {
+  const handlePreview = async (template) => {
     setSelectedTemplate(template);
     setLoading(true);
     try {
@@ -180,7 +180,7 @@ export default function EmailManagementPage() {
     }
   };
 
-  const handleBulkEmail = async (template: any) => {
+  const handleBulkEmail = async (template) => {
     modal.confirm({
       title: 'Send Bulk Email',
       content: `Are you sure you want to send "${template.name}" to all users? This action cannot be undone.`,
@@ -197,7 +197,7 @@ export default function EmailManagementPage() {
     });
   };
 
-  const getTemplateStatus = (_template: any) => {
+  const getTemplateStatus = (_template) => {
     // Mock status - in real app, this would come from the backend
     return Math.random() > 0.3 ? 'active' : 'inactive';
   };
@@ -206,7 +206,7 @@ export default function EmailManagementPage() {
     {
       title: 'Template',
       key: 'template',
-      render: (template: any) => (
+      render: (template) => (
         <Space orientation="vertical" size="small">
           <Text strong>{template.name}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -232,7 +232,7 @@ export default function EmailManagementPage() {
     {
       title: 'Status',
       key: 'status',
-      render: (template: any) => {
+      render: (template) => {
         const status = getTemplateStatus(template);
         return (
           <Badge
@@ -245,7 +245,7 @@ export default function EmailManagementPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (template: any) => (
+      render: (template) => (
         <Space>
           <Tooltip title="Preview Email">
             <Button

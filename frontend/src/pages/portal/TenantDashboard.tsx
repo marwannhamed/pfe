@@ -308,7 +308,7 @@ export default function TenantDashboard() {
                     </button>
                   </div>
                 )
-                : recentBookings.map((b: any, i: number) => {
+                : recentBookings.map((b, i) => {
                   const bs = BOOKING_STATUS[b.status] ?? { bg: '#f1f5f9', color: '#475569', label: b.status };
                   return (
                     <div key={b.id}
@@ -366,7 +366,7 @@ export default function TenantDashboard() {
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>No open maintenance tickets</div>
                   </div>
                 )
-                : recentTickets.map((tk: any, i: number) => {
+                : recentTickets.map((tk, i) => {
                   const ts = TICKET_STATUS[tk.status]     ?? { bg: '#f1f5f9', color: '#475569' };
                   const tp = TICKET_PRIORITY[tk.priority] ?? { bg: '#f1f5f9', color: '#475569' };
                   return (
@@ -428,7 +428,7 @@ export default function TenantDashboard() {
                     No notifications
                   </div>
                 )
-                : recentNotifs.map((n: any, i: number) => {
+                : recentNotifs.map((n, i) => {
                   const nm = NOTIF_TYPE_ICON[n.type] ?? { icon: '📣', color: '#475569', bg: t.tableHead };
                   return (
                     <div key={n.id}
@@ -475,7 +475,7 @@ export default function TenantDashboard() {
                       <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>Invite your team to collaborate</div>
                     </div>
                   )
-                  : members.slice(0, 6).map((m: any, i: number) => {
+                  : members.slice(0, 6).map((m, i) => {
                     const ROLE_META: Record<string, { bg: string; color: string }> = {
                       TENANT_ADMIN: { bg: '#ede9fe', color: '#6d28d9' },
                       EMPLOYEE:     { bg: '#f1f5f9', color: '#475569' },

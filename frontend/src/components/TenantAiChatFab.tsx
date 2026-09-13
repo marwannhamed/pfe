@@ -3,6 +3,7 @@ import { Button, Drawer, Input, Space, Typography } from 'antd';
 import { message } from '../utils/feedback';
 import { CommentOutlined } from '@ant-design/icons';
 import { aiApi } from '../api/services';
+import { errorMessage } from '../utils/errors';
 
 const { Text } = Typography;
 
@@ -26,8 +27,8 @@ export default function TenantAiChatDrawer({ open, onClose }: { open: boolean; o
       );
       const reply = (res.data as any)?.reply as string;
       setMessages([...next, { role: 'assistant', content: reply || '(empty)' }]);
-    } catch (e: any) {
-      message.error(e?.userMessage || e?.message || 'Assistant unavailable');
+    } catch (e) {
+      message.error(errorMessage(e, 'Assistant unavailable'));
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);

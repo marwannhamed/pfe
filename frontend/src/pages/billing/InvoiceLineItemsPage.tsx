@@ -53,9 +53,9 @@ export default function InvoiceLineItemsPage() {
   }, [invoicesRaw]);
 
   const lineItems: InvoiceLine[] = useMemo(() => {
-    return invoices.flatMap((invoice: any) => {
+    return invoices.flatMap((invoice) => {
       const lines = Array.isArray(invoice?.lines) ? invoice.lines : [];
-      return lines.map((line: any, lineIndex: number) => ({
+      return lines.map((line, lineIndex) => ({
         id: line.id ?? `${invoice.id}-line-${lineIndex}`,
         invoice_id: invoice.id,
         invoice_number: invoice.invoice_number,
@@ -71,7 +71,13 @@ export default function InvoiceLineItemsPage() {
   }, [invoices]);
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) =>
+    mutationFn: (payload: {
+      invoiceId: string;
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      taxRate?: number;
+    }) =>
       billingApi.addInvoiceLine(payload.invoiceId, {
         description: payload.description,
         quantity: payload.quantity,
@@ -106,7 +112,7 @@ export default function InvoiceLineItemsPage() {
     setModalVisible(true);
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values) => {
     createMutation.mutate(values);
   };
 
@@ -388,7 +394,7 @@ export default function InvoiceLineItemsPage() {
                 rules={[{ required: true, message: 'Please enter invoice ID' }]}
               >
                 <Select placeholder="Select invoice">
-                  {invoices.map((invoice: any) => (
+                  {invoices.map((invoice) => (
                     <Option key={invoice.id} value={invoice.id}>
                       {invoice.invoice_number}
                     </Option>

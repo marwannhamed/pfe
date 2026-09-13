@@ -64,7 +64,7 @@ export default function PortalAddonsPage() {
 
   const myBookingAddons = useMemo(() => bookings.flatMap((booking) => {
     const addOns = Array.isArray(booking.addOns) ? booking.addOns : [];
-    return addOns.map((addOn: any) => ({
+    return addOns.map((addOn) => ({
       ...addOn,
       booking_id: booking.id,
       booking_number: booking.booking_number,

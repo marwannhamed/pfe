@@ -7,6 +7,7 @@ import { tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { errorMessage } from '../../utils/errors';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -113,8 +114,8 @@ export default function EmbeddedReportsPage() {
       });
       message.success('Saved');
       load(tid);
-    } catch (e: any) {
-      message.error(e?.userMessage || e?.message || 'Save failed');
+    } catch (e) {
+      message.error(errorMessage(e, 'Save failed'));
     } finally {
       setLoading(false);
     }

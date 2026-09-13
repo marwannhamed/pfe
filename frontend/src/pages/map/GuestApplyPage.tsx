@@ -18,6 +18,7 @@ import { clearPendingBookingSpace } from '../../utils/pendingBookingSpace';
 import { PORTAL_MAP_PATH, PUBLIC_MAP_PATH } from '../../constants/routes';
 import { addonLineTotal, addonUnitPriceForLease } from '../../utils/addonPricing';
 import { currencySymbol, DEFAULT_CURRENCY, isQatarWeekend } from '../../constants/qatar';
+import { asApiError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
 
@@ -157,7 +158,7 @@ export default function GuestApplyPage() {
       setIsSuccess(true);
     },
     onError: (err: { userMessage?: string; response?: { data?: { message?: string | string[] } } }) => {
-      const msg = err?.userMessage ?? err?.response?.data?.message;
+      const msg = err?.userMessage ?? asApiError(err).response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Failed to submit application'));
     },
   });

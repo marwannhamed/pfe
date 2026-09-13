@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Alert, Typography } from 'antd';
 import { MailOutlined, HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { authApi } from '../../api/services';
+import { asApiError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
 
@@ -18,9 +19,9 @@ export default function ForgotPasswordPage() {
     try {
       await authApi.requestPasswordReset(values.email);
       setSent(true);
-    } catch (err: unknown) {
+    } catch (err) {
       const e = err as { response?: { data?: { message?: string | string[] } } };
-      const msg = e?.response?.data?.message;
+      const msg = asApiError(e).response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Could not send reset email. Try again.'));
     } finally {
       setLoading(false);
