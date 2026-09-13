@@ -135,7 +135,7 @@ function RenewModal({ contract, onClose }: { contract: any; onClose: () => void 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 2 }}>{contract.tenant?.name ?? 'Tenant'}</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Monthly rent: <strong>${parseFloat(contract.monthly_rent || 0).toLocaleString()}</strong> {contract.currency}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>Monthly rent: <strong>${parseFloat(contract.monthly_rent || '0').toLocaleString()}</strong> {contract.currency}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ background: urgency.bg, color: urgency.color, border: `1px solid ${urgency.border}`, fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -242,7 +242,7 @@ function RenewModal({ contract, onClose }: { contract: any; onClose: () => void 
 function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c) => void; onView: (c) => void }) {
   const days    = daysUntil(contract.end_date);
   const urgency = getUrgency(days);
-  const rent    = parseFloat(contract.monthly_rent || 0);
+  const rent    = parseFloat(contract.monthly_rent || '0');
 
   return (
     <div style={{
@@ -356,7 +356,7 @@ export default function ContractRenewalPage() {
   const in60     = all.filter(c => { const d = daysUntil(c.end_date); return d > 0 && d <= 60; }).length;
   const totalRevAtRisk = all
     .filter(c => daysUntil(c.end_date) <= 90)
-    .reduce((s, c) => s + parseFloat(c.monthly_rent || 0), 0);
+    .reduce((s, c) => s + parseFloat(c.monthly_rent || '0'), 0);
 
   return (
     <div style={{ padding: 24, minHeight: '100%' }}>

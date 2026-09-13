@@ -12,6 +12,7 @@ import { addonServiceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import type { ApiError } from '../../types';
 
 const { TextArea } = Input;
 
@@ -118,9 +119,9 @@ export default function AddonServicesPage() {
     return { total: services.length, active, inactive: services.length - active };
   }, [services]);
 
-  const bookingAddOns = useMemo(() => bookings.flatMap((booking: any) => {
+  const bookingAddOns = useMemo(() => bookings.flatMap((booking) => {
     const addOns = Array.isArray(booking?.addOns) ? booking.addOns : [];
-    return addOns.map((addOn: any) => ({
+    return addOns.map((addOn) => ({
       ...addOn,
       booking_id: booking.id,
       booking_number: booking.booking_number,
@@ -136,7 +137,7 @@ export default function AddonServicesPage() {
     setServiceModalOpen(true);
   };
 
-  const openEditModal = (record: any) => {
+  const openEditModal = (record) => {
     setEditingService(record);
     setServiceModalOpen(true);
   };
@@ -147,7 +148,7 @@ export default function AddonServicesPage() {
     serviceForm.resetFields();
   };
 
-  const handleSubmitService = async (values: any) => {
+  const handleSubmitService = async (values) => {
     const payload = {
       name: values.name,
       description: values.description,
@@ -168,13 +169,14 @@ export default function AddonServicesPage() {
       }
       closeServiceModal();
       loadData();
-    } catch (err: any) {
-      const m = err?.response?.data?.message ?? err?.userMessage;
+    } catch (err) {
+      const { response, userMessage } = (err ?? {}) as ApiError;
+      const m = response?.data?.message ?? userMessage;
       message.error(Array.isArray(m) ? m[0] : (m || 'Failed to save service'));
     }
   };
 
-  const handleToggleActive = async (record: any) => {
+  const handleToggleActive = async (record) => {
     try {
       if (record.is_active) await addonServiceApi.deactivate(record.id);
       else await addonServiceApi.activate(record.id);

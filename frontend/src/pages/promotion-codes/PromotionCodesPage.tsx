@@ -53,7 +53,7 @@ export default function PromotionCodesPage() {
     setModalVisible(true);
   };
 
-  const handleEdit = (record: any) => {
+  const handleEdit = (record) => {
     setEditingCode(record);
     form.setFieldsValue({
       ...record,
@@ -63,7 +63,7 @@ export default function PromotionCodesPage() {
     setModalVisible(true);
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values) => {
     try {
       const payload = {
         ...values,
@@ -112,7 +112,7 @@ export default function PromotionCodesPage() {
     }
   };
 
-  const getDiscountDisplay = (record: any) => {
+  const getDiscountDisplay = (record) => {
     if (record.type === 'PERCENTAGE') {
       return `${record.discount}%`;
     } else {
@@ -120,7 +120,7 @@ export default function PromotionCodesPage() {
     }
   };
 
-  const getStatusColor = (record: any) => {
+  const getStatusColor = (record) => {
     if (!record.is_active) return 'default';
     if (record.valid_until && dayjs().isAfter(record.valid_until)) return 'error';
     if (record.valid_from && dayjs().isBefore(record.valid_from)) return 'warning';
@@ -128,7 +128,7 @@ export default function PromotionCodesPage() {
     return 'success';
   };
 
-  const getStatusText = (record: any) => {
+  const getStatusText = (record) => {
     if (!record.is_active) return 'Inactive';
     if (record.valid_until && dayjs().isAfter(record.valid_until)) return 'Expired';
     if (record.valid_from && dayjs().isBefore(record.valid_from)) return 'Upcoming';
@@ -164,7 +164,7 @@ export default function PromotionCodesPage() {
     {
       title: 'Discount',
       key: 'discount',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {record.type === 'PERCENTAGE' ? 
             <PercentageOutlined /> : <DollarOutlined />}
@@ -175,7 +175,7 @@ export default function PromotionCodesPage() {
     {
       title: 'Usage',
       key: 'usage',
-      render: (record: any) => (
+      render: (record) => (
         <Text>
           {record.used_count || 0} / {record.max_uses || '∞'}
         </Text>
@@ -184,7 +184,7 @@ export default function PromotionCodesPage() {
     {
       title: 'Validity',
       key: 'validity',
-      render: (record: any) => (
+      render: (record) => (
         <Space orientation="vertical" size="small">
           {record.valid_from && (
             <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -202,7 +202,7 @@ export default function PromotionCodesPage() {
     {
       title: 'Status',
       key: 'status',
-      render: (record: any) => (
+      render: (record) => (
         <Tag color={getStatusColor(record)}>
           {getStatusText(record)}
         </Tag>
@@ -211,7 +211,7 @@ export default function PromotionCodesPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           <Tooltip title="View Statistics">
             <Button

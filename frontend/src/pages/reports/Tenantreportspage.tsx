@@ -9,14 +9,16 @@ import {
 import { ReloadOutlined } from '@ant-design/icons';
 import { bookingApi, billingApi, contractApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { Booking, Invoice, LeaseContract, Payment } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 type Range = '7d' | '30d' | '3m' | '1y';
 
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function getRangeStart(range: Range): Date {
@@ -83,7 +85,7 @@ function ChartTooltip({ active, payload, label, currency = true }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fff', marginBottom: i < payload.length - 1 ? 4 : 0 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -174,17 +176,17 @@ export default function TenantReportsPage() {
 
   const isLoading = l1 || l2 || l3 || l4;
 
-  const bookings  = toArray<any>(bookingsRaw);
-  const invoices  = toArray<any>(invoicesRaw);
-  const payments  = toArray<any>(paymentsRaw);
-  const contracts = toArray<any>(contractsRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const payments  = toArray<Payment>(paymentsRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
 
   // ── Filtered by range ────────────────────────────────────────────────────────
   const rangeBookings = bookings.filter(b => inRange(b.created_at));
   const rangePayments = payments.filter(p => inRange(p.payment_date));
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
-  const totalSpent      = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || 0), 0);
+  const totalSpent      = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
   const activeContracts = contracts.filter(c => c.status === 'ACTIVE').length;
   const pendingInvoices = invoices.filter(i => ['ISSUED','SENT','PARTIALLY_PAID'].includes(i.status)).length;
   const overdueInvoices = invoices.filter(i => i.status === 'OVERDUE').length;
@@ -195,7 +197,7 @@ export default function TenantReportsPage() {
     const buckets: Record<string, number> = {};
     rangePayments.filter(p => p.status === 'COMPLETED').forEach(p => {
       const key = range === '7d' ? fmtDay(p.payment_date) : fmtMonth(p.payment_date);
-      buckets[key] = (buckets[key] || 0) + parseFloat(p.amount || 0);
+      buckets[key] = (buckets[key] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(buckets).map(([date, Spent]) => ({ date, Spent: Math.round(Spent) }));
   }, [rangePayments, range]);
@@ -228,7 +230,7 @@ export default function TenantReportsPage() {
   }, [invoices]);
 
   // ── Monthly cost from active contracts ───────────────────────────────────────
-  const monthlyCommitment = contracts.filter(c => c.status === 'ACTIVE').reduce((s: number, c: any) => s + parseFloat(c.monthly_rent || 0), 0);
+  const monthlyCommitment = contracts.filter(c => c.status === 'ACTIVE').reduce((s: number, c: any) => s + parseFloat(c.monthly_rent || '0'), 0);
 
   // ── Upcoming invoices (due in next 30 days) ──────────────────────────────────
   const upcomingInvoices = invoices.filter(i => {
@@ -400,7 +402,7 @@ export default function TenantReportsPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {upcomingInvoices.map((inv: any) => {
+              {upcomingInvoices.map((inv) => {
                 const daysLeft = Math.ceil((new Date(inv.due_date).getTime() - Date.now()) / 86400000);
                 const urgent = daysLeft <= 7;
                 return (
@@ -432,7 +434,7 @@ export default function TenantReportsPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {recentBookings.map((b: any) => {
+              {recentBookings.map((b) => {
                 const statusColors: Record<string, { bg: string; color: string }> = {
                   CONFIRMED:        { bg: '#dcfce7', color: '#15803d' },
                   CHECKED_IN:       { bg: '#dbeafe', color: '#1d4ed8' },

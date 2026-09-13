@@ -312,7 +312,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
               { label: '📅 End',        value: `${end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${fmtTime(end)}` },
               { label: '⏱ Duration',   value: hours < 24 ? `${hours.toFixed(1)} hours` : `${(hours/24).toFixed(1)} days` },
               { label: '👥 Attendees',  value: `${booking.attendee_count ?? '—'} people` },
-              { label: '💰 Price',      value: `$${parseFloat(booking.total_price || 0).toLocaleString()}` },
+              { label: '💰 Price',      value: `$${parseFloat(booking.total_price || '0').toLocaleString()}` },
               ...(booking.tenant?.name ? [{ label: '🏢 Tenant', value: booking.tenant.name }] : []),
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${th.cardBorder}`, fontSize: 13 }}>

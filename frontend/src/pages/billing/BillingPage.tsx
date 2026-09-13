@@ -16,7 +16,7 @@ import {
 import { billingApi, contractApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { InvoiceDownloadButton, InvoicePreviewModal } from '../../components/InvoicePDF';
-import type { Invoice, Payment, InvoiceStatus } from '../../types';
+import type { ApiError, Invoice, InvoiceStatus, LeaseContract, Payment } from '../../types';
 import { currencySymbol, DEFAULT_CURRENCY } from '../../constants/qatar';
 
 // --- Helpers ------------------------------------------------------------------
@@ -76,10 +76,11 @@ function canTenantPay(inv: Invoice) {
   return payableInvoices([inv]).length > 0 && !hasPendingPayment(inv);
 }
 
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -111,17 +112,17 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
       return list.filter((c) => ['ACTIVE', 'DRAFT'].includes(c.status));
     },
   });
-  const contracts = toArray<any>(contractsRaw);
-  const selectedContract = contracts.find((c: any) => c.id === form.contract_id);
+  const contracts = toArray<LeaseContract>(contractsRaw);
+  const selectedContract = contracts.find((c) => c.id === form.contract_id);
 
   const handleContractChange = (v: string) => {
-    const c = contracts.find((x: any) => x.id === v);
+    const c = contracts.find((x) => x.id === v);
     setForm(f => ({ ...f, contract_id: v, amount: c ? c.monthly_rent : f.amount, currency: c ? c.currency : f.currency, description: c ? `Monthly rent — ${c.contract_number}` : f.description }));
     setErrors(e => { const n = { ...e }; delete n.contract_id; return n; });
   };
 
   const mutation = useMutation({
-    mutationFn: (d: any) => billingApi.createInvoice(d),
+    mutationFn: (d: unknown) => billingApi.createInvoice(d),
     onSuccess: () => {
       message.success('Invoice generated and sent to tenant admin');
       qc.invalidateQueries({ queryKey: ['invoices'] });
@@ -129,7 +130,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
       qc.invalidateQueries({ queryKey: ['billing-summary'] });
       onClose();
     },
-    onError: (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError: (err: ApiError) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {
@@ -185,7 +186,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
           {/* Contract */}
           <div style={{ border: '2px solid #2563eb', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>📄 Source Contract</div>
-            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c: any) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
+            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
             {errors.contract_id && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.contract_id}</div>}
             {selectedContract && (
               <div style={{ marginTop: 10, background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#1d4ed8', display: 'flex', gap: 16 }}>
@@ -246,7 +247,7 @@ function ChequeUploadButton({ paymentId, onDone }: { paymentId: string; onDone: 
   const uploadMut = useMutation({
     mutationFn: (file: File) => billingApi.uploadPaymentCheque(paymentId, file),
     onSuccess: () => { message.success('Cheque PDF uploaded'); onDone(); },
-    onError: (err: any) => message.error(err?.response?.data?.message ?? 'Upload failed'),
+    onError: (err: ApiError) => message.error(err?.response?.data?.message ?? 'Upload failed'),
   });
   return (
     <>
@@ -316,7 +317,7 @@ function RecordPaymentModal({
   const invoice = initialInvoice ?? unpaid.find((i) => i.id === selectedId) ?? null;
 
   const mutation = useMutation({
-    mutationFn: (d: any) => billingApi.createPayment(d).then((res) => res.data),
+    mutationFn: (d: unknown) => billingApi.createPayment(d).then((res) => res.data),
     onSuccess: () => {
       message.success(isSubmit ? 'Payment submitted — awaiting finance confirmation' : 'Payment recorded!');
       qc.invalidateQueries({ queryKey: ['invoices'] });
@@ -324,7 +325,7 @@ function RecordPaymentModal({
       qc.invalidateQueries({ queryKey: ['billing-summary'] });
       onClose();
     },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       if (!err?.response) {
         message.error('Cannot reach the API. Start the backend and try again.');
         return;
@@ -497,9 +498,9 @@ function EditInvoiceModal({ invoice, onClose }: { invoice: Invoice; onClose: () 
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
 
   const mutation = useMutation({
-    mutationFn: (d: any) => billingApi.updateInvoice(invoice.id, d),
+    mutationFn: (d: unknown) => billingApi.updateInvoice(invoice.id, d),
     onSuccess: () => { message.success('Invoice updated!'); qc.invalidateQueries({ queryKey: ['invoices'] }); onClose(); },
-    onError: (err: any) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError: (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
   });
 
   const submit = () => {
@@ -696,7 +697,7 @@ export default function BillingPage() {
   const cancelMut = useMutation({ mutationFn: (id: string) => billingApi.cancelInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Cancelled'); },    onError: () => message.error('Failed') });
   const deleteMut = useMutation({ mutationFn: (id: string) => billingApi.deleteInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Deleted'); },      onError: () => message.error('Failed') });
   const refundMut  = useMutation({ mutationFn: (id: string) => billingApi.refundPayment(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Refunded'); }, onError: () => message.error('Failed') });
-  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed — invoice marked as paid'); }, onError: (err: any) => message.error(err?.response?.data?.message ?? 'Failed to confirm') });
+  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed — invoice marked as paid'); }, onError: (err: ApiError) => message.error(err?.response?.data?.message ?? 'Failed to confirm') });
 
   const filteredInv = invoices.filter(inv => {
     if (q && !inv.invoice_number.toLowerCase().includes(q.toLowerCase()) &&

@@ -14,12 +14,14 @@ import {
 import { userApi, bookingApi, contractApi, billingApi, notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { PHONE_E164_PATTERN, PHONE_PLACEHOLDER } from '../../constants/team';
+import type { ApiError, Booking, Invoice, LeaseContract, Notification } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function formatDate(d: string) {
@@ -154,15 +156,15 @@ export default function ProfilePage() {
   const { data: invoicesRaw }  = useQuery({ queryKey: ['profile-invoices',  tenantId], queryFn: () => billingApi.getInvoices(tenantId ? { tenantId } : {}).then(r => r.data),       enabled: !!userId });
   const { data: notifsRaw }    = useQuery({ queryKey: ['profile-notifs',    userId],   queryFn: () => notificationApi.getAll({ userId }).then(r => r.data),                         enabled: !!userId });
 
-  const bookings  = toArray<any>(bookingsRaw);
-  const contracts = toArray<any>(contractsRaw);
-  const invoices  = toArray<any>(invoicesRaw);
-  const notifs    = toArray<any>(notifsRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const notifs    = toArray<Notification>(notifsRaw);
   const unreadNotifs = notifs.filter(n => !n.is_read).length;
 
   // ── Update profile mutation ─────────────────────────────────────────────────
   const updateMut = useMutation({
-    mutationFn: (data: any) => userApi.update(userId, data),
+    mutationFn: (data: unknown) => userApi.update(userId, data),
     onSuccess: (res) => {
       message.success('Profile updated successfully!');
       const updated = unwrapApiPayload(res.data) ?? res.data;
@@ -172,7 +174,7 @@ export default function ProfilePage() {
       qc.invalidateQueries({ queryKey: ['auth-me'] });
       setEditing(false);
     },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       const msg = err?.response?.data?.message ?? 'Failed to update profile';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
@@ -180,7 +182,8 @@ export default function ProfilePage() {
 
   // ── Change password mutation ────────────────────────────────────────────────
   const pwMut = useMutation({
-    mutationFn: (data: any) => userApi.changePassword(userId, data),
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      userApi.changePassword(userId, data),
     onSuccess: (res) => {
       message.success('Password changed successfully!');
       const updated = unwrapApiPayload(res.data) ?? res.data;
@@ -194,7 +197,7 @@ export default function ProfilePage() {
       setPwSuccess(true);
       setTimeout(() => setPwSuccess(false), 4000);
     },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       const msg = err?.response?.data?.message ?? 'Failed';
       if (typeof msg === 'string' && msg.toLowerCase().includes('incorrect')) {
         setPwErrors(e => ({ ...e, current: 'Current password is incorrect' }));
@@ -492,7 +495,7 @@ export default function ProfilePage() {
             {[...bookings]
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .slice(0, 5)
-              .map((b: any, i: number) => {
+              .map((b, i) => {
                 const statusColors: Record<string, { bg: string; color: string }> = {
                   CONFIRMED:        { bg: '#dcfce7', color: '#15803d' },
                   PENDING_APPROVAL: { bg: '#fef3c7', color: '#92400e' },

@@ -7,17 +7,19 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { ReloadOutlined } from '@ant-design/icons';
-import { bookingApi, billingApi, contractApi, siteApi, tenantApi } from '../../api/services';
+import { bookingApi, billingApi, contractApi, siteApi, spaceApi, tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { can } from '../../permissions/can';
+import type { Booking, Invoice, LeaseContract, Payment, Site, Space, Tenant } from '../../types';
 
 // --- Types & Helpers ----------------------------------------------------------
 type Range = '7d' | '30d' | '3m' | '1y';
 
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -80,7 +82,7 @@ function ChartTooltip({ active, payload, label, currency = true }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fff', marginBottom: i < payload.length - 1 ? 4 : 0 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -166,15 +168,18 @@ export default function ReportsPage() {
     enabled: canListTenants,
   });
   const { data: summaryRaw } = useQuery({ queryKey: ['rpt-summary', refreshKey], queryFn: () => billingApi.getFinancialSummary().then(r => r.data) });
+  // Occupancy needs the spaces themselves — see the chart below.
+  const { data: spacesRaw } = useQuery({ queryKey: ['rpt-spaces', refreshKey], queryFn: () => spaceApi.getAll() });
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || (canListTenants && l6);
 
-  const bookings  = toArray<any>(bookingsRaw);
-  const invoices  = toArray<any>(invoicesRaw);
-  const payments  = toArray<any>(paymentsRaw);
-  const contracts = toArray<any>(contractsRaw);
-  const sites     = toArray<any>(sitesRaw);
-  const tenants   = toArray<any>(tenantsRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const payments  = toArray<Payment>(paymentsRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
+  const sites     = toArray<Site>(sitesRaw);
+  const tenants   = toArray<Tenant>(tenantsRaw);
+  const spaces    = toArray<Space>(spacesRaw);
 
   // -- Filter by range ----------------------------------------------------------
   const inRange = (d: string) => new Date(d) >= rangeStart;
@@ -184,7 +189,7 @@ export default function ReportsPage() {
   const rangePayments  = payments.filter(p  => inRange(p.payment_date));
 
   // -- KPIs ---------------------------------------------------------------------
-  const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || 0), 0);
+  const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
   const activeContracts= contracts.filter(c => c.status === 'ACTIVE').length;
   const totalBookings  = rangeBookings.length;
   const confirmedBookings = rangeBookings.filter(b => ['CONFIRMED','CHECKED_IN','COMPLETED'].includes(b.status)).length;
@@ -196,7 +201,7 @@ export default function ReportsPage() {
     const buckets: Record<string, number> = {};
     rangePayments.filter(p => p.status === 'COMPLETED').forEach(p => {
       const key = range === '7d' ? fmtDay(p.payment_date) : fmtMonth(p.payment_date);
-      buckets[key] = (buckets[key] || 0) + parseFloat(p.amount || 0);
+      buckets[key] = (buckets[key] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(buckets).map(([date, revenue]) => ({ date, Revenue: Math.round(revenue) }));
   }, [rangePayments, range]);
@@ -233,24 +238,30 @@ export default function ReportsPage() {
 
   // -- Occupancy rate per site --------------------------------------------------
   const occupancyChart = useMemo(() => {
-    return sites.map((s: any) => ({
-      name: s.name?.length > 12 ? s.name.substring(0, 12) + '…' : s.name,
-      Occupied:  Math.max(0, (s.total_spaces ?? 0) - (s.available_spaces ?? 0)),
-      Available: s.available_spaces ?? 0,
-      Rate: s.total_spaces > 0 ? Math.round(((s.total_spaces - (s.available_spaces ?? 0)) / s.total_spaces) * 100) : 0,
-    }));
-  }, [sites]);
+    return sites.map((s) => {
+      const siteSpaces = spaces.filter((sp) => sp.floor?.building?.id === s.id);
+      const occupied  = siteSpaces.filter((sp) => sp.status === 'OCCUPIED').length;
+      const available = siteSpaces.filter((sp) => sp.status === 'AVAILABLE').length;
+      const total     = siteSpaces.length;
+      return {
+        name: s.name?.length > 12 ? s.name.substring(0, 12) + '…' : s.name,
+        Occupied:  occupied,
+        Available: available,
+        Rate: total > 0 ? Math.round((occupied / total) * 100) : 0,
+      };
+    });
+  }, [sites, spaces]);
 
   // -- Top tenants by revenue ---------------------------------------------------
   const topTenantsChart = useMemo(() => {
     const byTenant: Record<string, number> = {};
-    payments.filter(p => p.status === 'COMPLETED').forEach((p: any) => {
+    payments.filter(p => p.status === 'COMPLETED').forEach((p) => {
       const tid = p.tenant_id;
-      byTenant[tid] = (byTenant[tid] || 0) + parseFloat(p.amount || 0);
+      byTenant[tid] = (byTenant[tid] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(byTenant)
       .map(([tid, revenue]) => {
-        const tenant = tenants.find((t: any) => t.id === tid);
+        const tenant = tenants.find((t) => t.id === tid);
         return { name: tenant?.name ?? tid.substring(0, 8), Revenue: Math.round(revenue) };
       })
       .sort((a, b) => b.Revenue - a.Revenue)

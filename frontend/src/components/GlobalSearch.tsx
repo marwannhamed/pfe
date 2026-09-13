@@ -183,7 +183,7 @@ export default function GlobalSearch() {
       subtitle: `${b.space?.name ?? 'Space'} · ${new Date(b.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       badge:    STATUS_COLORS[b.status] ? { label: b.status.replace(/_/g,' '), ...STATUS_COLORS[b.status] } : undefined,
       path:     `${basePath}/bookings`,
-      meta:     `$${parseFloat(b.total_price || 0).toLocaleString()}`,
+      meta:     `$${parseFloat(b.total_price || '0').toLocaleString()}`,
     }));
 
   toArray<any>(contractsRaw)
@@ -193,7 +193,7 @@ export default function GlobalSearch() {
       id:       c.id,
       type:     'contract',
       title:    c.contract_number,
-      subtitle: `${c.tenant?.name ?? 'Tenant'} · ${c.currency} ${parseFloat(c.monthly_rent || 0).toLocaleString()}/mo`,
+      subtitle: `${c.tenant?.name ?? 'Tenant'} · ${c.currency} ${parseFloat(c.monthly_rent || '0').toLocaleString()}/mo`,
       badge:    STATUS_COLORS[c.status] ? { label: c.status, ...STATUS_COLORS[c.status] } : undefined,
       path:     `${basePath}/contracts`,
       meta:     c.status === 'ACTIVE'
@@ -224,7 +224,7 @@ export default function GlobalSearch() {
       subtitle: `${i.tenant?.name ?? ''} · ${i.type?.replace(/_/g,' ').toLowerCase()}`,
       badge:    STATUS_COLORS[i.status] ? { label: i.status, ...STATUS_COLORS[i.status] } : undefined,
       path:     `${basePath}/billing`,
-      meta:     `$${parseFloat(i.total_amount || 0).toLocaleString()}`,
+      meta:     `$${parseFloat(i.total_amount || '0').toLocaleString()}`,
     }));
 
   toArray<any>(spacesRaw)

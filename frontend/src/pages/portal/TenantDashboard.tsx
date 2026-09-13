@@ -331,7 +331,7 @@ export default function TenantDashboard() {
                           {bs.label}
                         </span>
                         <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
-                          ${parseFloat(b.total_price || 0).toLocaleString()}
+                          ${parseFloat(b.total_price || '0').toLocaleString()}
                         </div>
                       </div>
                     </div>
