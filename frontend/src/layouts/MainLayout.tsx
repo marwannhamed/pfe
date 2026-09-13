@@ -233,7 +233,7 @@ export default function MainLayout() {
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <UserAvatar
-                avatarUrl={(user as any).avatar_url}
+                avatarUrl={user.avatar_url}
                 firstName={user.first_name}
                 lastName={user.last_name}
                 email={user.email}
@@ -361,7 +361,7 @@ export default function MainLayout() {
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <UserAvatar
-                  avatarUrl={(user as any).avatar_url}
+                  avatarUrl={user.avatar_url}
                   firstName={user.first_name}
                   lastName={user.last_name}
                   email={user.email}

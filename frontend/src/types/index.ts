@@ -295,6 +295,9 @@ export interface Payment {
   reference_number?:    string;
   cheque_document_url?: string;
   created_at:           string;
+  // relations
+  tenant?:              Tenant;
+  invoice?:             Invoice;
 }
 
 export interface MaintenanceTicket {

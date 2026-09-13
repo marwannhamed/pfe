@@ -259,13 +259,13 @@ export default function SiteManagerDashboard() {
         ) : isManager ? (
           <KpiCard label="Applications" value={bookings.filter((b) => b.status === 'PENDING_APPROVAL').length} sub="Pending booking applications" color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />} path="/admin/booking-applications" loading={isLoading} />
         ) : (
-          <KpiCard label="Open Tickets"   value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`}    color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}       path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
+          <KpiCard label="Open Tickets"   value={mxStats?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`}    color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}       path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
         )}
       </div>
 
       {isClientAdmin && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 20 }}>
-          <KpiCard label="Open Tickets" value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`} color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />} path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
+          <KpiCard label="Open Tickets" value={mxStats?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`} color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />} path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
           <KpiCard label="Billing hub" value="Open" sub="Invoices & payments for your organization" color="#0891b2" bg="#f0f9ff" icon={<CreditCardOutlined />} path="/admin/billing" loading={false} />
         </div>
       )}
@@ -396,9 +396,9 @@ export default function SiteManagerDashboard() {
           {/* Maintenance stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.divider}` }}>
             {[
-              { label: 'Open',        value: (mxStats as any)?.open        ?? openTix,    color: '#f59e0b' },
+              { label: 'Open',        value: mxStats?.open        ?? openTix,    color: '#f59e0b' },
               { label: 'In Progress', value: (mxStats as MaintenanceStats | undefined)?.inProgress ?? inProgTix,  color: '#3b82f6' },
-              { label: 'Resolved',    value: (mxStats as any)?.resolved    ?? 0,          color: '#10b981' },
+              { label: 'Resolved',    value: mxStats?.resolved    ?? 0,          color: '#10b981' },
               { label: 'Urgent',      value: urgentTix,                                    color: '#dc2626' },
             ].map(s => (
               <div key={s.label} style={{ textAlign: 'center', background: t.tableHead, borderRadius: 8, padding: '8px 4px' }}>

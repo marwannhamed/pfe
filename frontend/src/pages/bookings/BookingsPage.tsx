@@ -301,7 +301,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
 
   if (!booking) return null;
   const sm          = STATUS_META[booking.status] ?? STATUS_META.DRAFT;
-  const spaceName   = (booking as any).space?.name ?? `Space ${booking.space_id.substring(0, 8)}`;
+  const spaceName   = booking.space?.name ?? `Space ${booking.space_id.substring(0, 8)}`;
   const canCancel   = !['CANCELLED','COMPLETED','NO_SHOW'].includes(booking.status);
   const isPending   = approveMut.isPending || rejectMut.isPending || cancelMut.isPending || checkInMut.isPending || checkOutMut.isPending;
   const canContract = canManage && CONTRACT_ELIGIBLE.includes(booking.status);
@@ -322,7 +322,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
             <div style={{ width: 40, height: 40, borderRadius: 10, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📋</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: th.text }}>{spaceName}</div>
-              <div style={{ fontSize: 12, color: th.textSub }}>{(booking as any).space?.type?.replace(/_/g,' ') ?? 'Office Space'}</div>
+              <div style={{ fontSize: 12, color: th.textSub }}>{booking.space?.type?.replace(/_/g,' ') ?? 'Office Space'}</div>
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: th.text }}>${parseFloat(booking.total_price).toLocaleString()}</div>
@@ -406,7 +406,7 @@ export default function BookingsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const tenantId      = (user as any)?.tenant_id ?? '';
+  const tenantId      = user?.tenant_id ?? '';
   const userId        = user?.id ?? '';
   const canManage     = !!(user?.role && ['SUPER_ADMIN', 'MANAGER'].includes(user.role));
   const isReception   = user?.role === 'RECEPTIONIST';
@@ -501,7 +501,7 @@ export default function BookingsPage() {
   const filtered = bookings.filter(b => {
     if (statusFilt && b.status !== statusFilt) return false;
     if (q) {
-      const name = (b as any).space?.name ?? '';
+      const name = b.space?.name ?? '';
       if (!name.toLowerCase().includes(q.toLowerCase()) && !b.booking_number.toLowerCase().includes(q.toLowerCase())) return false;
     }
     return true;
@@ -672,7 +672,7 @@ export default function BookingsPage() {
           </div>
           {filtered.map((b: Booking, i: number) => {
             const sm        = STATUS_META[b.status] ?? STATUS_META.DRAFT;
-            const spaceName = (b as any).space?.name ?? `Space ${b.space_id.substring(0,6)}`;
+            const spaceName = b.space?.name ?? `Space ${b.space_id.substring(0,6)}`;
             const canCancel = !['CANCELLED','COMPLETED','NO_SHOW'].includes(b.status);
             const isEligible = CONTRACT_ELIGIBLE.includes(b.status);
             return (
@@ -690,7 +690,7 @@ export default function BookingsPage() {
                   <div style={{ width: 30, height: 30, borderRadius: 7, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><EnvironmentOutlined style={{ color: '#2563eb', fontSize: 13 }} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: th.text }}>{spaceName}</div>
-                    <div style={{ fontSize: 11, color: th.textMuted }}>{(b as any).space?.type?.replace(/_/g,' ') ?? '—'}</div>
+                    <div style={{ fontSize: 11, color: th.textMuted }}>{b.space?.type?.replace(/_/g,' ') ?? '—'}</div>
                   </div>
                 </div>
                 <div>
@@ -788,7 +788,7 @@ export default function BookingsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {dayBookings.map((b: Booking) => {
                   const sm        = STATUS_META[b.status] ?? STATUS_META.DRAFT;
-                  const spaceName = (b as any).space?.name ?? 'Space';
+                  const spaceName = b.space?.name ?? 'Space';
                   const isEligible = CONTRACT_ELIGIBLE.includes(b.status);
                   return (
                     <div key={b.id} style={{ ...CARD, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'box-shadow 0.15s' }}

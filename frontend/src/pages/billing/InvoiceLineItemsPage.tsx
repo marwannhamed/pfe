@@ -37,7 +37,7 @@ export default function InvoiceLineItemsPage() {
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '');
   const canManage = isBackOffice;
-  const tenantId = (user as any)?.tenant_id;
+  const tenantId = user?.tenant_id;
 
   const { data: invoicesRaw, isLoading, isError, refetch } = useQuery({
     queryKey: ['invoice-line-items-live', canManage ? 'all' : tenantId],

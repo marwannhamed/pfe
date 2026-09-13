@@ -590,7 +590,7 @@ export default function ContractsPage() {
   const location = useLocation();
   const { user } = useAuthStore();
 
-  const tenantId      = (user as any)?.tenant_id ?? '';
+  const tenantId      = user?.tenant_id ?? '';
   const userId        = user?.id ?? '';
   const isSuperAdmin  = user?.role === 'SUPER_ADMIN';
   const isSiteManager = user?.role === 'MANAGER';

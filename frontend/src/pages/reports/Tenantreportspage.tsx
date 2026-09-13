@@ -139,7 +139,7 @@ function EmptyChart({ height = 200 }: { height?: number }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TenantReportsPage() {
   const { user }    = useAuthStore();
-  const tenantId    = (user as any)?.tenant_id ?? '';
+  const tenantId    = user?.tenant_id ?? '';
 
   const [range,      setRange]      = useState<Range>('30d');
   const [refreshKey, setRefreshKey] = useState(0);

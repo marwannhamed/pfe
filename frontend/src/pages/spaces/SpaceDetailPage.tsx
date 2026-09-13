@@ -293,7 +293,7 @@ export default function SpaceDetailPage() {
   // ── Role checks ──
   const isAdmin      = !!(user?.role && ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER'].includes(user.role));
   const isTenant     = !!(user?.role && ['TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user.role));
-  const tenantId     = (user as any)?.tenant_id ?? '';
+  const tenantId     = user?.tenant_id ?? '';
   const userId       = user?.id ?? '';
 
   const backPath = isAdmin ? '/admin/spaces' : isAuthenticated ? '/portal/spaces' : '/spaces';

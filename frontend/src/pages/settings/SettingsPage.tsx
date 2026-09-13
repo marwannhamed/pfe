@@ -309,7 +309,7 @@ export default function SettingsPage() {
         <div style={{ ...card, padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
             <UserAvatar
-              avatarUrl={(user as any)?.avatar_url}
+              avatarUrl={user?.avatar_url}
               firstName={user?.first_name}
               lastName={user?.last_name}
               email={user?.email}

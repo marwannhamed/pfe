@@ -131,7 +131,7 @@ export default function ProfilePage() {
   const qc       = useQueryClient();
   const { user, setUser } = useAuthStore() as any;
   const userId   = user?.id ?? '';
-  const tenantId = (user as any)?.tenant_id ?? '';
+  const tenantId = user?.tenant_id ?? '';
   const roleMeta = ROLE_META[user?.role ?? ''] ?? ROLE_META.EMPLOYEE;
   const isTenant = ['TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user?.role ?? '');
 
@@ -141,7 +141,7 @@ export default function ProfilePage() {
     first_name: user?.first_name ?? '',
     last_name:  user?.last_name  ?? '',
     email:      user?.email      ?? '',
-    phone_number: (user as any)?.phone_number ?? '',
+    phone_number: user?.phone_number ?? '',
   });
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
 
@@ -238,7 +238,7 @@ export default function ProfilePage() {
   };
 
   const handleCancelEdit = () => {
-    setProfileForm({ first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', phone_number: (user as any)?.phone_number ?? '' });
+    setProfileForm({ first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', phone_number: user?.phone_number ?? '' });
     setProfileErrors({});
     setEditing(false);
   };
@@ -260,7 +260,7 @@ export default function ProfilePage() {
     pwMut.mutate({ currentPassword: pwForm.current, newPassword: pwForm.next });
   };
 
-  const joinDate = (user as any)?.created_at ? formatDate((user as any).created_at) : '—';
+  const joinDate = user?.created_at ? formatDate(user.created_at) : '—';
 
   return (
     <PageShell maxWidth={1000}>
@@ -271,7 +271,7 @@ export default function ProfilePage() {
 
           <AvatarUpload
             userId={userId}
-            currentAvatarUrl={(user as any)?.avatar_url}
+            currentAvatarUrl={user?.avatar_url}
             firstName={user?.first_name ?? ''}
             lastName={user?.last_name ?? ''}
             size={90}
@@ -290,9 +290,9 @@ export default function ProfilePage() {
             </div>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: th.textSub }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MailOutlined /> {user?.email}</span>
-              {(user as any)?.phone_number && <span>📞 {(user as any).phone_number}</span>}
+              {user?.phone_number && <span>📞 {user.phone_number}</span>}
               <span>📅 Joined {joinDate}</span>
-              {(user as any)?.tenant?.name && <span>🏢 {(user as any).tenant.name}</span>}
+              {user?.tenant?.name && <span>🏢 {user.tenant.name}</span>}
             </div>
           </div>
 

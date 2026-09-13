@@ -551,7 +551,7 @@ export default function BookingCalendarPage() {
   const { user } = useAuthStore();
 
   const isBackOffice = ['SUPER_ADMIN','MANAGER'].includes(user?.role ?? '');
-  const tenantId     = (user as any)?.tenant_id ?? '';
+  const tenantId     = user?.tenant_id ?? '';
   const userId       = user?.id ?? '';
   const basePath     = isBackOffice ? '/admin' : '/portal';
 

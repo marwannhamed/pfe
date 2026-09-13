@@ -534,12 +534,12 @@ export default function TenantDashboard() {
             ].map(action => (
               <button key={action.label} onClick={() => navigate(action.path)}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 9, border: `1px solid ${t.cardBorder}`, background: t.cardBg, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: t.textSub, transition: 'all 0.15s', textAlign: 'left' }}
-                onMouseEnter={e => { e.currentTarget.style.background = (action as any).bg; e.currentTarget.style.color = (action as any).color; e.currentTarget.style.borderColor = (action as any).color + '40'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = action.bg; e.currentTarget.style.color = action.color; e.currentTarget.style.borderColor = action.color + '40'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = t.cardBg; e.currentTarget.style.color = t.textSub; e.currentTarget.style.borderColor = t.cardBorder; }}>
-                <span style={{ fontSize: 14, color: (action as any).color }}>{action.icon}</span>
+                <span style={{ fontSize: 14, color: action.color }}>{action.icon}</span>
                 <span style={{ flex: 1 }}>{action.label}</span>
-                {(action as any).badge > 0 && (
-                  <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 10 }}>{(action as any).badge}</span>
+                {action.badge > 0 && (
+                  <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 10 }}>{action.badge}</span>
                 )}
               </button>
             ))}

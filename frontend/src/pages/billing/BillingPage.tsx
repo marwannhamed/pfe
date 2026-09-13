@@ -61,10 +61,10 @@ function isOverdue(dueDate: string) {
   return new Date(dueDate) < new Date();
 }
 function payMethod(p: Payment) {
-  return String((p as any).method ?? p.payment_method ?? 'BANK_TRANSFER');
+  return String(p.method ?? p.payment_method ?? 'BANK_TRANSFER');
 }
 function payTenantLabel(p: Payment) {
-  return (p as any).tenant?.name ?? (p as any).invoice?.tenant?.name ?? '—';
+  return p.tenant?.name ?? p.invoice?.tenant?.name ?? '—';
 }
 function payableInvoices(list: Invoice[]) {
   return list.filter((i) => !['PAID', 'CANCELLED'].includes(i.status));
@@ -305,7 +305,7 @@ function RecordPaymentModal({
   const invoiceRemaining = (inv: Invoice) => {
     const paid = (inv.payments ?? [])
       .filter((p) => p.status === 'COMPLETED')
-      .reduce((s, p) => s + parseFloat(String((p as any).amount ?? 0)), 0);
+      .reduce((s, p) => s + parseFloat(String(p.amount ?? 0)), 0);
     const rem = parseFloat(String(inv.total_amount)) - paid;
     return rem > 0 ? rem : parseFloat(String(inv.total_amount));
   };
@@ -353,7 +353,7 @@ function RecordPaymentModal({
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     const paymentTenantId =
-      (invoice as any)?.tenant_id ?? (invoice as any)?.tenant?.id ?? tenantId;
+      invoice?.tenant_id ?? invoice?.tenant?.id ?? tenantId;
     if (!paymentTenantId) {
       message.error('Could not determine tenant for this invoice');
       return;
@@ -390,7 +390,7 @@ function RecordPaymentModal({
 
   const paidOnInvoice = (invoice?.payments ?? [])
     .filter((p) => p.status === 'COMPLETED')
-    .reduce((s, p) => s + parseFloat(String((p as any).amount ?? 0)), 0);
+    .reduce((s, p) => s + parseFloat(String(p.amount ?? 0)), 0);
   const remaining = invoice
     ? parseFloat(String(invoice.total_amount)) - paidOnInvoice
     : 0;
@@ -403,7 +403,7 @@ function RecordPaymentModal({
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: th.text }}>{isSubmit ? 'Submit Payment' : 'Record Payment Received'}</h2>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: th.textMuted }}>
-              {invoice ? `${invoice.invoice_number}${(invoice as any).tenant?.name ? ` · ${(invoice as any).tenant.name}` : ''}` : isSubmit ? 'Tell us how you paid — finance will confirm' : 'Select invoice and payment details'}
+              {invoice ? `${invoice.invoice_number}${invoice.tenant?.name ? ` · ${invoice.tenant.name}` : ''}` : isSubmit ? 'Tell us how you paid — finance will confirm' : 'Select invoice and payment details'}
             </p>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}><CloseOutlined style={{ fontSize: 13 }} /></button>
@@ -420,7 +420,7 @@ function RecordPaymentModal({
                 style={{ width: '100%' }}
                 options={unpaid.map((i) => ({
                   value: i.id,
-                  label: `${(i as any).tenant?.name ? `${(i as any).tenant.name} · ` : ''}${i.invoice_number} · ${formatAmt(i.total_amount, i.currency)} (${i.status})`,
+                  label: `${i.tenant?.name ? `${i.tenant.name} · ` : ''}${i.invoice_number} · ${formatAmt(i.total_amount, i.currency)} (${i.status})`,
                 }))}
               />
               {errors.invoice && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.invoice}</div>}
@@ -562,8 +562,8 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
     ['Due Date',    formatDate(invoice.due_date)],
     ['Status',      invoice.status],
     ['Currency',    invoice.currency],
-    ...((invoice as any).contract?.contract_number ? [['Contract', (invoice as any).contract.contract_number]] as [string,string][] : []),
-    ...((invoice as any).tenant?.name ? [['Tenant', (invoice as any).tenant.name]] as [string,string][] : []),
+    ...(invoice.contract?.contract_number ? [['Contract', invoice.contract.contract_number]] as [string,string][] : []),
+    ...(invoice.tenant?.name ? [['Tenant', invoice.tenant.name]] as [string,string][] : []),
   ];
 
   return (
@@ -636,7 +636,7 @@ export default function BillingPage() {
   const qc       = useQueryClient();
   const { user } = useAuthStore();
 
-  const tenantId     = (user as any)?.tenant_id ?? '';
+  const tenantId     = user?.tenant_id ?? '';
   const userId       = user?.id ?? '';
   const isSiteManager= user?.role === 'MANAGER';
   const isClientAdmin= user?.role === 'CLIENT_ADMIN';
@@ -678,8 +678,8 @@ export default function BillingPage() {
   const tenants = useMemo(() => {
     const map = new Map<string, string>();
     for (const inv of invoices) {
-      const id = (inv as any).tenant_id ?? (inv as any).tenant?.id;
-      const name = (inv as any).tenant?.name;
+      const id = inv.tenant_id ?? inv.tenant?.id;
+      const name = inv.tenant?.name;
       if (id && name) map.set(id, name);
     }
     for (const pay of payments) {
@@ -701,7 +701,7 @@ export default function BillingPage() {
 
   const filteredInv = invoices.filter(inv => {
     if (q && !inv.invoice_number.toLowerCase().includes(q.toLowerCase()) &&
-        !((inv as any).tenant?.name ?? '').toLowerCase().includes(q.toLowerCase())) return false;
+        !(inv.tenant?.name ?? '').toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
   const filteredPay = payments.filter(pay => {
@@ -709,7 +709,7 @@ export default function BillingPage() {
     if (q && !pay.payment_number.toLowerCase().includes(q.toLowerCase()) &&
         !(pay.reference_number ?? '').toLowerCase().includes(q.toLowerCase()) &&
         !payTenantLabel(pay).toLowerCase().includes(q.toLowerCase()) &&
-        !((pay as any).invoice?.invoice_number ?? '').toLowerCase().includes(q.toLowerCase())) return false;
+        !(pay.invoice?.invoice_number ?? '').toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
 
@@ -980,10 +980,10 @@ export default function BillingPage() {
                                 onMouseLeave={e => (e.currentTarget.style.background = '')}>
                                 <div><div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#2563eb' }}>{pay.payment_number}</div>{pay.reference_number && <div style={{ fontSize: 10, color: th.textMuted }}>Ref: {pay.reference_number}</div>}</div>
                                 {canManage && tenantPayFilt && <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{payTenantLabel(pay)}</div>}
-                                <div style={{ fontSize: 12, color: th.textSub }}>{(pay as any).invoice?.invoice_number ?? pay.invoice_id?.substring(0, 12)}</div>
+                                <div style={{ fontSize: 12, color: th.textSub }}>{pay.invoice?.invoice_number ?? pay.invoice_id?.substring(0, 12)}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 26, height: 26, borderRadius: 6, background: mm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><PaymentMethodIcon method={payMethod(pay)} size={13} /></div><span style={{ fontSize: 12 }}>{mm.label}</span></div>
                                 <div style={{ fontSize: 12 }}>{formatDate(pay.payment_date)}</div>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: pay.status === 'REFUNDED' ? '#94a3b8' : '#0f172a', textDecoration: pay.status === 'REFUNDED' ? 'line-through' : 'none' }}>{formatAmt(pay.amount, (pay as any).currency ?? 'USD')}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: pay.status === 'REFUNDED' ? '#94a3b8' : '#0f172a', textDecoration: pay.status === 'REFUNDED' ? 'line-through' : 'none' }}>{formatAmt(pay.amount, pay.currency ?? 'USD')}</div>
                                 <span style={{ background: pay.status === 'COMPLETED' ? '#dcfce7' : pay.status === 'REFUNDED' ? '#f1f5f9' : '#fef3c7', color: pay.status === 'COMPLETED' ? '#15803d' : pay.status === 'REFUNDED' ? '#475569' : '#92400e', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{pay.status}</span>
                                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                   {payMethod(pay) === 'CHECK' && pay.cheque_document_url && (

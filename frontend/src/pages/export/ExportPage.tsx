@@ -144,7 +144,7 @@ export default function ExportPage() {
   const { headerCard, t: th } = usePageTheme();
   const { user } = useAuthStore();
   const role     = user?.role ?? '';
-  const tenantId = (user as any)?.tenant_id ?? '';
+  const tenantId = user?.tenant_id ?? '';
 
   // Default date range: last 30 days
   const [[defaultFrom, defaultTo]] = useState(() => [

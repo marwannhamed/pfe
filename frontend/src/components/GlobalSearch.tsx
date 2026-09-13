@@ -96,7 +96,7 @@ export default function GlobalSearch() {
   const isSuperAdmin  = user?.role === 'SUPER_ADMIN';
   const isSiteManager = user?.role === 'MANAGER';
   const isFinance     = user?.role === 'FINANCE';
-  const tenantId      = (user as any)?.tenant_id ?? '';
+  const tenantId      = user?.tenant_id ?? '';
   const basePath      = isBackOffice ? '/admin' : '/portal';
 
   const canSeeAll     = isSuperAdmin || isSiteManager;

@@ -248,9 +248,9 @@ export default function AdminDashboard() {
   const confirmedBooks  = bookings.filter(b => ['CONFIRMED','CHECKED_IN'].includes(b.status)).length;
   const pendingBooks    = bookings.filter(b => b.status === 'PENDING_APPROVAL').length;
   const overdueInv      = invoices.filter(i => i.status === 'OVERDUE').length;
-  const totalRevenue    = Number((summary as any)?.total_paid    ?? 0);
-  const totalPending    = Number((summary as any)?.total_pending ?? 0);
-  const totalInvoiced   = Number((summary as any)?.total_invoiced ?? 0);
+  const totalRevenue    = Number(summary?.total_paid    ?? 0);
+  const totalPending    = Number(summary?.total_pending ?? 0);
+  const totalInvoiced   = Number(summary?.total_invoiced ?? 0);
   const collectionRate  = totalInvoiced > 0 ? Math.round((totalRevenue / totalInvoiced) * 100) : 0;
   const completedPays   = payments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
 
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
         <KpiCard label="Revenue Collected" value={`$${Math.round(totalRevenue).toLocaleString()}`}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Pending Revenue"   value={`$${Math.round(totalPending).toLocaleString()}`}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Total Bookings"    value={bookings.length}   sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                 color="#2563eb" bg="#eff6ff" icon={<CalendarOutlined />}    path="/admin/bookings"     loading={isLoading} />
-        <KpiCard label="Open Tickets"      value={(mxStats as any)?.open ?? 0} sub={`${(mxStats as MaintenanceStats | undefined)?.inProgress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
+        <KpiCard label="Open Tickets"      value={mxStats?.open ?? 0} sub={`${(mxStats as MaintenanceStats | undefined)?.inProgress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
       </div>
 
       {/* Charts Row 1 */}
