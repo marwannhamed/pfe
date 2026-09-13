@@ -144,5 +144,8 @@
         "statements": 20
       }
     }
+  },
+  "overrides": {
+    "nodemailer": "$nodemailer"
   }
 }

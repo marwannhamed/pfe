@@ -13,9 +13,11 @@ const userWith = (role: string, tenantId = 'tenant-a'): AuthUser => ({
 function makeService() {
   const prisma = {
     tenant: {
-      findUnique: jest.fn().mockImplementation(({ where }) =>
-        Promise.resolve({ id: where.id, name: 'Org' }),
-      ),
+      findUnique: jest
+        .fn()
+        .mockImplementation(({ where }) =>
+          Promise.resolve({ id: where.id, name: 'Org' }),
+        ),
     },
   };
   const mail = {};
@@ -29,7 +31,10 @@ describe('TenantService.findOneForUser — one organisation per caller', () => {
     const { service } = makeService();
 
     await expect(
-      service.findOneForUser(userWith(USER_ROLE.CLIENT_ADMIN, 'tenant-a'), 'tenant-a'),
+      service.findOneForUser(
+        userWith(USER_ROLE.CLIENT_ADMIN, 'tenant-a'),
+        'tenant-a',
+      ),
     ).resolves.toMatchObject({ id: 'tenant-a' });
   });
 
@@ -52,7 +57,10 @@ describe('TenantService.findOneForUser — one organisation per caller', () => {
     const { service } = makeService();
 
     await expect(
-      service.findOneForUser(userWith(USER_ROLE.SUPER_ADMIN, 'platform'), 'tenant-b'),
+      service.findOneForUser(
+        userWith(USER_ROLE.SUPER_ADMIN, 'platform'),
+        'tenant-b',
+      ),
     ).resolves.toMatchObject({ id: 'tenant-b' });
   });
 });
