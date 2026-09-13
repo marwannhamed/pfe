@@ -36,7 +36,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function PortalAddonsPage() {
   const navigate = useNavigate();
-  const { t: th, card, ...s } = usePageTheme();
+  const { t: th, card, ..._s } = usePageTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('catalog');
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<any[]>([]);

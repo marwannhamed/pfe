@@ -5,7 +5,6 @@ import {
   Col,
   Statistic,
   Typography,
-  Select,
   DatePicker,
   Spin,
   Table,
@@ -51,7 +50,6 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
 

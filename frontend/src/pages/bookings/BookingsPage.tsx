@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import { bookingApi, bookingApplicationApi, spaceApi, buildingApi, floorApi, addonServiceApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Booking, BookingStatus, Space, Site, Building, Floor } from '../../types';
+import type { Booking, BookingStatus, Space, Building, Floor } from '../../types';
 import SpaceAddonPicker, { type SelectedAddon } from '../../components/spaces/SpaceAddonPicker';
 import { PORTAL_MAP_PATH } from '../../constants/routes';
 import PageShell from '../../components/ui/PageShell';

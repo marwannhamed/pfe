@@ -49,7 +49,7 @@ export type PrefillData = ContractPrefillFromBooking;
 
 function Field({ label, required, children, error }: { label: string; required?: boolean; children: React.ReactNode; error?: string }) {
 
-  const { input: INPUT, t: th } = usePageTheme();
+  const { t: th } = usePageTheme();
   const LABEL: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: th.textSub, display: 'block', marginBottom: 5 };
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -65,7 +65,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
   onClose: () => void; tenantId: string; userId: string;
   isSuperAdmin: boolean; prefillData?: PrefillData | null;
 }) {
-  const { card: CARD, input: INPUT, t: th } = usePageTheme();
+  const { input: INPUT, t: th } = usePageTheme();
   const qc  = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
 
@@ -584,7 +584,7 @@ function EditContractModal({ contract, onClose, isSuperAdmin }: { contract: Leas
 // --- Page ---------------------------------------------------------------------
 export default function ContractsPage() {
 
-  const { card: CARD, headerCard, input: INPUT, t: th } = usePageTheme();
+  const { card: CARD, headerCard, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const location = useLocation();
   const { user } = useAuthStore();

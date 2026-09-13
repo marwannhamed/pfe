@@ -7,7 +7,7 @@ import {
   CalendarOutlined, ToolOutlined, TeamOutlined,
   FileTextOutlined, CreditCardOutlined, AppstoreOutlined,
   BellOutlined, ArrowRightOutlined, CheckCircleOutlined,
-  ClockCircleOutlined, WarningOutlined, PlusOutlined, ReloadOutlined,
+  WarningOutlined, PlusOutlined, ReloadOutlined,
 } from '@ant-design/icons';
 import {
   bookingApi, maintenanceApi, userApi,

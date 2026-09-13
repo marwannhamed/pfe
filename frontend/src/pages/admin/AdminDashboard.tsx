@@ -11,7 +11,7 @@ import {
   BankOutlined, AppstoreOutlined, TeamOutlined,
   CalendarOutlined, CreditCardOutlined, ToolOutlined,
   ArrowRightOutlined, ReloadOutlined, FileTextOutlined,
-  WarningOutlined, CheckCircleOutlined, ClockCircleOutlined,
+  WarningOutlined, ClockCircleOutlined,
   BellOutlined,
 } from '@ant-design/icons';
 import {
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
   const { data: sitesRaw,      isLoading: l1 } = useQuery({ ...opts('d-sites'),      queryFn: () => siteApi.getAll() });
   const { data: spacesRaw,     isLoading: l2 } = useQuery({ ...opts('d-spaces'),     queryFn: () => spaceApi.getAll() });
   const { data: tenantsRaw,    isLoading: l3 } = useQuery({ ...opts('d-tenants'),    queryFn: () => tenantApi.getAll().then(r => r.data) });
-  const { data: usersRaw,      isLoading: l4 } = useQuery({ ...opts('d-users'),      queryFn: () => userApi.getAll().then(r => r.data) });
+  const { isLoading: l4 } = useQuery({ ...opts('d-users'), queryFn: () => userApi.getAll().then(r => r.data) });
   const { data: bookingsRaw,   isLoading: l5 } = useQuery({ ...opts('d-bookings'),   queryFn: () => bookingApi.getAll().then(r => r.data) });
   const { data: invoicesRaw,   isLoading: l6 } = useQuery({ ...opts('d-invoices'),   queryFn: () => billingApi.getInvoices().then(r => r.data) });
   const { data: paymentsRaw,   isLoading: l7 } = useQuery({ ...opts('d-payments'),   queryFn: () => billingApi.getPayments().then(r => r.data) });
@@ -231,7 +231,6 @@ export default function AdminDashboard() {
   const sites     = toArray<any>(sitesRaw);
   const spaces    = toArray<any>(spacesRaw);
   const tenants   = toArray<any>(tenantsRaw);
-  const users     = toArray<any>(usersRaw);
   const bookings  = toArray<any>(bookingsRaw);
   const invoices  = toArray<any>(invoicesRaw);
   const payments  = toArray<any>(paymentsRaw);

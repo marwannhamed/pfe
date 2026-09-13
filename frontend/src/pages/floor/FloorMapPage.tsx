@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Select, Skeleton } from 'antd';
 import { message } from '../../utils/feedback';
 import {
-  ReloadOutlined, SaveOutlined, InfoCircleOutlined,
-  CalendarOutlined, CloseOutlined, LoadingOutlined,
+  ReloadOutlined, SaveOutlined, CalendarOutlined, CloseOutlined, LoadingOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { floorApi, buildingApi, spaceApi, bookingApi } from '../../api/services';
@@ -540,7 +539,7 @@ export default function FloorMapPage() {
                       transform={`translate(${pos.x}, ${pos.y})`}
                       style={{ cursor: isAdmin ? 'grab' : canBook ? 'pointer' : 'default' }}
                       onMouseDown={e => isAdmin && onMouseDown(e, space.id)}
-                      onMouseEnter={e => {
+                      onMouseEnter={_e => {
                         if (dragging) return;
                         const svg = svgRef.current;
                         if (!svg) return;

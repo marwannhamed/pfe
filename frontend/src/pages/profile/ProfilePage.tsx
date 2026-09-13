@@ -76,7 +76,6 @@ function PasswordInput({ value, onChange, placeholder, error }: {
 // ─── Password strength meter ──────────────────────────────────────────────────
 function PasswordStrength({ password }: { password: string }) {
 
-  const { card: CARD, input: INPUT, t: th } = usePageTheme();
   if (!password) return null;
   const checks = [
     { label: '8+ chars',    ok: password.length >= 8       },
@@ -111,7 +110,7 @@ function PasswordStrength({ password }: { password: string }) {
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, color, bg }: { icon: React.ReactNode; label: string; value: string | number; color: string; bg: string }) {
 
-  const { card: CARD, input: INPUT, t: th } = usePageTheme();
+  const { card: CARD, t: th } = usePageTheme();
   return (
     <div style={{ ...CARD, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 40, height: 40, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color, flexShrink: 0 }}>{icon}</div>

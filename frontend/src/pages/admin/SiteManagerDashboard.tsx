@@ -5,8 +5,7 @@ import { Skeleton } from 'antd';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area,
-} from 'recharts';
+  ResponsiveContainer, } from 'recharts';
 import {
   BankOutlined, AppstoreOutlined, CalendarOutlined,
   ToolOutlined, ReloadOutlined, ArrowRightOutlined,
@@ -15,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import {
   siteApi, spaceApi, bookingApi,
-  maintenanceApi, buildingApi, userApi,
+  maintenanceApi, userApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -110,7 +109,6 @@ export default function SiteManagerDashboard() {
   const { data: bookingsRaw, isLoading: l3 } = useQuery({ ...opts('sm-bookings'), queryFn: () => bookingApi.getAll().then(r => r.data) });
   const { data: mxRaw,       isLoading: l4 } = useQuery({ ...opts('sm-mx'),       queryFn: () => maintenanceApi.getAll().then(r => r.data) });
   const { data: mxStats,     isLoading: l5 } = useQuery({ ...opts('sm-mxstats'),  queryFn: () => maintenanceApi.getStats().then(r => r.data) });
-  const { data: buildingsRaw }               = useQuery({ ...opts('sm-buildings'), queryFn: () => buildingApi.getAll() });
   const { data: teamRaw }                    = useQuery({
     ...opts('sm-team'),
     queryFn: () => userApi.getAll(user!.tenant_id).then(r => r.data),
@@ -123,7 +121,6 @@ export default function SiteManagerDashboard() {
   const spaces    = toArray<any>(spacesRaw);
   const bookings  = toArray<any>(bookingsRaw);
   const tickets   = toArray<any>(mxRaw);
-  const buildings = toArray<any>(buildingsRaw);
   const teamMembers = toArray<any>(teamRaw).filter(
     (u) => u.id !== user?.id && isClientTeamRole(u.role),
   );
@@ -136,7 +133,6 @@ export default function SiteManagerDashboard() {
 
   const pendingBook  = bookings.filter(b => b.status === 'PENDING_APPROVAL').length;
   const confirmedBook= bookings.filter(b => b.status === 'CONFIRMED').length;
-  const checkedIn    = bookings.filter(b => b.status === 'CHECKED_IN').length;
 
   const openTix      = tickets.filter(t => t.status === 'OPEN').length;
   const inProgTix    = tickets.filter(t => t.status === 'IN_PROGRESS').length;

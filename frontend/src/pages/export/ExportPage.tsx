@@ -141,7 +141,7 @@ function ExportCard({ card, tenantId, defaultFrom, defaultTo }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ExportPage() {
-  const { card: CARD, headerCard, t: th } = usePageTheme();
+  const { headerCard, t: th } = usePageTheme();
   const { user } = useAuthStore();
   const role     = user?.role ?? '';
   const tenantId = (user as any)?.tenant_id ?? '';

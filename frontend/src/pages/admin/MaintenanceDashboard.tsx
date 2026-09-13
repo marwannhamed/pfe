@@ -157,13 +157,12 @@ export default function MaintenanceDashboard() {
   };
 
   const { data: ticketsRaw, isLoading: l1 } = useQuery({ ...opts('md-tickets'), queryFn: () => maintenanceApi.getAll().then(r => r.data) });
-  const { data: statsRaw,   isLoading: l2 } = useQuery({ ...opts('md-stats'),   queryFn: () => maintenanceApi.getStats().then(r => r.data) });
+  const { isLoading: l2 } = useQuery({ ...opts('md-stats'), queryFn: () => maintenanceApi.getStats().then(r => r.data) });
   const { data: usersRaw }                   = useQuery({ ...opts('md-users'),   queryFn: () => userApi.getAll().then(r => r.data) });
 
   const isLoading = l1 || l2;
   const tickets   = toArray<any>(ticketsRaw);
   const users     = toArray<any>(usersRaw);
-  const stats     = statsRaw as any;
 
   const acceptMut  = useMutation({ mutationFn: (id: string) => maintenanceApi.accept(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket accepted!'); } });
   const startMut   = useMutation({ mutationFn: (id: string) => maintenanceApi.start(id),   onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket started!');  } });

@@ -8,7 +8,7 @@ import {
   ClockCircleOutlined, SearchOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { contractApi } from '../../api/services';
-import { useAuthStore } from '../../store/authStore';
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: any): T[] {
@@ -323,7 +323,6 @@ function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ContractRenewalPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
   const [daysFilter, setDaysFilter] = useState<30 | 60 | 90 | 'all'>(90);
   const [search,     setSearch]     = useState('');
   const [renewingContract, setRenewing] = useState<any | null>(null);
@@ -353,7 +352,6 @@ export default function ContractRenewalPage() {
   const crit7    = all.filter(c => { const d = daysUntil(c.end_date); return d > 0 && d <= 7; }).length;
   const in30     = all.filter(c => { const d = daysUntil(c.end_date); return d > 0 && d <= 30; }).length;
   const in60     = all.filter(c => { const d = daysUntil(c.end_date); return d > 0 && d <= 60; }).length;
-  const in90     = all.filter(c => { const d = daysUntil(c.end_date); return d > 0 && d <= 90; }).length;
   const totalRevAtRisk = all
     .filter(c => daysUntil(c.end_date) <= 90)
     .reduce((s, c) => s + parseFloat(c.monthly_rent || 0), 0);

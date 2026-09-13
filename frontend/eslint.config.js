@@ -25,7 +25,18 @@ export default defineConfig([
     // rules do. Burn the warnings down and promote these back to 'error'.
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // Matches the backend config: a deliberate discard opts out by name —
+      // a leading underscore for parameters a signature has to keep, and rest
+      // siblings for the `const { omitted, ...rest }` idiom.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
       'react-refresh/only-export-components': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
       // React Compiler (eslint-plugin-react-hooks v7) advisory rules.

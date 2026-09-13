@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input, Select, Skeleton, Empty, Spin } from 'antd';
+import { Input, Select, Skeleton, Empty } from 'antd';
 import { message } from '../../utils/feedback';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { floorApi, buildingApi } from '../../api/services';

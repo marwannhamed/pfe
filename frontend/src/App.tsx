@@ -5,7 +5,6 @@ import { Spin } from 'antd';
 import { useAuthStore, hasValidSession, isAuthPending } from './store/authStore';
 import AuthSessionLoader from './components/AuthSessionLoader';
 
-import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute      from './components/RoleRoute';
 import AuthBootstrap  from './components/AuthBootstrap';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -52,7 +51,6 @@ function PublicMapEntry() {
 
 // ── Portal pages (TENANT_ADMIN + EMPLOYEE) ────────────────────────────────────
 const TenantDashboard     = lazy(() => import('./pages/portal/TenantDashboard'));
-const PortalSpacesPage    = lazy(() => import('./pages/spaces/SpacesPage'));
 const BookingsPage        = lazy(() => import('./pages/bookings/BookingsPage'));
 const BookingCalendarPage = lazy(() => import('./pages/bookings/BookingCalendarPage'));
 const ContractsPage       = lazy(() => import('./pages/contracts/ContractsPage'));
@@ -84,7 +82,6 @@ const ContractRenewalPage     = lazy(() => import('./pages/contracts/ContractRen
 const AdminBillingPage        = lazy(() => import('./pages/billing/BillingPage'));
 const PaymentsPage            = lazy(() => import('./pages/billing/PaymentsPage'));
 const AdminMaintenancePage    = lazy(() => import('./pages/maintenance/MaintenancePage'));
-const ReportsPage             = lazy(() => import('./pages/reports/ReportsPage'));
 const AuditPage               = lazy(() => import('./pages/audit/AuditPage'));
 const AddonServicesPage       = lazy(() => import('./pages/services/AddonServicesPage'));
 const AdminNotifications      = lazy(() => import('./pages/notifications/NotificationsPage'));
@@ -107,8 +104,6 @@ const PortalAddonsPage = lazy(() => import('./pages/portal/PortalAddonsPage'));
 const ExportPage = lazy(() => import('./pages/export/ExportPage'));
 const EmailManagementPage = lazy(() => import('./pages/email/EmailManagementPage'));
 // ─── Role groups ──────────────────────────────────────────────────────────────
-const BACK_OFFICE  = ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER', 'FINANCE', 'MAINTENANCE', 'RECEPTIONIST'];
-const FRONT_OFFICE = ['TENANT_ADMIN', 'TENANT_EMPLOYEE'];
 
 // ─── Query client ─────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({

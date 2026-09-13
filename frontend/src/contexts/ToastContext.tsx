@@ -37,7 +37,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     showToast('info', title, description);
   };
 
-  const showLoading = (title: string, description?: string) => {
+  const showLoading = (title: string, _description?: string) => {
     const hide = message.loading(title, 0);
     return hide;
   };

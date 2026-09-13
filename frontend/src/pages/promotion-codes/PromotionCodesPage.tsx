@@ -18,7 +18,6 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 export default function PromotionCodesPage() {
   const { user } = useAuthStore();
@@ -102,7 +101,7 @@ export default function PromotionCodesPage() {
     message.success('Code copied to clipboard');
   };
 
-  const handleViewStats = async (codeId: string) => {
+  const handleViewStats = async (_codeId: string) => {
     try {
       // Mock stats for now - would need to implement getUsageStats in promotionCodeApi
       const stats = { data: { totalUses: 0, totalSavings: 0 } };
@@ -260,9 +259,6 @@ export default function PromotionCodesPage() {
     (!code.valid_from || dayjs().isAfter(code.valid_from))
   );
 
-  const expiredCodes = promotionCodes.filter(code => 
-    code.valid_until && dayjs().isAfter(code.valid_until)
-  );
 
   const totalUsage = promotionCodes.reduce((sum, code) => sum + (code.used_count || 0), 0);
 

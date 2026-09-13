@@ -86,7 +86,6 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
     enabled:  !!userId && open,
   });
   const notifs = toArray<any>(notifsRaw).slice(0, 8);
-  const unreadList = notifs.filter(n => !n.is_read);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const readMut = useMutation({

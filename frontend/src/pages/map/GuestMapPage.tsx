@@ -11,7 +11,6 @@ import { spaceApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { getPendingBookingSpace, clearPendingBookingSpace } from '../../utils/pendingBookingSpace';
 import { usePageTheme } from '../../hooks/usePageTheme';
-import { PUBLIC_MAP_PATH } from '../../constants/routes';
 import { isClientOperatorRole } from '../../utils/propertyScope';
 import { DOHA_CENTER, QATAR_ZONES, currencySymbol } from '../../constants/qatar';
 
@@ -87,7 +86,6 @@ export default function GuestMapPage() {
   const [mediaTab, setMediaTab] = useState<'photo' | 'tour'>('photo');
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const { isAuthenticated, user } = useAuthStore();
-  const isPublicGuestMap = pathname === PUBLIC_MAP_PATH;
   const isClientPortfolioMap =
     embedded && isClientOperatorRole(user?.role);
 

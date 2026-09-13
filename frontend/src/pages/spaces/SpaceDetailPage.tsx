@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, Skeleton, Badge } from 'antd';
 import { message } from '../../utils/feedback';
 import {
   ArrowLeftOutlined, EditOutlined, CalendarOutlined,
-  EnvironmentOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  ReloadOutlined, WarningOutlined, CloseOutlined,
+  EnvironmentOutlined, CheckCircleOutlined, ReloadOutlined, WarningOutlined, CloseOutlined,
   LoadingOutlined, PlusOutlined,
 } from '@ant-design/icons';
 import { spaceApi, bookingApi } from '../../api/services';

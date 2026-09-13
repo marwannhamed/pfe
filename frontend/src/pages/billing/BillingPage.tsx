@@ -87,7 +87,7 @@ function toArray<T>(raw: any): T[] {
 function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
   onClose: () => void; userId: string; tenantId: string; canManage: boolean;
 }) {
-  const { card: CARD, input: INPUT, t: th } = usePageTheme();
+  const { input: INPUT, t: th } = usePageTheme();
   const LABEL: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: th.textSub, display: 'block', marginBottom: 5 };
   const qc = useQueryClient();
   // Computed once per mount: these only seed the form below, and calling
@@ -631,7 +631,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
 // --- Page ---------------------------------------------------------------------
 export default function BillingPage() {
 
-  const { card: CARD, headerCard, input: INPUT, t: th } = usePageTheme();
+  const { card: CARD, headerCard, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const { user } = useAuthStore();
 

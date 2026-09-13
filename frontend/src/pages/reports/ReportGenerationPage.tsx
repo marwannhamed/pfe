@@ -110,7 +110,7 @@ export default function ReportGenerationPage() {
   const handleSubmitGenerate = async (values: ReportRequest) => {
     try {
       setLoading(true);
-      const response = await enhancedReportApi.generate(values);
+      await enhancedReportApi.generate(values);
       message.success('Report generation started successfully');
       setGenerateModalVisible(false);
       loadReports();

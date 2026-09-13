@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Badge,
   Button,
@@ -19,7 +19,6 @@ import {
   Col,
   Statistic,
 } from 'antd';
-import type { DropdownProps } from 'antd';
 import {
   BellOutlined,
   CheckOutlined,

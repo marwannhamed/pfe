@@ -35,7 +35,7 @@ export function AuditPage() {
   const [action,  setAction]  = useState('');
   const [severity,setSeverity]= useState('');
 
-  const { data: logs = [], isLoading, isError, refetch } = useQuery({
+  const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['audit', action, severity],
     queryFn:  () => auditApi.getAll({ ...(action && { action }), ...(severity && { severity }) }).then(r => r.data),
   });

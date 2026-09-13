@@ -1,11 +1,10 @@
 ﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select, Skeleton, Empty } from 'antd';
+import { Select, Skeleton } from 'antd';
 import { message } from '../../utils/feedback';
 import {
   BellOutlined, CheckCircleOutlined, DeleteOutlined,
-  ReloadOutlined, CheckOutlined, CloseOutlined,
-} from '@ant-design/icons';
+  ReloadOutlined, CheckOutlined, } from '@ant-design/icons';
 import { notificationApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import PageShell from '../../components/ui/PageShell';
@@ -126,7 +125,7 @@ function NotifItem({ notif, onRead, onDelete }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
-  const { card, headerCard, btnIcon, tableHead, t: th } = usePageTheme();
+  const { card, headerCard, btnIcon, t: th } = usePageTheme();
   const qc       = useQueryClient();
   const { user } = useAuthStore();
   const userId   = user?.id ?? '';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select, Steps, Modal, Input, Button } from 'antd';
@@ -59,7 +59,10 @@ export default function PublishSpacePage() {
   const steps = STEPS;
   const [step, setStep] = useState(0);
   const [buildingId, setBuildingId] = useState('');
-  const [floorId, setFloorId] = useState('');
+  // Derived rather than reset in an effect: with no building chosen there is
+  // no valid floor, so the empty value falls out of the selection itself.
+  const [pickedFloorId, setFloorId] = useState('');
+  const floorId = buildingId ? pickedFloorId : '';
   const [form, setForm] = useState({
     name: '',
     code: '',
@@ -129,12 +132,6 @@ export default function PublishSpacePage() {
       message.error(Array.isArray(msg) ? msg[0] : (msg ?? 'Failed to add building'));
     },
   });
-
-  useEffect(() => {
-    if (!buildingId) {
-      setFloorId('');
-    }
-  }, [buildingId]);
 
   const setF = (key: string, value: string | boolean) => {
     setForm((f) => ({ ...f, [key]: value }));

@@ -18,9 +18,8 @@ import dayjs from 'dayjs';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
 
 const EMAIL_TEMPLATES = [
   {
@@ -96,7 +95,6 @@ export default function EmailManagementPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [previewContent, setPreviewContent] = useState<string>('');
   const [templates, setTemplates] = useState<any[]>([]);
-  const [form] = Form.useForm();
   const [testForm] = Form.useForm();
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER'].includes(user?.role || '');
@@ -199,7 +197,7 @@ export default function EmailManagementPage() {
     });
   };
 
-  const getTemplateStatus = (template: any) => {
+  const getTemplateStatus = (_template: any) => {
     // Mock status - in real app, this would come from the backend
     return Math.random() > 0.3 ? 'active' : 'inactive';
   };

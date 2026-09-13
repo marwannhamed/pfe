@@ -190,9 +190,6 @@ export default function ReportsPage() {
   const confirmedBookings = rangeBookings.filter(b => ['CONFIRMED','CHECKED_IN','COMPLETED'].includes(b.status)).length;
   const paidInvoices   = rangeInvoices.filter(i => i.status === 'PAID').length;
   const overdueInvoices= invoices.filter(i => i.status === 'OVERDUE').length;
-  const occupancyRate  = sites.length > 0
-    ? Math.round((sites.filter((s: any) => (s.available_spaces ?? 0) < (s.total_spaces ?? 1)).length / sites.length) * 100)
-    : 0;
 
   // -- Revenue over time --------------------------------------------------------
   const revenueChart = useMemo(() => {

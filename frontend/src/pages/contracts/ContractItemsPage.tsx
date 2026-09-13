@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Form, Input, InputNumber, Select, DatePicker, Typography, Row, Col, Statistic, Alert, Tag, Tooltip, Divider, Modal } from 'antd';
+import { Card, Table, Button, Space, Form, Input, InputNumber, Select, DatePicker, Typography, Row, Col, Statistic, Alert, Tag, Tooltip, Modal } from 'antd';
 import { message } from '../../utils/feedback';
 import {
   PlusOutlined,
@@ -185,7 +185,7 @@ export default function ContractItemsPage() {
     setItemModalVisible(true);
   };
 
-  const handleEditItem = (record: any) => {
+  const handleEditItem = (_record: any) => {
     message.info('Edit is not available yet for contract items');
   };
 
@@ -224,7 +224,7 @@ export default function ContractItemsPage() {
     setDepositModalVisible(true);
   };
 
-  const handleEditDeposit = (record: any) => {
+  const handleEditDeposit = (_record: any) => {
     message.info('Edit is not available yet for deposits');
   };
 

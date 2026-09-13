@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Form, Input, Select, DatePicker, Typography, Row, Col, Statistic, Alert, Tag, Tooltip, Descriptions, Timeline, Upload, Badge, Progress, Modal } from 'antd';
+import { Card, Table, Button, Space, Form, Input, Select, DatePicker, Typography, Row, Col, Statistic, Alert, Tag, Tooltip, Descriptions, Badge, Modal } from 'antd';
 import { message } from '../../utils/feedback';
 import {
   PlusOutlined,
@@ -20,7 +20,6 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
-const { RangePicker } = DatePicker;
 
 // Mock data - in real app, this would come from API
 const mockTickets = [
