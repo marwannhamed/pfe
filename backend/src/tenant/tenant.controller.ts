@@ -102,6 +102,7 @@ export class TenantController {
   @Get(':id')
   @Roles(
     USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
     USER_ROLE.FINANCE,
     USER_ROLE.TENANT_ADMIN,
     USER_ROLE.MANAGER,

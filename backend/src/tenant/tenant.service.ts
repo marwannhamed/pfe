@@ -246,16 +246,17 @@ export class TenantService {
     });
   }
 
+  /**
+   * Only the platform owner reads across organisations; everyone else is
+   * confined to their own. Written as deny-by-default: this was an allow-list
+   * of "portal roles", so FINANCE — present in the controller's @Roles but
+   * absent from that list — fell through every check and could read any tenant
+   * on the platform. A role added to the controller later cannot now inherit
+   * cross-tenant access by omission.
+   */
   async findOneForUser(user: AuthUser, id: string) {
-    const portalRoles: string[] = [
-      USER_ROLE.TENANT_ADMIN,
-      USER_ROLE.TENANT_EMPLOYEE,
-      USER_ROLE.MANAGER,
-      USER_ROLE.CLIENT_ADMIN,
-    ];
-    if (portalRoles.includes(user.role)) {
-      if (id !== user.tenant_id)
-        throw new ForbiddenException('Cannot view another tenant');
+    if (user.role !== USER_ROLE.SUPER_ADMIN && id !== user.tenant_id) {
+      throw new ForbiddenException('Cannot view another tenant');
     }
     return this.findOne(id);
   }
