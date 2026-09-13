@@ -8,13 +8,15 @@ import {
   ClockCircleOutlined, SearchOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { contractApi } from '../../api/services';
+import type { ApiError } from '../../types';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function daysUntil(dateStr: string): number {
@@ -73,7 +75,7 @@ function RenewModal({ contract, onClose }: { contract: any; onClose: () => void 
       qc.invalidateQueries({ queryKey: ['contracts'] });
       onClose();
     },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       const msg = err?.response?.data?.message ?? 'Failed to renew';
       message.error(Array.isArray(msg) ? msg.join(', ') : msg);
     },
@@ -237,7 +239,7 @@ function RenewModal({ contract, onClose }: { contract: any; onClose: () => void 
 }
 
 // ─── Contract Renewal Card ─────────────────────────────────────────────────────
-function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c: any) => void; onView: (c: any) => void }) {
+function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c) => void; onView: (c) => void }) {
   const days    = daysUntil(contract.end_date);
   const urgency = getUrgency(days);
   const rent    = parseFloat(contract.monthly_rent || 0);

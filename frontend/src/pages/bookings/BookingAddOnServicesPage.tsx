@@ -33,7 +33,7 @@ export default function BookingAddOnServicesPage() {
   const [serviceForm] = Form.useForm();
   const [bookingForm] = Form.useForm();
 
-  const normalizeList = (payload: any) => {
+  const normalizeList = (payload) => {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.data)) return payload.data;
     return [];
@@ -62,9 +62,9 @@ export default function BookingAddOnServicesPage() {
   }, [loadData]);
 
   const bookingAddOns = useMemo(() => {
-    return bookings.flatMap((booking: any) => {
+    return bookings.flatMap((booking) => {
       const addOns = Array.isArray(booking?.addOns) ? booking.addOns : [];
-      return addOns.map((addOn: any) => ({
+      return addOns.map((addOn) => ({
         ...addOn,
         booking_id: booking.id,
         booking_number: booking.booking_number,
@@ -82,7 +82,7 @@ export default function BookingAddOnServicesPage() {
     setServiceModalVisible(true);
   };
 
-  const handleSubmitService = async (values: any) => {
+  const handleSubmitService = async (values) => {
     try {
       await addonServiceApi.create({
         ...values,
@@ -96,7 +96,7 @@ export default function BookingAddOnServicesPage() {
     }
   };
 
-  const handleToggleServiceStatus = async (record: any) => {
+  const handleToggleServiceStatus = async (record) => {
     try {
       if (record.is_active) {
         await addonServiceApi.deactivate(record.id);
@@ -126,7 +126,7 @@ export default function BookingAddOnServicesPage() {
     setBookingModalVisible(true);
   };
 
-  const handleSubmitBookingAddOn = async (values: any) => {
+  const handleSubmitBookingAddOn = async (values) => {
     try {
       await bookingApi.addAddon(values.booking_id, {
         addon_service_id: values.addon_service_id,
@@ -141,7 +141,7 @@ export default function BookingAddOnServicesPage() {
     }
   };
 
-  const handleDeleteBookingAddOn = async (record: any) => {
+  const handleDeleteBookingAddOn = async (record) => {
     try {
       await bookingApi.removeAddon(record.booking_id, record.id);
       message.success('Booking add-on deleted successfully');
@@ -166,7 +166,7 @@ export default function BookingAddOnServicesPage() {
     {
       title: 'Price',
       key: 'price',
-      render: (record: any) => <Text strong>${Number(record.price ?? 0).toLocaleString()}</Text>,
+      render: (record) => <Text strong>${Number(record.price ?? 0).toLocaleString()}</Text>,
     },
     {
       title: 'Cycle',
@@ -176,7 +176,7 @@ export default function BookingAddOnServicesPage() {
     {
       title: 'Status',
       key: 'status',
-      render: (record: any) => (
+      render: (record) => (
         <Tag color={record.is_active ? 'success' : 'default'}>
           {record.is_active ? 'Active' : 'Inactive'}
         </Tag>
@@ -185,7 +185,7 @@ export default function BookingAddOnServicesPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {isBackOffice && (
             <>
@@ -230,18 +230,18 @@ export default function BookingAddOnServicesPage() {
       title: 'Unit Price',
       key: 'unit_price',
       align: 'right' as const,
-      render: (record: any) => `$${Number(record.unit_price ?? 0).toLocaleString()}`,
+      render: (record) => `$${Number(record.unit_price ?? 0).toLocaleString()}`,
     },
     {
       title: 'Total',
       key: 'total_price',
       align: 'right' as const,
-      render: (record: any) => <Text strong>${Number(record.total_price ?? 0).toLocaleString()}</Text>,
+      render: (record) => <Text strong>${Number(record.total_price ?? 0).toLocaleString()}</Text>,
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {isBackOffice && (
             <Tooltip title="Delete">
@@ -418,7 +418,7 @@ export default function BookingAddOnServicesPage() {
         <Form form={bookingForm} layout="vertical" onFinish={handleSubmitBookingAddOn}>
           <Form.Item name="booking_id" label="Booking ID" rules={[{ required: true, message: 'Booking ID is required' }]}>
             <Select showSearch optionFilterProp="label">
-              {bookings.map((booking: any) => (
+              {bookings.map((booking) => (
                 <Option
                   key={booking.id}
                   value={booking.id}

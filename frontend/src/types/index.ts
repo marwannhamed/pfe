@@ -641,3 +641,20 @@ export interface AnalyticsMaintenance {
   total: number;
   avgResolutionHours: number;
 }
+
+/**
+ * What a failed API call actually looks like here: an axios error carrying the
+ * server's ResponseDto body, plus the `userMessage` our interceptor attaches.
+ * Error handlers used to take `any` purely to reach these fields.
+ */
+export interface ApiError extends Error {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string | string[];
+      error?: string;
+      statusCode?: number;
+    };
+  };
+  userMessage?: string;
+}

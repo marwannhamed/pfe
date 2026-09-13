@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { contractApi } from '../../api/services';
 import dayjs from 'dayjs';
+import type { ContractItem, LeaseContract } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -129,12 +130,15 @@ export default function ContractItemsPage() {
       const contractsRaw = await contractApi.getAll().then((r) => r.data);
       const contracts = Array.isArray(contractsRaw) ? contractsRaw : [];
 
-      const items = contracts.flatMap((contract: any) => {
-        const rawItems =
+      const items = contracts.flatMap((contract) => {
+        // `contract_items` is the older server spelling; neither relation is
+        // in the schema yet, so both branches are normally empty.
+        const legacy = contract as LeaseContract & { contract_items?: ContractItem[] };
+        const rawItems: ContractItem[] =
           (Array.isArray(contract?.items) && contract.items) ||
-          (Array.isArray(contract?.contract_items) && contract.contract_items) ||
+          (Array.isArray(legacy?.contract_items) && legacy.contract_items) ||
           [];
-        return rawItems.map((item: any) => ({
+        return rawItems.map((item) => ({
           id: item.id,
           contractId: contract.id,
           contractNumber: contract.contract_number,
@@ -143,7 +147,8 @@ export default function ContractItemsPage() {
           itemType: item.item_type || 'OTHER',
           quantity: Number(item.quantity ?? 1),
           unitPrice: Number(item.unit_price ?? 0),
-          totalPrice: Number(item.total_price ?? Number(item.unit_price ?? 0) * Number(item.quantity ?? 1)),
+          // ContractItem carries no total_price, so this was always the product.
+          totalPrice: Number(item.unit_price ?? 0) * Number(item.quantity ?? 1),
           billingCycle: 'ONE_TIME',
           startDate: contract.start_date,
           endDate: contract.end_date,
@@ -151,7 +156,7 @@ export default function ContractItemsPage() {
         }));
       });
 
-      const depositRows = contracts.flatMap((contract: any) => {
+      const depositRows = contracts.flatMap((contract) => {
         const deposit = contract?.deposit;
         if (!deposit) return [];
         return [
@@ -161,7 +166,7 @@ export default function ContractItemsPage() {
             contractNumber: contract.contract_number,
             depositType: 'SECURITY',
             amount: Number(deposit.amount ?? 0),
-            status: deposit.status || 'HELD',
+            status: deposit.refund_status || 'HELD',
             paidDate: deposit.paid_at,
             refundDate: deposit.refunded_at,
             refundConditions: deposit.notes || '',
@@ -185,11 +190,11 @@ export default function ContractItemsPage() {
     setItemModalVisible(true);
   };
 
-  const handleEditItem = (_record: any) => {
+  const handleEditItem = (_record) => {
     message.info('Edit is not available yet for contract items');
   };
 
-  const handleSubmitItem = async (values: any) => {
+  const handleSubmitItem = async (values) => {
     try {
       const payload = {
         ...values,
@@ -224,11 +229,11 @@ export default function ContractItemsPage() {
     setDepositModalVisible(true);
   };
 
-  const handleEditDeposit = (_record: any) => {
+  const handleEditDeposit = (_record) => {
     message.info('Edit is not available yet for deposits');
   };
 
-  const handleSubmitDeposit = async (values: any) => {
+  const handleSubmitDeposit = async (values) => {
     try {
       const payload = {
         ...values,
@@ -374,7 +379,7 @@ export default function ContractItemsPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {isBackOffice && (
             <>
@@ -452,7 +457,7 @@ export default function ContractItemsPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record) => (
         <Space>
           {isBackOffice && (
             <>

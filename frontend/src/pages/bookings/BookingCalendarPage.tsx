@@ -14,12 +14,14 @@ import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { isQatarWeekend } from '../../constants/qatar';
+import type { ApiError, Space } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -107,9 +109,9 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
     : 0;
 
   const mutation = useMutation({
-    mutationFn: (d: any) => bookingApi.create(d),
+    mutationFn: (d: unknown) => bookingApi.create(d),
     onSuccess:  () => { message.success('Booking submitted for approval'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); qc.invalidateQueries({ queryKey: ['bookings'] }); onClose(); },
-    onError:    (err: any) => { const m = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(m) ? m.join(', ') : m); },
+    onError:    (err: ApiError) => { const m = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(m) ? m.join(', ') : m); },
   });
 
   const validate = () => {
@@ -264,7 +266,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
   const approveMut = useMutation({
     mutationFn: () => bookingApi.approve(booking.id, user?.id ?? ''),
     onSuccess:  () => { message.success('Booking approved! ✅'); qc.invalidateQueries({ queryKey: ['calendar-bookings'] }); onClose(); },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       const m = err?.userMessage ?? err?.response?.data?.message ?? 'Failed to approve';
       message.error(Array.isArray(m) ? m[0] : m);
     },
@@ -346,7 +348,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
 function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }: {
   year: number; month: number; bookings: any[];
   onDayClick: (d: Date) => void;
-  onBookingClick: (b: any) => void;
+  onBookingClick: (b) => void;
   today: Date;
 }) {
   const firstDay  = new Date(year, month, 1).getDay();
@@ -459,7 +461,7 @@ function MonthView({ year, month, bookings, onDayClick, onBookingClick, today }:
 function WeekView({ weekStart, bookings, onDayClick, onBookingClick, today }: {
   weekStart: Date; bookings: any[];
   onDayClick: (d: Date) => void;
-  onBookingClick: (b: any) => void;
+  onBookingClick: (b) => void;
   today: Date;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -590,7 +592,7 @@ export default function BookingCalendarPage() {
   });
 
   const allBookings = mapBookings(bookingsRaw);
-  const allSpaces   = toArray<any>(spacesRaw);
+  const allSpaces   = toArray<Space>(spacesRaw);
 
   // Filter by space
   const bookings = useMemo(() =>

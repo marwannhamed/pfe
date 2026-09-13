@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { contractApi, tenantApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { LeaseContract, ContractStatus, Booking } from '../../types';
+import type { ApiError, Booking, ContractStatus, LeaseContract, Tenant } from '../../types';
 import { mapBookings } from '../../utils/booking';
 import { DEFAULT_CURRENCY } from '../../constants/qatar';
 import {
@@ -38,10 +38,11 @@ function formatDate(d: string) {
 function getDaysLeft(endDate: string): number {
   return Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000);
 }
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 
@@ -118,12 +119,12 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
     queryFn:  () => tenantApi.getAll().then(r => r.data),
     enabled:  isSuperAdmin,
   });
-  const tenants = toArray<any>(tenantsRaw);
+  const tenants = toArray<Tenant>(tenantsRaw);
 
   const mutation = useMutation({
-    mutationFn: (d: any) => contractApi.create(d),
+    mutationFn: (d: unknown) => contractApi.create(d),
     onSuccess: () => { message.success('Contract created!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: any) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
+    onError:   (err: ApiError) => { const msg = err?.response?.data?.message ?? 'Failed'; message.error(Array.isArray(msg) ? msg.join(', ') : msg); },
   });
 
   const validate = () => {
@@ -237,7 +238,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
               </div>
               <Field label="Select Tenant" required error={errors.tenant_id}>
                 <Select value={form.tenant_id || undefined} onChange={v => setF('tenant_id', v)} placeholder="Select tenant..." style={{ width: '100%' }}
-                  options={tenants.map((t: any) => ({ value: t.id, label: `${t.name} (${t.slug})` }))} />
+                  options={tenants.map((t) => ({ value: t.id, label: `${t.name} (${t.slug})` }))} />
               </Field>
             </div>
           )}
@@ -368,7 +369,7 @@ function RenewModal({ contract, onClose }: { contract: LeaseContract; onClose: (
   const mutation = useMutation({
     mutationFn: () => contractApi.renew(contract.id, new Date(newEndDate).toISOString()),
     onSuccess: () => { message.success('Contract renewed!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: any) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError:   (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
   });
   const handleSubmit = () => {
     if (!newEndDate) { setError('Required'); return; }
@@ -522,11 +523,11 @@ function EditContractModal({ contract, onClose, isSuperAdmin }: { contract: Leas
   const [errors, setErrors] = useState<Record<string, string>>({});
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
   const { data: tenantsRaw } = useQuery({ queryKey: ['tenants-edit'], queryFn: () => tenantApi.getAll().then(r => r.data), enabled: isSuperAdmin });
-  const tenants = toArray<any>(tenantsRaw);
+  const tenants = toArray<Tenant>(tenantsRaw);
   const mutation = useMutation({
-    mutationFn: (d: any) => contractApi.update(contract.id, d),
+    mutationFn: (d: unknown) => contractApi.update(contract.id, d),
     onSuccess: () => { message.success('Updated!'); qc.invalidateQueries({ queryKey: ['contracts'] }); onClose(); },
-    onError:   (err: any) => { message.error(err?.response?.data?.message ?? 'Failed'); },
+    onError:   (err: ApiError) => { message.error(err?.response?.data?.message ?? 'Failed'); },
   });
   const validate = () => {
     const e: Record<string, string> = {};
@@ -555,7 +556,7 @@ function EditContractModal({ contract, onClose, isSuperAdmin }: { contract: Leas
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}><CloseOutlined /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {isSuperAdmin && <Field label="Tenant" required error={errors.tenant_id}><select style={INPUT} value={form.tenant_id} onChange={e => setF('tenant_id', e.target.value)}><option value="">Select tenant</option>{tenants.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>}
+          {isSuperAdmin && <Field label="Tenant" required error={errors.tenant_id}><select style={INPUT} value={form.tenant_id} onChange={e => setF('tenant_id', e.target.value)}><option value="">Select tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Start Date" required error={errors.start_date}><input type="date" style={INPUT} value={form.start_date} onChange={e => setF('start_date', e.target.value)} /></Field>
             <Field label="End Date" required error={errors.end_date}><input type="date" style={INPUT} value={form.end_date} onChange={e => setF('end_date', e.target.value)} /></Field>
