@@ -24,12 +24,14 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
+import type { MaintenanceTicket, User } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function fmtMonth(d: string) {
@@ -68,7 +70,7 @@ function ChartTip({ active, payload, label }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -161,8 +163,8 @@ export default function MaintenanceDashboard() {
   const { data: usersRaw }                   = useQuery({ ...opts('md-users'),   queryFn: () => userApi.getAll().then(r => r.data) });
 
   const isLoading = l1 || l2;
-  const tickets   = toArray<any>(ticketsRaw);
-  const users     = toArray<any>(usersRaw);
+  const tickets   = toArray<MaintenanceTicket>(ticketsRaw);
+  const users     = toArray<User>(usersRaw);
 
   const acceptMut  = useMutation({ mutationFn: (id: string) => maintenanceApi.accept(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket accepted!'); } });
   const startMut   = useMutation({ mutationFn: (id: string) => maintenanceApi.start(id),   onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket started!');  } });
@@ -554,7 +556,7 @@ export default function MaintenanceDashboard() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>Queue is clear! 🎉</div>
                 <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>No active tickets right now.</div>
               </div>
-            : activeTickets.map((tk: any, i: number) => {
+            : activeTickets.map((tk, i) => {
               const pm = PRIORITY_CFG[tk.priority] ?? PRIORITY_CFG.NORMAL;
               const sm = STATUS_CFG[tk.status]   ?? STATUS_CFG.OPEN;
               const age = daysSince(tk.created_at);
@@ -592,7 +594,7 @@ export default function MaintenanceDashboard() {
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
             : recentResolved.length === 0
             ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No resolved tickets yet</div>
-            : recentResolved.map((tk: any, i: number) => {
+            : recentResolved.map((tk, i) => {
               const pm = PRIORITY_CFG[tk.priority] ?? PRIORITY_CFG.NORMAL;
               const sm = STATUS_CFG[tk.status]   ?? STATUS_CFG.RESOLVED;
               return (

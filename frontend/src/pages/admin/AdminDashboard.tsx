@@ -19,17 +19,18 @@ import {
   billingApi, maintenanceApi, userApi, contractApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { MaintenanceStats } from '../../types';
+import type { Booking, Invoice, LeaseContract, MaintenanceStats, Payment, Site, Space, Tenant } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function fmtMonth(d: string) {
@@ -79,7 +80,7 @@ function ChartTooltip({ active, payload, label, isCurrency = false }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fff' }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -229,13 +230,13 @@ export default function AdminDashboard() {
 
   const isLoading = l1||l2||l3||l4||l5||l6||l7||l8||l9;
 
-  const sites     = toArray<any>(sitesRaw);
-  const spaces    = toArray<any>(spacesRaw);
-  const tenants   = toArray<any>(tenantsRaw);
-  const bookings  = toArray<any>(bookingsRaw);
-  const invoices  = toArray<any>(invoicesRaw);
-  const payments  = toArray<any>(paymentsRaw);
-  const contracts = toArray<any>(contractsRaw);
+  const sites     = toArray<Site>(sitesRaw);
+  const spaces    = toArray<Space>(spacesRaw);
+  const tenants   = toArray<Tenant>(tenantsRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const payments  = toArray<Payment>(paymentsRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
 
   const available   = spaces.filter(s => s.status === 'AVAILABLE').length;
   const occupied    = spaces.filter(s => s.status === 'OCCUPIED').length;
@@ -251,7 +252,7 @@ export default function AdminDashboard() {
   const totalPending    = Number((summary as any)?.total_pending ?? 0);
   const totalInvoiced   = Number((summary as any)?.total_invoiced ?? 0);
   const collectionRate  = totalInvoiced > 0 ? Math.round((totalRevenue / totalInvoiced) * 100) : 0;
-  const completedPays   = payments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || 0), 0);
+  const completedPays   = payments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
 
   const expiringCount = contracts.filter(c => { const d = daysUntil(c.end_date); return c.status === 'ACTIVE' && d <= 90; }).length;
   const criticalCount = contracts.filter(c => { const d = daysUntil(c.end_date); return c.status === 'ACTIVE' && d <= 30; }).length;
@@ -261,7 +262,7 @@ export default function AdminDashboard() {
     const buckets: Record<string, number> = {};
     payments.filter(p => p.status === 'COMPLETED').forEach(p => {
       const k = fmtMonth(p.payment_date);
-      buckets[k] = (buckets[k] || 0) + parseFloat(p.amount || 0);
+      buckets[k] = (buckets[k] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(buckets).slice(-6).map(([date, Revenue]) => ({ date, Revenue: Math.round(Revenue) }));
   }, [payments]);
@@ -294,7 +295,7 @@ export default function AdminDashboard() {
 
   const siteOccupancyChart = useMemo(() => {
     return sites.slice(0, 6).map(s => {
-      const siteSpaces = spaces.filter(sp => sp.floor?.building?.site_id === s.id);
+      const siteSpaces = spaces.filter(sp => sp.floor?.building?.id === s.id);
       const occ = siteSpaces.filter(sp => sp.status === 'OCCUPIED').length;
       const rate = siteSpaces.length > 0 ? Math.round((occ / siteSpaces.length) * 100) : 0;
       return { name: s.name?.length > 10 ? s.name.substring(0, 10) + '…' : s.name, Occupancy: rate };
@@ -355,7 +356,7 @@ export default function AdminDashboard() {
 
       {/* KPI Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 16 }}>
-        <KpiCard label="Published Listings" value={spaces.filter((s: any) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
+        <KpiCard label="Published Listings" value={spaces.filter((s) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
         <KpiCard label="Total Spaces"      value={spaces.length}     sub={`${occRate}% occupancy rate`}                                           color="#059669" bg="#f0fdf4" icon={<AppstoreOutlined />}    path="/admin/spaces"       loading={isLoading} />
         <KpiCard label="Active Tenants"    value={activeTenants}     sub={`${tenants.length} total registered`}                                   color="#d97706" bg="#fffbeb" icon={<TeamOutlined />}        path="/admin/tenants"      loading={isLoading} />
         <KpiCard label="Active Contracts"  value={activeContracts}   sub={`${contracts.length} total · ${expiringCount} expiring soon`}           color="#7c3aed" bg="#f5f3ff" icon={<FileTextOutlined />}   path="/admin/contracts"    loading={isLoading} />
@@ -537,7 +538,7 @@ export default function AdminDashboard() {
           </div>
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
             : recentTenants.length === 0 ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No tenants yet</div>
-            : recentTenants.map((tn: any, i: number) => {
+            : recentTenants.map((tn, i) => {
               const ts = TENANT_STATUS[tn.status] ?? { bg: '#f1f5f9', color: '#475569' };
               return (
                 <div key={tn.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 20px', borderBottom: i < recentTenants.length - 1 ? `1px solid ${t.divider}` : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
@@ -565,7 +566,7 @@ export default function AdminDashboard() {
           </div>
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
             : recentBookings.length === 0 ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No bookings yet</div>
-            : recentBookings.map((b: any, i: number) => {
+            : recentBookings.map((b, i) => {
               const bs = BOOKING_STATUS[b.status] ?? BOOKING_STATUS.DRAFT;
               return (
                 <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 20px', borderBottom: i < recentBookings.length - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s' }}
@@ -602,7 +603,7 @@ export default function AdminDashboard() {
         </div>
         {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
           : recentInvoices.length === 0 ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No invoices yet</div>
-          : recentInvoices.map((inv: any, i: number) => {
+          : recentInvoices.map((inv, i) => {
             const isPaid    = inv.status === 'PAID';
             const isOverdue = inv.status === 'OVERDUE';
             return (
@@ -629,8 +630,8 @@ export default function AdminDashboard() {
             <button onClick={() => navigate('/admin/spaces')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>View all →</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
-            {sites.slice(0, 4).map((site: any) => {
-              const siteSpaces = spaces.filter(sp => sp.floor?.building?.site_id === site.id);
+            {sites.slice(0, 4).map((site) => {
+              const siteSpaces = spaces.filter(sp => sp.floor?.building?.id === site.id);
               const siteOcc    = siteSpaces.filter(sp => sp.status === 'OCCUPIED').length;
               const occR       = siteSpaces.length > 0 ? Math.round((siteOcc / siteSpaces.length) * 100) : 0;
               const occColor   = occR >= 80 ? '#22c55e' : occR >= 50 ? '#f59e0b' : '#ef4444';

@@ -17,7 +17,7 @@ import {
   maintenanceApi, userApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { MaintenanceStats } from '../../types';
+import type { Booking, MaintenanceStats, MaintenanceTicket, Site, Space, User } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthReady } from '../../hooks/useAuthReady';
 import { getRoleDashboardMeta } from '../../constants/dashboards';
@@ -28,10 +28,11 @@ import RoleDashboardHero from '../../components/RoleDashboardHero';
 import { isClientTeamRole } from '../../constants/team';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function fmtMonth(d: string) {
@@ -46,7 +47,7 @@ function ChartTip({ active, payload, label, isCurrency }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -118,11 +119,11 @@ export default function SiteManagerDashboard() {
 
   const isLoading = l1 || l2 || l3 || l4 || l5;
 
-  const sites     = toArray<any>(sitesRaw);
-  const spaces    = toArray<any>(spacesRaw);
-  const bookings  = toArray<any>(bookingsRaw);
-  const tickets   = toArray<any>(mxRaw);
-  const teamMembers = toArray<any>(teamRaw).filter(
+  const sites     = toArray<Site>(sitesRaw);
+  const spaces    = toArray<Space>(spacesRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const tickets   = toArray<MaintenanceTicket>(mxRaw);
+  const teamMembers = toArray<User>(teamRaw).filter(
     (u) => u.id !== user?.id && isClientTeamRole(u.role),
   );
 
@@ -166,7 +167,7 @@ export default function SiteManagerDashboard() {
 
   const siteOcc = useMemo(() =>
     sites.map(s => {
-      const ss = spaces.filter(sp => sp.floor?.building?.site_id === s.id);
+      const ss = spaces.filter(sp => sp.floor?.building?.id === s.id);
       const occ = ss.filter(sp => sp.status === 'OCCUPIED').length;
       const rate = ss.length > 0 ? Math.round((occ / ss.length) * 100) : 0;
       return { name: s.name.length > 12 ? s.name.slice(0, 12) + '…' : s.name, Occupancy: rate, total: ss.length };
@@ -250,13 +251,13 @@ export default function SiteManagerDashboard() {
 
       {/* KPI Row — differs by role */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-        <KpiCard label="Published Listings" value={spaces.filter((s: any) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
+        <KpiCard label="Published Listings" value={spaces.filter((s) => s.is_published).length} sub={`${spaces.length} total spaces`} color="#2563eb" bg="#eff6ff" icon={<BankOutlined />} path="/admin/spaces" loading={isLoading} />
         <KpiCard label="Total Spaces"   value={spaces.length}   sub={`${occRate}% occupied · ${available} available`}                        color="#059669" bg="#f0fdf4" icon={<AppstoreOutlined />}   path="/admin/spaces"      loading={isLoading} />
         <KpiCard label="This Week"      value={thisWeekBookings.length} sub={`${confirmedBook} confirmed · ${pendingBook} pending`}          color="#d97706" bg="#fffbeb" icon={<CalendarOutlined />}   path="/admin/bookings"    loading={isLoading} />
         {isClientAdmin ? (
           <KpiCard label="Team Members" value={teamMembers.length} sub="Managers, finance, maintenance, reception" color="#7c3aed" bg="#f5f3ff" icon={<TeamOutlined />} path="/admin/users" loading={isLoading} />
         ) : isManager ? (
-          <KpiCard label="Applications" value={bookings.filter((b: any) => b.status === 'PENDING_APPROVAL').length} sub="Pending booking applications" color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />} path="/admin/booking-applications" loading={isLoading} />
+          <KpiCard label="Applications" value={bookings.filter((b) => b.status === 'PENDING_APPROVAL').length} sub="Pending booking applications" color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />} path="/admin/booking-applications" loading={isLoading} />
         ) : (
           <KpiCard label="Open Tickets"   value={(mxStats as any)?.open ?? openTix} sub={`${urgentTix} urgent · ${inProgTix} in progress`}    color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}       path="/admin/maintenance" loading={isLoading} alert={urgentTix > 0} />
         )}
@@ -319,7 +320,7 @@ export default function SiteManagerDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke={t.divider} horizontal={false} />
                 <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11, fill: t.textMuted }} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: t.textSub }} width={80} />
-                <Tooltip formatter={(v: any) => [`${v}%`, 'Occupancy']} />
+                <Tooltip formatter={(v) => [`${v}%`, 'Occupancy']} />
                 <Bar dataKey="Occupancy" radius={[0,6,6,0]}>
                   {siteOcc.map((e, i) => (
                     <Cell key={i} fill={e.Occupancy >= 80 ? '#3b82f6' : e.Occupancy >= 50 ? '#10b981' : '#f59e0b'} />
@@ -417,7 +418,7 @@ export default function SiteManagerDashboard() {
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 5 }} /></div>
             : recentBookings.length === 0
             ? <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No bookings yet</div>
-            : recentBookings.map((b: any, i: number) => {
+            : recentBookings.map((b, i) => {
               const bs = BOOK_STATUS[b.status] ?? { bg: '#f1f5f9', color: '#475569' };
               return (
                 <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentBookings.length - 1 ? `1px solid ${t.divider}` : 'none', transition: 'background 0.1s' }}
@@ -434,7 +435,7 @@ export default function SiteManagerDashboard() {
                     <span style={{ background: bs.bg, color: bs.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, display: 'inline-block', marginBottom: 3 }}>
                       {b.status.replace(/_/g,' ')}
                     </span>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>${parseFloat(b.total_price || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>${parseFloat(b.total_price || '0').toLocaleString()}</div>
                   </div>
                 </div>
               );
@@ -461,7 +462,7 @@ export default function SiteManagerDashboard() {
                 <div style={{ fontSize: 13, color: t.text, fontWeight: 600 }}>No urgent tickets!</div>
                 <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>All maintenance is under control.</div>
               </div>
-            : urgentTickets.map((tk: any, i: number) => {
+            : urgentTickets.map((tk, i) => {
               const pm = PRIO_META[tk.priority] ?? PRIO_META.NORMAL;
               return (
                 <div key={tk.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < urgentTickets.length - 1 ? `1px solid ${t.divider}` : 'none' }}>
@@ -490,8 +491,8 @@ export default function SiteManagerDashboard() {
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 4 }} /></div>
             : sites.length === 0
             ? <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No sites assigned</div>
-            : sites.slice(0, 5).map((site: any, i: number) => {
-              const ss = spaces.filter(sp => sp.floor?.building?.site_id === site.id);
+            : sites.slice(0, 5).map((site, i) => {
+              const ss = spaces.filter(sp => sp.floor?.building?.id === site.id);
               const occ = ss.filter(sp => sp.status === 'OCCUPIED').length;
               const rate = ss.length > 0 ? Math.round((occ / ss.length) * 100) : 0;
               const rateColor = rate >= 80 ? '#3b82f6' : rate >= 50 ? '#10b981' : '#f59e0b';

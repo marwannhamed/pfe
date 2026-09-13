@@ -20,12 +20,14 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
+import type { Invoice, LeaseContract, Payment, Tenant } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function fmtMonth(d: string) {
@@ -45,7 +47,7 @@ function ChartTip({ active, payload, label, isCurrency = false }: any) {
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>
       {label && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
@@ -129,10 +131,10 @@ export default function FinanceDashboard() {
 
   const isLoading = l1 || l2 || l3 || l4;
 
-  const invoices  = toArray<any>(invoicesRaw);
-  const payments  = toArray<any>(paymentsRaw);
-  const contracts = toArray<any>(contractsRaw);
-  const tenants   = toArray<any>(tenantsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const payments  = toArray<Payment>(paymentsRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
+  const tenants   = toArray<Tenant>(tenantsRaw);
   const summary   = summaryRaw as any;
 
   const totalRevenue    = Number(summary?.total_paid     ?? 0);
@@ -143,22 +145,22 @@ export default function FinanceDashboard() {
 
   const completedPays = payments.filter(p => p.status === 'COMPLETED');
   const refundedPays  = payments.filter(p => p.status === 'REFUNDED');
-  const totalCollected = completedPays.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-  const totalRefunded  = refundedPays.reduce((s,  p) => s + parseFloat(p.amount || 0), 0);
+  const totalCollected = completedPays.reduce((s, p) => s + parseFloat(p.amount || '0'), 0);
+  const totalRefunded  = refundedPays.reduce((s,  p) => s + parseFloat(p.amount || '0'), 0);
 
   const overdueInvoices   = invoices.filter(i => i.status === 'OVERDUE');
   const paidInvoices      = invoices.filter(i => i.status === 'PAID');
   const pendingInvoices   = invoices.filter(i => ['ISSUED','SENT','PARTIALLY_PAID'].includes(i.status));
   const activeContracts   = contracts.filter(c => c.status === 'ACTIVE');
-  const monthlyRecurring  = activeContracts.reduce((s, c) => s + parseFloat(c.monthly_rent || 0), 0);
+  const monthlyRecurring  = activeContracts.reduce((s, c) => s + parseFloat(c.monthly_rent || '0'), 0);
 
   const revenueTrend = useMemo(() => {
     const buckets: Record<string, { Revenue: number; Refunds: number }> = {};
     payments.forEach(p => {
       const k = fmtMonth(p.payment_date || p.created_at);
       if (!buckets[k]) buckets[k] = { Revenue: 0, Refunds: 0 };
-      if (p.status === 'COMPLETED') buckets[k].Revenue  += parseFloat(p.amount || 0);
-      if (p.status === 'REFUNDED')  buckets[k].Refunds  += parseFloat(p.amount || 0);
+      if (p.status === 'COMPLETED') buckets[k].Revenue  += parseFloat(p.amount || '0');
+      if (p.status === 'REFUNDED')  buckets[k].Refunds  += parseFloat(p.amount || '0');
     });
     return Object.entries(buckets)
       .slice(-revenueRange)
@@ -179,7 +181,7 @@ export default function FinanceDashboard() {
     completedPays.forEach(p => {
       const key = p.payment_method ?? p.method ?? 'OTHER';
       counts[key]  = (counts[key]  || 0) + 1;
-      amounts[key] = (amounts[key] || 0) + parseFloat(p.amount || 0);
+      amounts[key] = (amounts[key] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(counts).map(([method, count]) => ({
       method,
@@ -192,7 +194,7 @@ export default function FinanceDashboard() {
   const topTenants = useMemo(() => {
     const byTenant: Record<string, number> = {};
     completedPays.forEach(p => {
-      if (p.tenant_id) byTenant[p.tenant_id] = (byTenant[p.tenant_id] || 0) + parseFloat(p.amount || 0);
+      if (p.tenant_id) byTenant[p.tenant_id] = (byTenant[p.tenant_id] || 0) + parseFloat(p.amount || '0');
     });
     return Object.entries(byTenant)
       .map(([id, total]) => ({
@@ -207,7 +209,7 @@ export default function FinanceDashboard() {
     const months: Record<string, number> = {};
     invoices.filter(i => i.status === 'PAID' && i.type === 'MONTHLY_RENT').forEach(inv => {
       const k = fmtMonth(inv.issue_date || inv.created_at);
-      months[k] = (months[k] || 0) + parseFloat(inv.total_amount || 0);
+      months[k] = (months[k] || 0) + parseFloat(inv.total_amount || '0');
     });
     return Object.entries(months).slice(-6).map(([date, MRR]) => ({ date, MRR: Math.round(MRR) }));
   }, [invoices]);
@@ -291,7 +293,7 @@ export default function FinanceDashboard() {
               {overdueInvoices.length} overdue invoice{overdueInvoices.length > 1 ? 's' : ''}
             </span>
             <span style={{ color: '#dc2626', fontSize: 13, marginLeft: 8 }}>
-              Total: ${overdueInvoices.reduce((s, i) => s + parseFloat(i.total_amount || 0), 0).toLocaleString()} outstanding
+              Total: ${overdueInvoices.reduce((s, i) => s + parseFloat(i.total_amount || '0'), 0).toLocaleString()} outstanding
             </span>
           </div>
           <ArrowRightOutlined style={{ color: '#dc2626' }} />
@@ -547,7 +549,7 @@ export default function FinanceDashboard() {
           {isLoading ? <div style={{ padding: '16px 20px' }}><Skeleton active paragraph={{ rows: 5 }} /></div>
             : recentPayments.length === 0
             ? <div style={{ padding: '32px', textAlign: 'center', color: t.textMuted, fontSize: 13 }}>No payments yet</div>
-            : recentPayments.map((p: any, i: number) => {
+            : recentPayments.map((p, i) => {
               const payMethod = p.payment_method ?? p.method;
               const mm = PAYMENT_METHOD_META[payMethod] ?? { icon: '💰', label: payMethod, color: '#94a3b8' };
               return (
@@ -562,7 +564,7 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: t.textMuted }}>{mm.label} · {formatDate(p.payment_date || p.created_at)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>${parseFloat(p.amount || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>${parseFloat(p.amount || '0').toLocaleString()}</div>
                     <div style={{ fontSize: 10, color: t.textMuted }}>{p.currency}</div>
                   </div>
                 </div>
@@ -586,7 +588,7 @@ export default function FinanceDashboard() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>No overdue invoices!</div>
                 <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>All payments are on time.</div>
               </div>
-            : recentOverdue.map((inv: any, i: number) => {
+            : recentOverdue.map((inv, i) => {
               const daysLate = Math.ceil((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
               return (
                 <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentOverdue.length - 1 ? `1px solid ${t.divider}` : 'none', background: '#fff9f9', transition: 'background 0.1s' }}
@@ -600,7 +602,7 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: t.textMuted }}>{inv.tenant?.name ?? 'Tenant'} · Due {formatDate(inv.due_date)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>${parseFloat(inv.total_amount || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>${parseFloat(inv.total_amount || '0').toLocaleString()}</div>
                     <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>{daysLate}d overdue</div>
                   </div>
                 </div>

@@ -102,3 +102,6 @@ export function usePageTheme() {
   const { t, isDark } = useThemeStore();
   return { t, isDark, ...themedStyles(t, isDark) };
 }
+
+/** The palette object `usePageTheme().t` returns — handy for typing props. */
+export type PageTheme = ReturnType<typeof usePageTheme>['t'];

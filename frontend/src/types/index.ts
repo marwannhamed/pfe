@@ -281,6 +281,7 @@ export interface Invoice {
 }
 
 export interface Payment {
+  method:              string;
   id:                   string;
   tenant_id:            string;
   invoice_id:           string;
@@ -312,6 +313,7 @@ export interface MaintenanceTicket {
   cost?:                string;
   crisp_session_id?:    string;
   created_at:           string;
+  updated_at:           string;
   // relations
   space?:               Space;
   createdBy?:           User;

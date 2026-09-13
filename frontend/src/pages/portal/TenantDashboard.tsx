@@ -14,6 +14,15 @@ import {
   contractApi, billingApi, notificationApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { PageTheme } from '../../hooks/usePageTheme';
+import type {
+  Booking,
+  Invoice,
+  LeaseContract,
+  MaintenanceTicket,
+  Notification,
+  User,
+} from '../../types';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
@@ -21,10 +30,11 @@ import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function toArray<T>(raw: any): T[] {
+function toArray<T>(raw: unknown): T[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw)) return raw as T[];
+  const nested = (raw as { data?: unknown }).data;
+  if (Array.isArray(nested)) return nested as T[];
   return [];
 }
 function formatDate(d: string) {
@@ -62,7 +72,19 @@ const TICKET_PRIORITY: Record<string, { bg: string; color: string }> = {
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, color, bg, icon, path, loading, t }: any) {
+interface KpiCardProps {
+  label: string;
+  value: React.ReactNode;
+  sub: string;
+  color: string;
+  bg: string;
+  icon: React.ReactNode;
+  path?: string;
+  loading?: boolean;
+  t: PageTheme;
+}
+
+function KpiCard({ label, value, sub, color, bg, icon, path, loading, t }: KpiCardProps) {
   const navigate = useNavigate();
   return (
     <div
@@ -97,7 +119,7 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading, t }: any) 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TenantDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuthStore() as any;
+  const { user } = useAuthStore();
   const authReady = useAuthReady();
   const { t, card: CARD } = usePageTheme();
   const tenantId = user?.tenant_id;
@@ -115,40 +137,40 @@ export default function TenantDashboard() {
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
 
-  const bookings  = toArray<any>(bookingsRaw);
-  const tickets   = toArray<any>(ticketsRaw);
-  const members   = toArray<any>(usersRaw);
-  const contracts = toArray<any>(contractsRaw);
-  const invoices  = toArray<any>(invoicesRaw);
-  const notifs    = toArray<any>(notifsRaw);
+  const bookings  = toArray<Booking>(bookingsRaw);
+  const tickets   = toArray<MaintenanceTicket>(ticketsRaw);
+  const members   = toArray<User>(usersRaw);
+  const contracts = toArray<LeaseContract>(contractsRaw);
+  const invoices  = toArray<Invoice>(invoicesRaw);
+  const notifs    = toArray<Notification>(notifsRaw);
 
   // Derived
-  const myBookings       = user?.role === 'TENANT_EMPLOYEE' ? bookings.filter((b: any) => b.created_by_user_id === user?.id) : bookings;
-  const myTickets        = user?.role === 'TENANT_EMPLOYEE' ? tickets.filter((t: any) => t.created_by_user_id === user?.id) : tickets;
-  const confirmedBooks   = myBookings.filter((b: any) => b.status === 'CONFIRMED').length;
-  const pendingBooks     = myBookings.filter((b: any) => b.status === 'PENDING_APPROVAL').length;
-  const openTickets      = myTickets.filter((t: any) => !['CLOSED','CANCELLED'].includes(t.status)).length;
-  const urgentTickets    = myTickets.filter((t: any) => ['URGENT','EMERGENCY'].includes(t.priority) && !['CLOSED','CANCELLED','RESOLVED'].includes(t.status));
-  const activeContracts  = contracts.filter((c: any) => c.status === 'ACTIVE');
-  const overdueInvoices  = invoices.filter((i: any) => i.status === 'OVERDUE');
-  const unreadNotifs     = notifs.filter((n: any) => !n.is_read).length;
+  const myBookings       = user?.role === 'TENANT_EMPLOYEE' ? bookings.filter((b) => b.created_by_user_id === user?.id) : bookings;
+  const myTickets        = user?.role === 'TENANT_EMPLOYEE' ? tickets.filter((t) => t.created_by_user_id === user?.id) : tickets;
+  const confirmedBooks   = myBookings.filter((b) => b.status === 'CONFIRMED').length;
+  const pendingBooks     = myBookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
+  const openTickets      = myTickets.filter((t) => !['CLOSED','CANCELLED'].includes(t.status)).length;
+  const urgentTickets    = myTickets.filter((t) => ['URGENT','EMERGENCY'].includes(t.priority) && !['CLOSED','CANCELLED','RESOLVED'].includes(t.status));
+  const activeContracts  = contracts.filter((c) => c.status === 'ACTIVE');
+  const overdueInvoices  = invoices.filter((i) => i.status === 'OVERDUE');
+  const unreadNotifs     = notifs.filter((n) => !n.is_read).length;
   const onboardingDone   = localStorage.getItem('onboarding_done') === 'true';
 
   const expiringContracts = activeContracts
-    .map((c: any) => ({ ...c, days: daysUntil(c.end_date) }))
-    .filter((c: any) => c.days <= 90 && c.days >= 0)
-    .sort((a: any, b: any) => a.days - b.days);
+    .map((c) => ({ ...c, days: daysUntil(c.end_date) }))
+    .filter((c) => c.days <= 90 && c.days >= 0)
+    .sort((a, b) => a.days - b.days);
 
   const recentBookings = [...myBookings]
-    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 6);
 
   const recentTickets = [...myTickets]
-    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
   const recentNotifs = [...notifs]
-    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 6);
 
   const NOTIF_TYPE_ICON: Record<string, { icon: string; color: string; bg: string }> = {
@@ -242,7 +264,7 @@ export default function TenantDashboard() {
         {/* KPI Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
           {isAdmin && (
-            <KpiCard t={t} label="Team Members"   value={members.length}       sub={`${members.filter((m: any) => m.status === 'ACTIVE').length} active`} color="#2563eb" bg="#eff6ff" icon={<TeamOutlined />}       path="/portal/users"       loading={isLoading} />
+            <KpiCard t={t} label="Team Members"   value={members.length}       sub={`${members.filter((m) => m.status === 'ACTIVE').length} active`} color="#2563eb" bg="#eff6ff" icon={<TeamOutlined />}       path="/portal/users"       loading={isLoading} />
           )}
           {isAdmin && (
             <KpiCard t={t} label="Active Leases"  value={activeContracts.length} sub={`${contracts.length} total`}                                         color="#059669" bg="#f0fdf4" icon={<FileTextOutlined />}  path="/portal/contracts"   loading={isLoading} />
@@ -250,7 +272,7 @@ export default function TenantDashboard() {
           <KpiCard t={t} label="My Bookings"      value={myBookings.length}    sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                color="#7c3aed" bg="#f5f3ff" icon={<CalendarOutlined />}  path="/portal/bookings"    loading={isLoading} />
           <KpiCard t={t} label="Open Tickets"     value={openTickets}          sub={`${urgentTickets.length} urgent`}                                       color={urgentTickets.length > 0 ? '#dc2626' : '#059669'} bg={urgentTickets.length > 0 ? '#fef2f2' : '#f0fdf4'} icon={<ToolOutlined />} path="/portal/maintenance" loading={isLoading} />
           {isAdmin && (
-            <KpiCard t={t} label="Pending Invoices" value={overdueInvoices.length + invoices.filter((i: any) => i.status === 'ISSUED' || i.status === 'SENT').length} sub={`${overdueInvoices.length} overdue`} color={overdueInvoices.length > 0 ? '#dc2626' : '#d97706'} bg={overdueInvoices.length > 0 ? '#fef2f2' : '#fffbeb'} icon={<CreditCardOutlined />} path="/portal/billing" loading={isLoading} />
+            <KpiCard t={t} label="Pending Invoices" value={overdueInvoices.length + invoices.filter((i) => i.status === 'ISSUED' || i.status === 'SENT').length} sub={`${overdueInvoices.length} overdue`} color={overdueInvoices.length > 0 ? '#dc2626' : '#d97706'} bg={overdueInvoices.length > 0 ? '#fef2f2' : '#fffbeb'} icon={<CreditCardOutlined />} path="/portal/billing" loading={isLoading} />
           )}
         </div>
 
@@ -535,7 +557,7 @@ export default function TenantDashboard() {
               ? <Skeleton active paragraph={{ rows: 2 }} />
               : contracts.length === 0
                 ? <div style={{ fontSize: 12, color: t.textMuted, textAlign: 'center', padding: '12px 0' }}>No contracts</div>
-                : contracts.slice(0, 3).map((c: any) => {
+                : contracts.slice(0, 3).map((c) => {
                   const days = daysUntil(c.end_date);
                   const color = c.status !== 'ACTIVE' ? '#94a3b8' : days <= 30 ? '#dc2626' : days <= 90 ? '#d97706' : '#059669';
                   return (
