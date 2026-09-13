@@ -516,10 +516,10 @@ export default function ReportsPage() {
         {isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: '#f1f5f9', borderRadius: 10, overflow: 'hidden' }}>
             {[
-              { label: 'Total Invoiced',  value: `$${parseFloat(summaryRaw?.total_invoiced ?? 0).toLocaleString()}`,  color: '#2563eb' },
-              { label: 'Total Collected', value: `$${parseFloat(summaryRaw?.total_paid ?? 0).toLocaleString()}`,       color: '#059669' },
-              { label: 'Outstanding',     value: `$${parseFloat(summaryRaw?.total_pending ?? 0).toLocaleString()}`,    color: '#f59e0b' },
-              { label: 'Overdue',         value: `$${parseFloat(summaryRaw?.total_overdue ?? 0).toLocaleString()}`,    color: '#dc2626' },
+              { label: 'Total Invoiced',  value: `$${(summaryRaw?.total_invoiced ?? 0).toLocaleString()}`,  color: '#2563eb' },
+              { label: 'Total Collected', value: `$${(summaryRaw?.total_paid ?? 0).toLocaleString()}`,       color: '#059669' },
+              { label: 'Outstanding',     value: `$${(summaryRaw?.total_pending ?? 0).toLocaleString()}`,    color: '#f59e0b' },
+              { label: 'Overdue',         value: `$${(summaryRaw?.total_overdue ?? 0).toLocaleString()}`,    color: '#dc2626' },
               { label: 'Active Contracts',value: `${activeContracts}`,                                                 color: '#059669' },
               { label: 'Total Contracts', value: `${contracts.length}`,                                                color: '#2563eb' },
               { label: 'Total Tenants',   value: `${tenants.length}`,                                                  color: '#7c3aed' },

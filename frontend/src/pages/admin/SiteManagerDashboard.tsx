@@ -17,6 +17,7 @@ import {
   maintenanceApi, userApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { MaintenanceStats } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthReady } from '../../hooks/useAuthReady';
 import { getRoleDashboardMeta } from '../../constants/dashboards';
@@ -395,7 +396,7 @@ export default function SiteManagerDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.divider}` }}>
             {[
               { label: 'Open',        value: (mxStats as any)?.open        ?? openTix,    color: '#f59e0b' },
-              { label: 'In Progress', value: (mxStats as any)?.in_progress ?? inProgTix,  color: '#3b82f6' },
+              { label: 'In Progress', value: (mxStats as MaintenanceStats | undefined)?.inProgress ?? inProgTix,  color: '#3b82f6' },
               { label: 'Resolved',    value: (mxStats as any)?.resolved    ?? 0,          color: '#10b981' },
               { label: 'Urgent',      value: urgentTix,                                    color: '#dc2626' },
             ].map(s => (

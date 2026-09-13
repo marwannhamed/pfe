@@ -5,22 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { notificationApi } from '../api/services';
 import { API_BASE_URL } from '../api/client';
 
-interface Notification {
-  id: string;
-  type: 'BOOKING' | 'MAINTENANCE' | 'PAYMENT' | 'SYSTEM' | 'CONTRACT' | 'INVOICE';
-  title: string;
-  message: string;
-  data?: any;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  timestamp: string;
-  read: boolean;
-}
-
-interface NotificationStats {
-  total: number;
-  unread: number;
-  byType: Array<{ type: string; count: number }>;
-}
+import type { Notification, NotificationStats } from '../types';
 
 export const useNotifications = () => {
   const { message } = App.useApp();
@@ -146,7 +131,7 @@ export const useNotifications = () => {
     try {
       await notificationApi.markRead(notificationId);
       setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
       socketRef.current?.emit('mark-read', { notificationId });
@@ -160,7 +145,7 @@ export const useNotifications = () => {
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationApi.markAllRead(userRef.current?.id);
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
@@ -174,7 +159,7 @@ export const useNotifications = () => {
       await notificationApi.remove(notificationId);
       setNotifications(prev => {
         const target = prev.find(n => n.id === notificationId);
-        if (target && !target.read) {
+        if (target && !target.is_read) {
           setUnreadCount(c => Math.max(0, c - 1));
         }
         return prev.filter(n => n.id !== notificationId);

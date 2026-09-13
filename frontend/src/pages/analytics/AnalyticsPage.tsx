@@ -44,13 +44,18 @@ import { analyticsApi, exportApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
-import { AnalyticsOverview, RevenueTrend, BookingStatusData, SpaceUtilization, MaintenanceStats, TopSpace, RevenueByTenant } from '../../types';
+import { AnalyticsOverview, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+/** /analytics/maintenance reports counts per status rather than named fields. */
+function countByStatus(stats: AnalyticsMaintenance, status: string): number {
+  return stats.byStatus.find((s) => s.status === status)?.count ?? 0;
+}
 
 export default function AnalyticsPage() {
   const { t: th } = usePageTheme();
@@ -68,7 +73,7 @@ export default function AnalyticsPage() {
   const [revenueTrend, setRevenueTrend] = useState<RevenueTrend[]>([]);
   const [bookingStatus, setBookingStatus] = useState<BookingStatusData[]>([]);
   const [spaceUtilization, setSpaceUtilization] = useState<SpaceUtilization[]>([]);
-  const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats | null>(null);
+  const [maintenanceStats, setMaintenanceStats] = useState<AnalyticsMaintenance | null>(null);
   const [topSpaces, setTopSpaces] = useState<TopSpace[]>([]);
   const [revenueByTenant, setRevenueByTenant] = useState<RevenueByTenant[]>([]);
 
@@ -385,20 +390,20 @@ export default function AnalyticsPage() {
                     <Col span={12}>
                       <Statistic
                         title="Open Tickets"
-                        value={maintenanceStats.open}
+                        value={countByStatus(maintenanceStats, 'OPEN')}
                         styles={{ content: { color: '#cf1322'  } }}
                       />
                     </Col>
                     <Col span={12}>
                       <Statistic
                         title="Resolved"
-                        value={maintenanceStats.resolved}
+                        value={countByStatus(maintenanceStats, 'RESOLVED')}
                         styles={{ content: { color: '#3f8600'  } }}
                       />
                     </Col>
                     <Col span={24}>
                       <Text type="secondary">
-                        Avg. Resolution Time: {maintenanceStats.averageResolutionTime}h
+                        Avg. Resolution Time: {maintenanceStats.avgResolutionHours}h
                       </Text>
                     </Col>
                   </Row>

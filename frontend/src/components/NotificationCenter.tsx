@@ -62,8 +62,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ classNam
   const [showSettings, setShowSettings] = useState(false);
 
   const filteredNotifications = notifications.filter(notification => {
-    if (filter === 'unread' && notification.read) return false;
-    if (filter === 'read' && !notification.read) return false;
+    if (filter === 'unread' && notification.is_read) return false;
+    if (filter === 'read' && !notification.is_read) return false;
     if (typeFilter !== 'all' && notification.type !== typeFilter) return false;
     return true;
   });
@@ -217,19 +217,19 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ classNam
               <List.Item
                 style={{
                   padding: '12px 16px',
-                  background: notification.read ? 'transparent' : '#f6ffed',
+                  background: notification.is_read ? 'transparent' : '#f6ffed',
                   cursor: 'pointer',
                   transition: 'background 0.2s',
                 }}
-                onClick={() => !notification.read && markAsRead(notification.id)}
+                onClick={() => !notification.is_read && markAsRead(notification.id)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#f5f5f5';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = notification.read ? 'transparent' : '#f6ffed';
+                  e.currentTarget.style.background = notification.is_read ? 'transparent' : '#f6ffed';
                 }}
                 actions={[
-                  !notification.read && (
+                  !notification.is_read && (
                     <Tooltip title="Mark as read">
                       <Button
                         type="text"
@@ -262,11 +262,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ classNam
                   }
                   title={
                     <Space>
-                      <Text strong={!notification.read}>
+                      <Text strong={!notification.is_read}>
                         {notification.title}
                       </Text>
                       {getPriorityTag(notification.priority)}
-                      {!notification.read && (
+                      {!notification.is_read && (
                         <Badge status="processing" />
                       )}
                     </Space>
@@ -276,7 +276,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ classNam
                       <Text type="secondary">{notification.message}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: '11px' }}>
-                        {dayjs(notification.timestamp).fromNow()}
+                        {dayjs(notification.created_at).fromNow()}
                       </Text>
                     </div>
                   }

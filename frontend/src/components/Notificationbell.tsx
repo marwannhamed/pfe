@@ -77,7 +77,7 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
   const unreadCount =
     typeof countRaw === 'number'
       ? countRaw
-      : (countRaw?.unread_count ?? countRaw?.count ?? 0);
+      : (countRaw?.unread_count ?? 0);
 
   // ── Latest 8 notifications for dropdown ────────────────────────────────────
   const { data: notifsRaw = [] } = useQuery({

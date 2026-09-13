@@ -188,6 +188,31 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Totals for the notification centre. The frontend has always called
+   * GET /notifications/stats, but no such route existed, so the request fell
+   * through to GET /notifications/:id with id="stats" and answered 404 on
+   * every session. Scoped exactly like getUnreadCount.
+   */
+  async getStats(user: AuthUser, userId?: string) {
+    const scope = this.scopeFor(user, userId);
+    const [total, unread, grouped] = await Promise.all([
+      this.prisma.notification.count({ where: scope }),
+      this.prisma.notification.count({ where: { ...scope, is_read: false } }),
+      this.prisma.notification.groupBy({
+        by: ['type'],
+        where: scope,
+        _count: { _all: true },
+      }),
+    ]);
+
+    return {
+      total,
+      unread,
+      byType: grouped.map((g) => ({ type: g.type, count: g._count._all })),
+    };
+  }
+
   // ─── SEND SYSTEM NOTIFICATION ─────────────────────────────────
   async sendBookingConfirmation(userId: string, bookingNumber: string) {
     return (this as any).create({

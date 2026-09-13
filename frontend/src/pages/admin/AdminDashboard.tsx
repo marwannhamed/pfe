@@ -19,6 +19,7 @@ import {
   billingApi, maintenanceApi, userApi, contractApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
+import type { MaintenanceStats } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
@@ -365,7 +366,7 @@ export default function AdminDashboard() {
         <KpiCard label="Revenue Collected" value={`$${Math.round(totalRevenue).toLocaleString()}`}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Pending Revenue"   value={`$${Math.round(totalPending).toLocaleString()}`}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Total Bookings"    value={bookings.length}   sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                 color="#2563eb" bg="#eff6ff" icon={<CalendarOutlined />}    path="/admin/bookings"     loading={isLoading} />
-        <KpiCard label="Open Tickets"      value={(mxStats as any)?.open ?? 0} sub={`${(mxStats as any)?.in_progress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
+        <KpiCard label="Open Tickets"      value={(mxStats as any)?.open ?? 0} sub={`${(mxStats as MaintenanceStats | undefined)?.inProgress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
       </div>
 
       {/* Charts Row 1 */}

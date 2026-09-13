@@ -598,7 +598,7 @@ export interface MaintenanceStats {
   open: number;
   inProgress: number;
   resolved: number;
-  averageResolutionTime: number;
+  closed: number;
 }
 
 export interface TopSpace {
@@ -614,4 +614,28 @@ export interface RevenueByTenant {
   tenantName: string;
   revenue: string;
   bookings: number;
+}
+
+/** GET /billing/invoices/summary */
+export interface InvoiceSummary {
+  total_invoiced: number;
+  total_paid: number;
+  total_pending: number;
+  total_overdue: number;
+  invoice_count: number;
+}
+
+/** GET /notifications/stats */
+export interface NotificationStats {
+  total: number;
+  unread: number;
+  byType: Array<{ type: string; count: number }>;
+}
+
+/** GET /analytics/maintenance — note this is a different shape to MaintenanceStats. */
+export interface AnalyticsMaintenance {
+  byStatus: Array<{ status: string; count: number }>;
+  byPriority: Array<{ priority: string; count: number }>;
+  total: number;
+  avgResolutionHours: number;
 }

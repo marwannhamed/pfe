@@ -1,5 +1,23 @@
 ﻿import { api, listFromApi } from './client';
-import type { Building, Floor, Space } from '../types';
+import type { AxiosResponse } from 'axios';
+import type {
+  AuditLog,
+  Booking,
+  Building,
+  Floor,
+  Invoice,
+  InvoiceSummary,
+  LeaseContract,
+  MaintenanceStats,
+  MaintenanceTicket,
+  Notification,
+  Payment,
+  NotificationStats,
+  PromotionCode,
+  Space,
+  Tenant,
+  User,
+} from '../types';
 
 // ─── IN-FLIGHT REQUEST DEDUPLICATION ─────────────────────────────────────────
 //
@@ -13,9 +31,15 @@ import type { Building, Floor, Space } from '../types';
 // the request settles (success or error), so subsequent calls always get
 // fresh data.
 
-const inFlight = new Map<string, Promise<any>>();
+const inFlight = new Map<string, Promise<unknown>>();
 
-function dedupedGet<T = any>(url: string, params?: Record<string, any>): Promise<T> {
+// Returns the axios response, not the payload: callers do `.then(r => r.data)`.
+// The old signature claimed Promise<T> while handing back AxiosResponse<T>; with
+// T defaulting to `any` nothing caught the discrepancy.
+function dedupedGet<T = unknown>(
+  url: string,
+  params?: Record<string, unknown>,
+): Promise<AxiosResponse<T>> {
   const key = url + (params ? '?' + new URLSearchParams(
     // filter out undefined/null so keys are deterministic
     Object.fromEntries(
@@ -24,12 +48,12 @@ function dedupedGet<T = any>(url: string, params?: Record<string, any>): Promise
   ).toString() : '');
 
   if (inFlight.has(key)) {
-    return inFlight.get(key)! as Promise<T>;
+    return inFlight.get(key)! as Promise<AxiosResponse<T>>;
   }
 
   const promise = api
     .get<T>(url, params ? { params } : undefined)
-    .finally(() => inFlight.delete(key)) as Promise<T>;
+    .finally(() => inFlight.delete(key));
 
   inFlight.set(key, promise);
   return promise;
@@ -39,9 +63,9 @@ function dedupedGet<T = any>(url: string, params?: Record<string, any>): Promise
 export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),
-  registerTenant: (data: any) =>
+  registerTenant: (data: unknown) =>
     api.post('/auth/register-tenant', data),
-  register: (data: any) =>
+  register: (data: unknown) =>
     api.post('/auth/register', data),
   refreshToken: (refreshToken: string) =>
     api.post('/auth/refresh-token', { refreshToken }),
@@ -78,8 +102,8 @@ export const siteApi = {
     return list.map(mapBuildingAsSite);
   },
   getOne: (id: string) => buildingApi.getOne(id),
-  create: (data: any) => api.post('/sites', data),
-  update: (id: string, data: any) => api.patch(`/sites/${id}`, data),
+  create: (data: unknown) => api.post('/sites', data),
+  update: (id: string, data: unknown) => api.patch(`/sites/${id}`, data),
   remove: (id: string) => api.delete(`/sites/${id}`),
   getAvailableSpaces: (id: string) => api.get(`/sites/${id}/available-spaces`),
   getOccupancyRate: (id: string) => api.get(`/sites/${id}/occupancy-rate`),
@@ -146,8 +170,8 @@ export const buildingApi = {
     return listFromApi<Building>(res);
   },
   getOne: (id: string) => api.get(`/buildings/${id}`),
-  create: (data: any) => api.post('/buildings', data),
-  update: (id: string, data: any) => api.patch(`/buildings/${id}`, data),
+  create: (data: unknown) => api.post('/buildings', data),
+  update: (id: string, data: unknown) => api.patch(`/buildings/${id}`, data),
   remove: (id: string) => api.delete(`/buildings/${id}`),
   ensureFloor: (id: string) => api.post(`/buildings/${id}/ensure-floor`),
 };
@@ -162,16 +186,16 @@ export const floorApi = {
   ensureDefault: async (buildingId: string) => {
     try {
       return await api.post('/floors/ensure-default', { building_id: buildingId });
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
+    } catch (err) {
+      if ((err as { response?: { status?: number } })?.response?.status === 404) {
         return buildingApi.ensureFloor(buildingId);
       }
       throw err;
     }
   },
   getOne: (id: string) => api.get(`/floors/${id}`),
-  create: (data: any) => api.post('/floors', data),
-  update: (id: string, data: any) => api.patch(`/floors/${id}`, data),
+  create: (data: unknown) => api.post('/floors', data),
+  update: (id: string, data: unknown) => api.patch(`/floors/${id}`, data),
   remove: (id: string) => api.delete(`/floors/${id}`),
 };
 
@@ -187,8 +211,8 @@ export const spaceApi = {
   },
   getPublishedOne: (id: string) => dedupedGet(`/spaces/public/${id}`),
   getOne: (id: string) => api.get(`/spaces/${id}`),
-  create: (data: any) => api.post('/spaces', data),
-  update: (id: string, data: any) => api.patch(`/spaces/${id}`, data),
+  create: (data: unknown) => api.post('/spaces', data),
+  update: (id: string, data: unknown) => api.patch(`/spaces/${id}`, data),
   remove: (id: string) => api.delete(`/spaces/${id}`),
   checkAvailability: (id: string, start: string, end: string) =>
     api.get(`/spaces/${id}/availability`, { params: { start, end } }),
@@ -201,16 +225,16 @@ export const spaceApi = {
 // ─── TENANTS ──────────────────────────────────────────────────────────
 export const tenantApi = {
   getAll: (params?: { type?: 'CLIENT' | 'RENTER' }) =>
-    dedupedGet('/tenants', params),
+    dedupedGet<Tenant[]>('/tenants', params),
   getOne: (id: string) => api.get(`/tenants/${id}`),
-  create: (data: any) => api.post('/tenants', data),
+  create: (data: unknown) => api.post('/tenants', data),
   provisionClient: (data: {
     company_name: string;
     contact_email: string;
     subscription_plan?: string;
     send_welcome_email?: boolean;
   }) => api.post('/tenants/provision-client', data),
-  update: (id: string, data: any) => api.patch(`/tenants/${id}`, data),
+  update: (id: string, data: unknown) => api.patch(`/tenants/${id}`, data),
   remove: (id: string) => api.delete(`/tenants/${id}`),
   suspend: (id: string) => api.patch(`/tenants/${id}/suspend`),
   activate: (id: string) => api.patch(`/tenants/${id}/activate`),
@@ -230,14 +254,14 @@ export const tenantApi = {
 // ─── USERS ────────────────────────────────────────────────────────────
 export const userApi = {
   getAll: (tenantId?: string, role?: string) =>
-    dedupedGet('/users', {
+    dedupedGet<User[]>('/users', {
       ...(tenantId ? { tenantId } : {}),
       ...(role ? { role } : {}),
     }),
   getOne: (id: string) => api.get(`/users/${id}`),
-  create: (data: any) => api.post('/users', data),
-  invite: (data: any) => api.post('/users/invite', data),
-  update: (id: string, data: any) => api.patch(`/users/${id}`, data),
+  create: (data: unknown) => api.post('/users', data),
+  invite: (data: unknown) => api.post('/users/invite', data),
+  update: (id: string, data: unknown) => api.patch(`/users/${id}`, data),
   remove: (id: string) => api.delete(`/users/${id}`),
   changePassword: (id: string, data: { currentPassword: string; newPassword: string }) =>
     api.patch(`/users/${id}/change-password`, data),
@@ -246,10 +270,10 @@ export const userApi = {
 // ─── BOOKINGS ─────────────────────────────────────────────────────────
 export const bookingApi = {
   getAll: (params?: { tenantId?: string; spaceId?: string; status?: string; createdBy?: string }) =>
-    dedupedGet('/bookings', params),
+    dedupedGet<Booking[]>('/bookings', params),
   getOne: (id: string) => api.get(`/bookings/${id}`),
-  create: (data: any) => api.post('/bookings', data),
-  update: (id: string, data: any) => api.patch(`/bookings/${id}`, data),
+  create: (data: unknown) => api.post('/bookings', data),
+  update: (id: string, data: unknown) => api.patch(`/bookings/${id}`, data),
   remove: (id: string) => api.delete(`/bookings/${id}`),
   approve: (id: string, approvedByUserId: string) =>
     api.patch(`/bookings/${id}/approve`, {}, { params: { approvedByUserId } }),
@@ -259,7 +283,7 @@ export const bookingApi = {
     api.patch(`/bookings/${id}/cancel`, {}, { ...(reason ? { params: { reason } } : {}) }),
   checkIn: (id: string) => api.patch(`/bookings/${id}/check-in`, {}),
   checkOut: (id: string) => api.patch(`/bookings/${id}/check-out`, {}),
-  addAddon: (id: string, data: any) => api.post(`/bookings/${id}/addons`, data),
+  addAddon: (id: string, data: unknown) => api.post(`/bookings/${id}/addons`, data),
   removeAddon: (id: string, addonId: string) =>
     api.delete(`/bookings/${id}/addons/${addonId}`),
   getWorkflowQueues: () => dedupedGet('/bookings/workflow/queues'),
@@ -284,49 +308,49 @@ export const bookingApi = {
 // ─── LEASE CONTRACTS ──────────────────────────────────────────────────
 export const contractApi = {
   getAll: (params?: { tenantId?: string; status?: string }) =>
-    dedupedGet('/lease-contracts', params),
+    dedupedGet<LeaseContract[]>('/lease-contracts', params),
   getExpiring: (daysAhead?: number) =>
-    dedupedGet('/lease-contracts/expiring', daysAhead ? { daysAhead } : undefined),
+    dedupedGet<LeaseContract[]>('/lease-contracts/expiring', daysAhead ? { daysAhead } : undefined),
   getOne: (id: string) => api.get(`/lease-contracts/${id}`),
-  create: (data: any) => api.post('/lease-contracts', data),
-  update: (id: string, data: any) => api.patch(`/lease-contracts/${id}`, data),
+  create: (data: unknown) => api.post('/lease-contracts', data),
+  update: (id: string, data: unknown) => api.patch(`/lease-contracts/${id}`, data),
   remove: (id: string) => api.delete(`/lease-contracts/${id}`),
   sign: (id: string) => api.patch(`/lease-contracts/${id}/sign`),
   terminate: (id: string) => api.patch(`/lease-contracts/${id}/terminate`),
   renew: (id: string, newEndDate: string) =>
     api.patch(`/lease-contracts/${id}/renew`, null, { params: { newEndDate } }),
-  addItem: (id: string, data: any) =>
+  addItem: (id: string, data: unknown) =>
     api.post(`/lease-contracts/${id}/items`, data),
   removeItem: (id: string, itemId: string) =>
     api.delete(`/lease-contracts/${id}/items/${itemId}`),
-  createDeposit: (id: string, data: any) =>
+  createDeposit: (id: string, data: unknown) =>
     api.post(`/lease-contracts/${id}/deposit`, data),
-  refundDeposit: (id: string, data: any) =>
+  refundDeposit: (id: string, data: unknown) =>
     api.patch(`/lease-contracts/${id}/deposit/refund`, data),
 };
 
 // ─── BILLING ──────────────────────────────────────────────────────────
 export const billingApi = {
   getInvoices: (params?: { tenantId?: string; status?: string; type?: string }) =>
-    dedupedGet('/billing/invoices', params),
+    dedupedGet<Invoice[]>('/billing/invoices', params),
   getOverdueInvoices: (tenantId?: string) =>
-    dedupedGet('/billing/invoices/overdue', tenantId ? { tenantId } : undefined),
+    dedupedGet<Invoice[]>('/billing/invoices/overdue', tenantId ? { tenantId } : undefined),
   getFinancialSummary: (tenantId?: string) =>
-    dedupedGet('/billing/invoices/summary', tenantId ? { tenantId } : undefined),
+    dedupedGet<InvoiceSummary>('/billing/invoices/summary', tenantId ? { tenantId } : undefined),
   getOneInvoice: (id: string) => api.get(`/billing/invoices/${id}`),
-  createInvoice: (data: any) => api.post('/billing/invoices', data),
-  updateInvoice: (id: string, data: any) => api.patch(`/billing/invoices/${id}`, data),
+  createInvoice: (data: unknown) => api.post('/billing/invoices', data),
+  updateInvoice: (id: string, data: unknown) => api.patch(`/billing/invoices/${id}`, data),
   sendInvoice: (id: string) => api.patch(`/billing/invoices/${id}/send`),
   cancelInvoice: (id: string) => api.patch(`/billing/invoices/${id}/cancel`),
   deleteInvoice: (id: string) => api.delete(`/billing/invoices/${id}`),
-  addInvoiceLine: (id: string, data: any) =>
+  addInvoiceLine: (id: string, data: unknown) =>
     api.post(`/billing/invoices/${id}/lines`, data),
   removeInvoiceLine: (id: string, lineId: string) =>
     api.delete(`/billing/invoices/${id}/lines/${lineId}`),
   getPayments: (params?: { tenantId?: string; invoiceId?: string }) =>
-    dedupedGet('/billing/payments', params),
+    dedupedGet<Payment[]>('/billing/payments', params),
   getOnePayment: (id: string) => api.get(`/billing/payments/${id}`),
-  createPayment: (data: any) => api.post('/billing/payments', data),
+  createPayment: (data: unknown) => api.post('/billing/payments', data),
   uploadPaymentCheque: (id: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -340,7 +364,7 @@ export const billingApi = {
 
 // ─── MAINTENANCE ──────────────────────────────────────────────────────
 export const maintenanceApi = {
-  getAccessibleSpaces: () => dedupedGet('/maintenance/accessible-spaces'),
+  getAccessibleSpaces: () => dedupedGet<Space[]>('/maintenance/accessible-spaces'),
   getAll: (params?: {
     spaceId?: string;
     status?: string;
@@ -349,12 +373,12 @@ export const maintenanceApi = {
     assignedTo?: string;
     view?: 'available' | 'mine' | 'all';
   }) =>
-    dedupedGet('/maintenance', params),
+    dedupedGet<MaintenanceTicket[]>('/maintenance', params),
   getStats: (spaceId?: string) =>
-    dedupedGet('/maintenance/stats', spaceId ? { spaceId } : undefined),
+    dedupedGet<MaintenanceStats>('/maintenance/stats', spaceId ? { spaceId } : undefined),
   getOne: (id: string) => api.get(`/maintenance/${id}`),
-  create: (data: any) => api.post('/maintenance', data),
-  update: (id: string, data: any) => api.patch(`/maintenance/${id}`, data),
+  create: (data: unknown) => api.post('/maintenance', data),
+  update: (id: string, data: unknown) => api.patch(`/maintenance/${id}`, data),
   remove: (id: string) => api.delete(`/maintenance/${id}`),
   assign: (id: string, userId: string) =>
     api.patch(`/maintenance/${id}/assign`, {}, { params: { userId } }),
@@ -371,13 +395,13 @@ export const maintenanceApi = {
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────
 export const notificationApi = {
   getAll: (params?: { userId?: string; isRead?: string; type?: string }) =>
-    dedupedGet('/notifications', params),
+    dedupedGet<{ notifications: Notification[]; unread: number }>('/notifications', params),
   getUnreadCount: (userId: string) =>
-    dedupedGet('/notifications/unread-count', { userId }),
+    dedupedGet<{ user_id: string | null; unread_count: number }>('/notifications/unread-count', { userId }),
   getOne: (id: string) => api.get(`/notifications/${id}`),
   getStats: (userId?: string) =>
-    dedupedGet('/notifications/stats', userId ? { userId } : undefined),
-  create: (data: any) => api.post('/notifications', data),
+    dedupedGet<NotificationStats>('/notifications/stats', userId ? { userId } : undefined),
+  create: (data: unknown) => api.post('/notifications', data),
   markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllRead: (userId?: string) =>
     api.patch(`/notifications/read-all${userId ? `/${userId}` : ''}`),
@@ -389,7 +413,7 @@ export const notificationApi = {
 
 // ─── AUDIT ────────────────────────────────────────────────────────────
 export const auditApi = {
-  getAll: (params?: any) => dedupedGet('/audit', params),
+  getAll: (params?: Record<string, unknown>) => dedupedGet<AuditLog[]>('/audit', params),
   getOne: (id: string) => api.get(`/audit/${id}`),
 };
 
@@ -491,9 +515,9 @@ export const addonServiceApi = {
   }) => dedupedGet('/addon-services', params),
   getOne: (id: string) =>
     api.get(`/addon-services/${id}`),
-  create: (data: any) =>
+  create: (data: unknown) =>
     api.post('/addon-services', data),
-  update: (id: string, data: any) =>
+  update: (id: string, data: unknown) =>
     api.patch(`/addon-services/${id}`, data),
   remove: (id: string) =>
     api.delete(`/addon-services/${id}`),
@@ -512,10 +536,10 @@ export const promotionCodeApi = {
     page?: number;
     limit?: number;
     search?: string;
-  }) => dedupedGet('/promotion-codes', params),
+  }) => dedupedGet<PromotionCode[]>('/promotion-codes', params),
   getOne: (id: string) => api.get(`/promotion-codes/${id}`),
-  create: (data: any) => api.post('/promotion-codes', data),
-  update: (id: string, data: any) => api.patch(`/promotion-codes/${id}`, data),
+  create: (data: unknown) => api.post('/promotion-codes', data),
+  update: (id: string, data: unknown) => api.patch(`/promotion-codes/${id}`, data),
   remove: (id: string) => api.delete(`/promotion-codes/${id}`),
   /** Read-only check that a code is usable right now. */
   validate: (code: string) => api.get(`/promotion-codes/validate/${code}`),

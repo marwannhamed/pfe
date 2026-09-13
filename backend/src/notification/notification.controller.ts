@@ -75,6 +75,17 @@ export class NotificationController {
     return this.notificationService.getUnreadCount(user, userId);
   }
 
+  // Must stay above @Get(':id'), or "stats" is read as a notification id.
+  @Get('stats')
+  @ApiOperation({ summary: 'Totaux de notifications (total / non lues / par type)' })
+  @ApiQuery({ name: 'userId', required: false })
+  getStats(
+    @CurrentUser() user: AuthUser,
+    @Query('userId') userId?: string,
+  ) {
+    return this.notificationService.getStats(user, userId);
+  }
+
   @Get('preferences/me')
   @ApiOperation({
     summary: 'Get notification preferences for the current user',

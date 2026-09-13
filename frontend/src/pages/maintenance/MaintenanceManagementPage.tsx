@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Form, Input, Select, DatePicker, Typography, Row, Col, Statistic, Alert, Tag, Tooltip, Descriptions, Badge, Modal } from 'antd';
 import { message } from '../../utils/feedback';
+import type { MaintenanceTicket } from '../../types';
 import {
   PlusOutlined,
   EditOutlined,
@@ -20,6 +21,36 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+/**
+ * The table below was written against mockTickets, whose field names are
+ * camelCase and flattened; the API returns MaintenanceTicket, which is
+ * snake_case with related records nested. Without this mapping every column
+ * read undefined once real data arrived.
+ */
+function toTicketView(t: MaintenanceTicket) {
+  const name = (u?: { first_name?: string; last_name?: string; email?: string }) =>
+    u ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || (u.email ?? '') : '';
+  return {
+    id: t.id,
+    ticketNumber: t.ticket_number,
+    title: t.title,
+    description: '',
+    priority: t.priority as string,
+    status: t.status as string,
+    category: t.category as string,
+    reportedBy: name(t.createdBy),
+    assignedTo: name(t.assignedTo),
+    space: t.space?.name ?? '',
+    site: '',
+    reportedAt: t.reported_at,
+    updatedAt: t.created_at,
+    estimatedCost: t.estimated_hours ? Number(t.estimated_hours) : 0,
+    actualCost: t.cost ? Number(t.cost) : null,
+    estimatedCompletion: '',
+    attachments: [] as string[],
+  };
+}
 
 // Mock data - in real app, this would come from API
 const mockTickets = [
@@ -110,7 +141,7 @@ export default function MaintenanceManagementPage() {
     setLoading(true);
     try {
       const response = await maintenanceApi.getAll();
-      setTickets(response.data || []);
+      setTickets((response.data ?? []).map(toTicketView));
     } catch {
       message.error('Failed to load maintenance tickets');
     } finally {

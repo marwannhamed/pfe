@@ -175,7 +175,7 @@ function TicketDetailModal({
 
   const { data: maintenanceUsers = [] } = useQuery({
     queryKey: ['users-maintenance'],
-    queryFn:  () => userApi.getAll().then(r => r.data.filter((u: any) => u.role === 'MAINTENANCE')),
+    queryFn:  () => userApi.getAll().then(r => r.data.filter((u) => u.role === 'MAINTENANCE')),
     enabled:  !!ticket && canManage,
   });
 
@@ -438,9 +438,9 @@ export default function MaintenancePage() {
           {[
             { label: 'Total',       value: stats?.total       ?? '—', sub: 'All tickets',     color: '#2563eb', bg: '#eff6ff', icon: '🔧' },
             { label: 'Open',        value: stats?.open        ?? '—', sub: 'Need attention',  color: '#d97706', bg: '#fffbeb', icon: '⚠️' },
-            { label: 'In Progress', value: stats?.in_progress ?? '—', sub: 'Being worked on', color: '#7c3aed', bg: '#f5f3ff', icon: '🔄' },
+            { label: 'In Progress', value: stats?.inProgress ?? '—', sub: 'Being worked on', color: '#7c3aed', bg: '#f5f3ff', icon: '🔄' },
             { label: 'Resolved',    value: stats?.resolved    ?? '—', sub: 'Pending close',   color: '#059669', bg: '#f0fdf4', icon: '✅' },
-            { label: 'Total Cost',  value: stats?.total_cost !== undefined ? `$${Number(stats.total_cost).toLocaleString()}` : '—', sub: 'Closed tickets', color: '#0369a1', bg: '#f0f9ff', icon: '💰' },
+            { label: 'Closed',      value: stats?.closed ?? '—', sub: 'Closed tickets', color: '#0369a1', bg: '#f0f9ff', icon: '📦' },
           ].map(s => (
             <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -619,7 +619,7 @@ export default function MaintenancePage() {
 
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
             <span>Showing {filtered.length} of {(tickets as any[]).length} tickets</span>
-            <span>{stats?.open ?? 0} open · {stats?.in_progress ?? 0} in progress</span>
+            <span>{stats?.open ?? 0} open · {stats?.inProgress ?? 0} in progress</span>
           </div>
         </div>
       )}
