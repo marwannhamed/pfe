@@ -758,3 +758,16 @@ export interface PromotionCodeStats {
   averageSavings?: number;
   lastUsed?: string | null;
 }
+
+/** GET /analytics/predictive-maintenance */
+export interface PredictiveMaintenanceTicket {
+  ticketId: string;
+  title: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  space_id: string;
+  riskScore: number;
+  band: 'high' | 'watch' | 'normal';
+  hints: string[];
+}

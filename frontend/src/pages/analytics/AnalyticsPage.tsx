@@ -44,7 +44,7 @@ import { analyticsApi, exportApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
-import { AnalyticsOverview, BookingsTrend, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
+import { AnalyticsOverview, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;

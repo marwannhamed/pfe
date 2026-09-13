@@ -419,7 +419,9 @@ export const auditApi = {
 
 // ─── EXPORT ───────────────────────────────────────────────────────────
 const multipartConfig = {
-  headers: { 'Content-Type': undefined as any },
+  // Left undefined on purpose: the browser must set multipart/form-data
+  // together with its boundary, which axios cannot know.
+  headers: { 'Content-Type': undefined as unknown as string },
 };
 
 export const exportApi = {

@@ -6,6 +6,7 @@ import { analyticsApi, siteApi } from '../../api/services';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { errorMessage } from '../../utils/errors';
+import type { PredictiveMaintenanceTicket } from '../../types';
 
 const { Title, Paragraph } = Typography;
 
@@ -13,7 +14,7 @@ export default function PredictiveMaintenancePage() {
   const { t: th } = usePageTheme();
   const [sites, setSites] = useState<{ id: string; name: string }[]>([]);
   const [siteId, setSiteId] = useState<string | undefined>();
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<PredictiveMaintenanceTicket[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function PredictiveMaintenancePage() {
       const res = await analyticsApi.getPredictiveMaintenance({
         siteId: siteId || undefined,
       });
-      const body = res.data as { tickets?: any[] };
+      const body = res.data as { tickets?: PredictiveMaintenanceTicket[] };
       setRows(body.tickets ?? []);
     } catch (e) {
       message.error(errorMessage(e, 'Failed to load'));

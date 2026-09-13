@@ -13,7 +13,6 @@ import {
 } from '@ant-design/icons';
 import { enhancedReportApi } from '../../api/enhancedServices';
 import { useAuthStore } from '../../store/authStore';
-import { Report } from '../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
