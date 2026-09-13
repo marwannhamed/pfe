@@ -15,6 +15,7 @@ import {
 import { promotionCodeApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
+import type { PromotionCode } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -24,7 +25,7 @@ export default function PromotionCodesPage() {
   const [loading, setLoading] = useState(false);
   const [promotionCodes, setPromotionCodes] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingCode, setEditingCode] = useState<any>(null);
+  const [editingCode, setEditingCode] = useState<PromotionCode | null>(null);
   const [usageStatsModal, setUsageStatsModal] = useState(false);
   const [selectedCodeStats, setSelectedCodeStats] = useState<any>(null);
   const [form] = Form.useForm();

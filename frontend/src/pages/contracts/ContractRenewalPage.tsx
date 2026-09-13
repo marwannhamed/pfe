@@ -240,7 +240,7 @@ function RenewModal({ contract, onClose }: { contract: LeaseContract; onClose: (
 }
 
 // ─── Contract Renewal Card ─────────────────────────────────────────────────────
-function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c) => void; onView: (c) => void }) {
+function RenewalCard({ contract, onRenew, onView }: { contract: LeaseContract; onRenew: (c: LeaseContract) => void; onView: (c: LeaseContract) => void }) {
   const days    = daysUntil(contract.end_date);
   const urgency = getUrgency(days);
   const rent    = parseFloat(contract.monthly_rent || '0');
@@ -290,7 +290,6 @@ function RenewalCard({ contract, onRenew, onView }: { contract: any; onRenew: (c
             <span>📅 Ends <strong style={{ color: urgency.color }}>{formatDate(contract.end_date)}</strong></span>
             <span>💰 <strong style={{ color: '#0f172a' }}>${rent.toLocaleString()}</strong>/mo</span>
             <span>📄 {contract.status}</span>
-            {contract.space?.name && <span>🏢 {contract.space.name}</span>}
           </div>
 
           {/* Progress bar — days remaining */}

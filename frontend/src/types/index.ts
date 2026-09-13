@@ -436,6 +436,7 @@ export interface CreateMaintenanceTicketDto {
 
 export interface AddOnService {
   id:            string;
+  description?:  string | null;
   site_id:       string;
   name:          string;
   category:      string;

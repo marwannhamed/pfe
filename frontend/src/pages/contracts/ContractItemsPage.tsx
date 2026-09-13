@@ -19,6 +19,9 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 // Mock data - in real app, this would come from API
+type ContractItemRow = (typeof mockContractItems)[number];
+type DepositRow = (typeof mockDeposits)[number];
+
 const mockContractItems = [
   {
     id: '1',
@@ -108,12 +111,12 @@ const DEPOSIT_STATUSES = [
 export default function ContractItemsPage() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [contractItems, setContractItems] = useState<any[]>([]);
-  const [deposits, setDeposits] = useState<any[]>([]);
+  const [contractItems, setContractItems] = useState<ContractItemRow[]>([]);
+  const [deposits, setDeposits] = useState<DepositRow[]>([]);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [depositModalVisible, setDepositModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [editingDeposit, setEditingDeposit] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<ContractItemRow | null>(null);
+  const [editingDeposit, setEditingDeposit] = useState<DepositRow | null>(null);
   const [activeTab, setActiveTab] = useState('items');
   const [itemForm] = Form.useForm();
   const [depositForm] = Form.useForm();

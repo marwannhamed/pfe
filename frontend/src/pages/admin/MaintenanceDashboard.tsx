@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import { maintenanceApi, userApi } from '../../api/services';
 
-function getAssignee(ticket: any) {
+function getAssignee(ticket: MaintenanceTicket | null | undefined) {
   return ticket?.assignedTo ?? null;
 }
 import { useAuthStore } from '../../store/authStore';
@@ -112,7 +112,7 @@ function KpiCard({ label, value, sub, color, bg, icon, path, loading, alert }: {
 }
 
 // ─── Quick Action Button ───────────────────────────────────────────────────────
-function QuickAction({ ticket, onAction, loading }: { ticket: any; onAction: (action: string, id: string) => void; loading: boolean }) {
+function QuickAction({ ticket, onAction, loading }: { ticket: MaintenanceTicket; onAction: (action: string, id: string) => void; loading: boolean }) {
   const s = ticket.status;
   if (s === 'OPEN' && !getAssignee(ticket)) return (
     <button onClick={() => onAction('accept', ticket.id)} disabled={loading}

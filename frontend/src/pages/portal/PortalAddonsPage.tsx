@@ -11,6 +11,7 @@ import { PORTAL_MAP_PATH } from '../../constants/routes';
 import PageHeader from '../../components/ui/PageHeader';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import type { AddOnService, Booking } from '../../types';
 
 type TabKey = 'catalog' | 'bookings';
 
@@ -39,8 +40,8 @@ export default function PortalAddonsPage() {
   const { t: th, card, ..._s } = usePageTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('catalog');
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [services, setServices] = useState<AddOnService[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
   const load = async () => {
     setLoading(true);

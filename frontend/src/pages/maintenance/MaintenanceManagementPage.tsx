@@ -28,6 +28,8 @@ const { TextArea } = Input;
  * snake_case with related records nested. Without this mapping every column
  * read undefined once real data arrived.
  */
+type TicketView = ReturnType<typeof toTicketView>;
+
 function toTicketView(t: MaintenanceTicket) {
   const name = (u?: { first_name?: string; last_name?: string; email?: string }) =>
     u ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || (u.email ?? '') : '';
@@ -127,8 +129,8 @@ export default function MaintenanceManagementPage() {
   const [tickets, setTickets] = useState(mockTickets);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editingTicket, setEditingTicket] = useState<any>(null);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [editingTicket, setEditingTicket] = useState<TicketView | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketView | null>(null);
   const [form] = Form.useForm();
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER', 'MAINTENANCE'].includes(user?.role || '');
