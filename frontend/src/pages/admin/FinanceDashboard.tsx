@@ -20,7 +20,7 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
-import type { Invoice, LeaseContract, Payment, Tenant } from '../../types';
+import type { ChartTooltipProps, Invoice, LeaseContract, Payment, Tenant } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: unknown): T[] {
@@ -42,7 +42,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function ChartTip({ active, payload, label, isCurrency = false }: any) {
+function ChartTip({ active, payload, label, isCurrency = false }: ChartTooltipProps & { isCurrency?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>

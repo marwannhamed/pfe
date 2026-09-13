@@ -83,7 +83,7 @@ const EMAIL_TEMPLATES = [
 interface TestEmailData {
   template: string;
   recipient: string;
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
 }
 
 export default function EmailManagementPage() {

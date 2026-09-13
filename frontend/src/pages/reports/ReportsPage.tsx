@@ -10,7 +10,7 @@ import { ReloadOutlined } from '@ant-design/icons';
 import { bookingApi, billingApi, contractApi, siteApi, spaceApi, tenantApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { can } from '../../permissions/can';
-import type { Booking, Invoice, LeaseContract, Payment, Site, Space, Tenant } from '../../types';
+import type { Booking, ChartTooltipProps, Invoice, LeaseContract, Payment, Site, Space, Tenant } from '../../types';
 
 // --- Types & Helpers ----------------------------------------------------------
 type Range = '7d' | '30d' | '3m' | '1y';
@@ -77,7 +77,7 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 // --- Custom Tooltip -----------------------------------------------------------
-function ChartTooltip({ active, payload, label, currency = true }: any) {
+function ChartTooltip({ active, payload, label, currency = true }: ChartTooltipProps & { currency?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>

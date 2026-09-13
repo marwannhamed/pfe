@@ -11,8 +11,8 @@ import {
 
 /** In dev, use Vite proxy (relative URLs). Override with VITE_API_URL if needed. */
 export const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_URL ??
-  ((import.meta as any).env?.DEV ? '' : 'http://localhost:6001');
+  import.meta.env?.VITE_API_URL ??
+  (import.meta.env?.DEV ? '' : 'http://localhost:6001');
 
 export const unwrapApiPayload = (payload) => {
   if (

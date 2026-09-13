@@ -84,7 +84,7 @@ export const enhancedReportApi = {
   generate: async (data: {
     type: string;
     title?: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, unknown>;
     format: string;
   }) => {
     try {
@@ -190,7 +190,7 @@ export const enhancedEmailApi = {
     }
   },
 
-  previewTemplate: async (templateName: string, data: Record<string, any>) => {
+  previewTemplate: async (templateName: string, data: Record<string, unknown>) => {
     try {
       const response = await api.post('/mail/preview', {
         template: templateName,
@@ -205,7 +205,7 @@ export const enhancedEmailApi = {
   sendBulkEmail: async (
     templateName: string,
     recipients: string[],
-    data: Record<string, any>,
+    data: Record<string, unknown>,
   ) => {
     try {
       const response = await api.post('/mail/bulk', {

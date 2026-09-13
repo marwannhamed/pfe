@@ -17,7 +17,7 @@ import {
   maintenanceApi, userApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Booking, MaintenanceStats, MaintenanceTicket, Site, Space, User } from '../../types';
+import type { Booking, ChartTooltipProps, MaintenanceStats, MaintenanceTicket, Site, Space, User } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthReady } from '../../hooks/useAuthReady';
 import { getRoleDashboardMeta } from '../../constants/dashboards';
@@ -42,7 +42,7 @@ function fmtTime(d: string) {
   return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-function ChartTip({ active, payload, label, isCurrency }: any) {
+function ChartTip({ active, payload, label, isCurrency }: ChartTooltipProps & { isCurrency?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>

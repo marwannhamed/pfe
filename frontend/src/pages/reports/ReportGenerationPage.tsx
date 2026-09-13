@@ -78,7 +78,7 @@ type ReportRow = RawReport & {
 
 interface ReportRequest {
   type: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   format: string;
 }
 

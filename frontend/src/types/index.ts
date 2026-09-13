@@ -560,7 +560,7 @@ export interface EmailTemplate {
 export interface EmailTestRequest {
   template: string;
   to: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export interface EmailPreview {
@@ -570,17 +570,41 @@ export interface EmailPreview {
 
 // ─── Analytics Types ───────────────────────────────────────────────────────
 
-export interface AnalyticsOverview {
-  totalRevenue: string;
-  totalBookings: number;
-  activeSpaces: number;
-  occupancyRate: number;
-  period: { from: string; to: string };
+/**
+ * GET /analytics/overview. Each headline figure comes back as a small object
+ * comparing the selected window with the one before it. The previous shape
+ * declared here (totalRevenue/totalBookings/activeSpaces) was never what the
+ * endpoint sends.
+ */
+export interface AnalyticsTrendValue {
+  current: number;
+  previous: number;
+  change: number;
 }
 
+export interface AnalyticsOverview {
+  revenue: AnalyticsTrendValue;
+  bookings: AnalyticsTrendValue & { confirmed: number };
+  invoices: AnalyticsTrendValue & { overdue: number };
+  occupancyRate: {
+    current: number;
+    total: number;
+    occupied: number;
+    available: number;
+  };
+  activeTenants: number;
+  maintenanceTickets: AnalyticsTrendValue & { open: number };
+}
+
+/** GET /analytics/revenue-trend — one point per month. */
 export interface RevenueTrend {
+  month: string;
+  revenue: number;
+}
+
+/** GET /analytics/bookings-trend — one point per day. */
+export interface BookingsTrend {
   date: string;
-  revenue: string;
   bookings: number;
 }
 
@@ -590,12 +614,14 @@ export interface BookingStatusData {
   percentage: number;
 }
 
+/** GET /analytics/space-utilization — aggregated per space type, not per space. */
 export interface SpaceUtilization {
-  spaceId: string;
-  spaceName: string;
-  utilizationRate: number;
-  totalHours: number;
-  bookedHours: number;
+  type: string;
+  total: number;
+  occupied: number;
+  available: number;
+  maintenance: number;
+  rate: number;
 }
 
 export interface MaintenanceStats {
@@ -606,19 +632,19 @@ export interface MaintenanceStats {
   closed: number;
 }
 
+/** GET /analytics/top-spaces — grouped by space name, not by id. */
 export interface TopSpace {
-  spaceId: string;
-  spaceName: string;
-  name?: string;      // occupancy endpoints return `name` instead of `spaceName`
-  bookings: number;
-  revenue: string;
+  name: string;
+  type: string;
+  count: number;
+  revenue: number;
+  currency: string;
 }
 
+/** GET /analytics/revenue-by-tenant — organisation name and its paid total. */
 export interface RevenueByTenant {
-  tenantId: string;
-  tenantName: string;
-  revenue: string;
-  bookings: number;
+  name: string;
+  revenue: number;
 }
 
 /** GET /billing/invoices/summary */
@@ -662,4 +688,21 @@ export interface ApiError extends Error {
   request?: unknown;
   code?: string;
   userMessage?: string;
+}
+
+/**
+ * What recharts hands a custom <Tooltip content={...}> component. Declared
+ * here because five dashboards each define their own tooltip and each was
+ * typing the whole props bag `any` to reach payload[].
+ */
+export interface ChartTooltipProps {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{
+    name?: string | number;
+    value?: string | number;
+    color?: string;
+    dataKey?: string | number;
+    payload?: Record<string, unknown>;
+  }>;
 }

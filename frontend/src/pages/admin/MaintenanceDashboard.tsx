@@ -24,7 +24,7 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
-import type { MaintenanceTicket, User } from '../../types';
+import type { ChartTooltipProps, MaintenanceTicket, User } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toArray<T>(raw: unknown): T[] {
@@ -65,7 +65,7 @@ const STATUS_COLORS = {
   RESOLVED: '#10b981', CLOSED: '#94a3b8', CANCELLED: '#ef4444',
 };
 
-function ChartTip({ active, payload, label }: any) {
+function ChartTip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px' }}>

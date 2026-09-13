@@ -44,7 +44,7 @@ import { analyticsApi, exportApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
-import { AnalyticsOverview, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
+import { AnalyticsOverview, BookingsTrend, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -195,15 +195,17 @@ export default function AnalyticsPage() {
 
   const topSpacesColumns = [
     {
+      // The endpoint groups by space name and returns `count`, not
+      // spaceName/bookings — both columns rendered blank before.
       title: 'Space',
-      dataIndex: 'spaceName',
-      key: 'spaceName',
+      dataIndex: 'name',
+      key: 'name',
     },
     {
       title: 'Bookings',
-      dataIndex: 'bookings',
-      key: 'bookings',
-      render: (bookings: number) => <Text strong>{bookings}</Text>,
+      dataIndex: 'count',
+      key: 'count',
+      render: (count: number) => <Text strong>{count}</Text>,
     },
     {
       title: 'Revenue',
@@ -265,7 +267,7 @@ export default function AnalyticsPage() {
               <Card>
                 <Statistic
                   title="Total Revenue"
-                  value={parseFloat(overview.totalRevenue || '0')}
+                  value={overview.revenue?.current ?? 0}
                   prefix={<DollarOutlined />}
                   precision={2}
                   styles={{ content: { color: '#3f8600'  } }}
@@ -276,7 +278,7 @@ export default function AnalyticsPage() {
               <Card>
                 <Statistic
                   title="Total Bookings"
-                  value={overview.totalBookings || 0}
+                  value={overview.bookings?.current ?? 0}
                   prefix={<CalendarOutlined />}
                   styles={{ content: { color: '#1890ff'  } }}
                 />
@@ -286,7 +288,7 @@ export default function AnalyticsPage() {
               <Card>
                 <Statistic
                   title="Active Spaces"
-                  value={overview.activeSpaces || 0}
+                  value={overview.occupancyRate?.total ?? 0}
                   prefix={<HomeOutlined />}
                   styles={{ content: { color: '#722ed1'  } }}
                 />
@@ -296,7 +298,7 @@ export default function AnalyticsPage() {
               <Card>
                 <Statistic
                   title="Occupancy Rate"
-                  value={overview.occupancyRate || 0}
+                  value={overview.occupancyRate?.current ?? 0}
                   suffix="%"
                   prefix={<TrophyOutlined />}
                   styles={{ content: { color: '#eb2f96'  } }}
@@ -311,7 +313,7 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={revenueTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
+                    <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
                     <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#2563eb" fillOpacity={0.3} />
@@ -361,7 +363,7 @@ export default function AnalyticsPage() {
                 <Table
                   columns={topSpacesColumns}
                   dataSource={topSpaces}
-                  rowKey={(row) => row.spaceId ?? row.name ?? row.spaceName}
+                  rowKey={(row) => row.name}
                   pagination={false}
                   size="small"
                 />
@@ -375,10 +377,10 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={spaceUtilization.slice(0, 5)}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="spaceName" />
+                    <XAxis dataKey="type" />
                     <YAxis />
                     <Tooltip formatter={(value) => [`${value}%`, 'Utilization']} />
-                    <Bar dataKey="utilizationRate" fill="#10b981" />
+                    <Bar dataKey="rate" fill="#10b981" />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -419,7 +421,7 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={revenueByTenant}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="tenantName" />
+                    <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
                     <Bar dataKey="revenue" fill="#8b5cf6" />

@@ -19,7 +19,7 @@ import {
   billingApi, maintenanceApi, userApi, contractApi,
 } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Booking, Invoice, LeaseContract, MaintenanceStats, Payment, Site, Space, Tenant } from '../../types';
+import type { Booking, ChartTooltipProps, Invoice, LeaseContract, MaintenanceStats, Payment, Site, Space, Tenant } from '../../types';
 import { useThemeStore } from '../../store/themeStore';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
@@ -75,7 +75,7 @@ const TENANT_STATUS: Record<string, { bg: string; color: string }> = {
 };
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label, isCurrency = false }: any) {
+function ChartTooltip({ active, payload, label, isCurrency = false }: ChartTooltipProps & { isCurrency?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>

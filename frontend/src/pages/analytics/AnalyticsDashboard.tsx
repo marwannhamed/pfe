@@ -47,6 +47,16 @@ import {
 import { analyticsApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
+import type {
+  AnalyticsMaintenance,
+  AnalyticsOverview,
+  BookingsTrend,
+  BookingStatusData,
+  RevenueByTenant,
+  RevenueTrend,
+  SpaceUtilization,
+  TopSpace,
+} from '../../types';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -60,14 +70,14 @@ export default function AnalyticsDashboard() {
     dayjs().subtract(30, 'days'),
     dayjs(),
   ]);
-  const [overview, setOverview] = useState<any>(null);
-  const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
-  const [bookingsTrend, setBookingsTrend] = useState<any[]>([]);
-  const [bookingStatus, setBookingStatus] = useState<any[]>([]);
-  const [spaceUtilization, setSpaceUtilization] = useState<any[]>([]);
-  const [topSpaces, setTopSpaces] = useState<any[]>([]);
-  const [revenueByTenant, setRevenueByTenant] = useState<any[]>([]);
-  const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [revenueTrend, setRevenueTrend] = useState<RevenueTrend[]>([]);
+  const [bookingsTrend, setBookingsTrend] = useState<BookingsTrend[]>([]);
+  const [bookingStatus, setBookingStatus] = useState<BookingStatusData[]>([]);
+  const [spaceUtilization, setSpaceUtilization] = useState<SpaceUtilization[]>([]);
+  const [topSpaces, setTopSpaces] = useState<TopSpace[]>([]);
+  const [revenueByTenant, setRevenueByTenant] = useState<RevenueByTenant[]>([]);
+  const [maintenanceStats, setMaintenanceStats] = useState<AnalyticsMaintenance | null>(null);
 
   const isAdmin = ['SUPER_ADMIN', 'MANAGER'].includes(user?.role || '');
 
@@ -357,7 +367,7 @@ export default function AnalyticsDashboard() {
         <Col xs={24} lg={12}>
           <Card title="Top Spaces" extra={<Text type="secondary">By bookings</Text>}>
             <Table
-              rowKey={(row) => row.id ?? row.spaceId ?? `${row.name ?? 'space'}-${row.count ?? 0}`}
+              rowKey={(row) => `${row.name}-${row.count}`}
               dataSource={topSpaces}
               pagination={false}
               size="small"
@@ -395,7 +405,7 @@ export default function AnalyticsDashboard() {
         <Col xs={24} lg={12}>
           <Card title="Revenue by Tenant" extra={<Text type="secondary">Top performers</Text>}>
             <Table
-              rowKey={(row) => row.id ?? row.tenantId ?? `${row.name ?? 'tenant'}-${row.revenue ?? 0}`}
+              rowKey={(row) => `${row.name}-${row.revenue}`}
               dataSource={revenueByTenant}
               pagination={false}
               size="small"
