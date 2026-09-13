@@ -262,8 +262,8 @@ export class AnalyticsService {
 
   // ─── Space utilization ────────────────────────────────────────────────────
   async getSpaceUtilization(user: AuthUser) {
-    const scope = this.tenantFilter(user);
     const spaces = await this.prisma.space.findMany({
+      where: this.spaceTenantFilter(user),
       select: { type: true, status: true },
     });
     const byType: Record<
@@ -312,13 +312,8 @@ export class AnalyticsService {
     const scope = this.tenantFilter(user, tenantId);
     const tickets = await this.prisma.maintenanceTicket.findMany({
       where: {
+        ...scope,
         created_at: { gte: from, lte: to },
-        ...(tenantId && {
-          OR: [
-            { user: { tenant_id: tenantId } },
-            { createdBy: { tenant_id: tenantId } },
-          ],
-        }),
       },
       select: {
         status: true,
@@ -365,8 +360,8 @@ export class AnalyticsService {
     const scope = this.tenantFilter(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
+        ...scope,
         created_at: { gte: from, lte: to },
-        ...(tenantId && { tenant_id: tenantId }),
       },
       include: {
         space: { select: { name: true, type: true, currency: true } },
@@ -405,7 +400,7 @@ export class AnalyticsService {
   async getRevenueByTenant(user: AuthUser, from: Date, to: Date) {
     const scope = this.tenantFilter(user);
     const invoices = await this.prisma.invoice.findMany({
-      where: { status: 'PAID', created_at: { gte: from, lte: to } },
+      where: { ...scope, status: 'PAID', created_at: { gte: from, lte: to } },
       include: { tenant: { select: { name: true } } },
     });
 
@@ -434,6 +429,18 @@ export class AnalyticsService {
       return tenantId ? { tenant_id: tenantId } : {};
     }
     return { tenant_id: user.tenant_id };
+  }
+
+  /**
+   * Space carries no tenant_id of its own — ownership is reached through
+   * floor -> building. Returns {} for the platform owner so the aggregate
+   * still spans every organisation.
+   */
+  private spaceTenantFilter(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    return scope.tenant_id
+      ? { floor: { building: { tenant_id: scope.tenant_id } } }
+      : {};
   }
 
   /** Desk / room utilization from bookings vs capacity over a window (heatmap input). */
