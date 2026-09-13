@@ -157,7 +157,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
   const mutation = useMutation({
     mutationFn: (d: any) => bookingApi.create(d),
     onSuccess: () => {
-      message.success(portalSubmit ? 'Booking submitted ? a combined invoice will be issued after approval' : 'Booking created');
+      message.success(portalSubmit ? 'Booking submitted — a combined invoice will be issued after approval' : 'Booking created');
       qc.invalidateQueries({ queryKey: ['bookings'] });
       onClose();
     },
@@ -230,7 +230,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
               <Field label="Attendees" required error={errors.attendee_count}><input style={{ ...INPUT, borderColor: errors.attendee_count ? '#ef4444' : '#e5e7eb' }} type="number" min="1" max={selectedSpace?.capacity ?? 999} value={form.attendee_count} onChange={e => setF('attendee_count', e.target.value)} /></Field>
               <Field label="Space rental">
                 <div style={{ ...INPUT, background: th.tableHead, display: 'flex', alignItems: 'center', cursor: 'default' }}>
-                  <span style={{ fontWeight: 700, color: autoPrice > 0 ? th.text : th.textMuted }}>{autoPrice > 0 ? `${form.currency} ${autoPrice.toFixed(2)}` : '?'}</span>
+                  <span style={{ fontWeight: 700, color: autoPrice > 0 ? th.text : th.textMuted }}>{autoPrice > 0 ? `${form.currency} ${autoPrice.toFixed(2)}` : '—'}</span>
                 </div>
               </Field>
               <Field label="Currency"><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={['USD','EUR','GBP','AED','TND'].map(c => ({ value: c, label: c }))} /></Field>
@@ -252,7 +252,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
           <div style={{ background: th.tableHead, border: `1px solid ${th.cardBorder}`, borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: th.textSub }}>Total (space + services)</span>
             <span style={{ fontSize: 20, fontWeight: 800, color: '#2563eb' }}>
-              {grandTotal > 0 ? `${form.currency} ${grandTotal.toFixed(2)}` : '?'}
+              {grandTotal > 0 ? `${form.currency} ${grandTotal.toFixed(2)}` : '—'}
             </span>
           </div>
         </div>
@@ -280,7 +280,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
     mutationFn: (id: string) => bookingApi.approve(id, userId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['bookings'] });
-      message.success('Approved ? create contract & record payment for the tenant');
+      message.success('Approved — create contract & record payment for the tenant');
       onClose();
     },
     onError: (err: any) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
@@ -451,7 +451,7 @@ export default function BookingsPage() {
   });
   const approveMut = useMutation({
     mutationFn: (id: string) => bookingApi.approve(id, userId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Approved ? create contract & record payment for the tenant'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings'] }); message.success('Approved — create contract & record payment for the tenant'); },
     onError: (err: any) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const rejectMut  = useMutation({
@@ -469,24 +469,24 @@ export default function BookingsPage() {
   };
   const confirmPhoneMut = useMutation({
     mutationFn: (id: string) => bookingApi.confirmPhone(id),
-    onSuccess: () => { invalidateBookings(); message.success('Tenant confirmed ? visit instructions emailed'); },
+    onSuccess: () => { invalidateBookings(); message.success('Tenant confirmed — visit instructions emailed'); },
     onError: (err: any) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const phoneUnreachableMut = useMutation({
     mutationFn: (id: string) => bookingApi.phoneUnreachable(id, 'Could not reach tenant'),
-    onSuccess: () => { invalidateBookings(); message.success('Booking cancelled ? space released'); },
+    onSuccess: () => { invalidateBookings(); message.success('Booking cancelled — space released'); },
     onError: (err: any) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
   const visitCompleteMut = useMutation({
     mutationFn: (id: string) => bookingApi.markDocumentsPending(id),
-    onSuccess: () => { invalidateBookings(); message.success('Visit complete ? manager can upload documents'); },
+    onSuccess: () => { invalidateBookings(); message.success('Visit complete — manager can upload documents'); },
     onError: (err: any) => message.error(err?.response?.data?.message?.[0] ?? err?.userMessage ?? 'Failed'),
   });
 
   const handleCreateContract = (booking: Booking) => {
     const b = mapBooking(booking as unknown as Record<string, unknown>);
     const prefill = prefillFromBooking(b);
-    message.info('Pre-filled from booking ? confirm rent & deposit, then create the contract.', 3);
+    message.info('Pre-filled from booking — confirm rent & deposit, then create the contract.', 3);
     navigate(`${basePath}/contracts`, { state: { fromBooking: prefill } });
   };
 
@@ -541,7 +541,7 @@ export default function BookingsPage() {
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          title={`${pendingApps.length} pending booking application${pendingApps.length > 1 ? 's' : ''} ? not shown here until you accept them`}
+          title={`${pendingApps.length} pending booking application${pendingApps.length > 1 ? 's' : ''} — not shown here until you accept them`}
           action={
             <Button size="small" type="primary" onClick={() => navigate('/admin/booking-applications')}>
               Review applications
@@ -559,10 +559,10 @@ export default function BookingsPage() {
           title="Reception workflow"
           description={
             awaitingCall > 0 && awaitingVisit > 0
-              ? `${awaitingCall} awaiting phone call ? ${awaitingVisit} awaiting visit ? use the action buttons in the table, or open the Reception queue.`
+              ? `${awaitingCall} awaiting phone call · ${awaitingVisit} awaiting visit — use the action buttons in the table, or open the Reception queue.`
               : awaitingCall > 0
                 ? `${awaitingCall} booking${awaitingCall > 1 ? 's' : ''} need a confirmation call first.`
-                : `${awaitingVisit} booking${awaitingVisit > 1 ? 's' : ''} awaiting visit ? after the tenant visits and signs on site, click Visit complete.`
+                : `${awaitingVisit} booking${awaitingVisit > 1 ? 's' : ''} awaiting visit — after the tenant visits and signs on site, click Visit complete.`
           }
           action={
             <Button size="small" onClick={() => navigate('/admin/reception')}>
@@ -613,12 +613,12 @@ export default function BookingsPage() {
           </>
         }
         stats={[
-          { label: 'Total', value: isLoading ? '?' : bookings.length, color: '#2563eb' },
-          { label: 'Confirmed', value: isLoading ? '?' : confirmed, color: '#059669' },
-          { label: 'Pending', value: isLoading ? '?' : pending, color: '#d97706' },
-          { label: 'Checked In', value: isLoading ? '?' : checkedIn, color: '#1d4ed8' },
-          { label: 'Completed', value: isLoading ? '?' : completed, color: '#7c3aed' },
-          { label: 'Cancelled', value: isLoading ? '?' : cancelled, color: '#dc2626' },
+          { label: 'Total', value: isLoading ? '—' : bookings.length, color: '#2563eb' },
+          { label: 'Confirmed', value: isLoading ? '—' : confirmed, color: '#059669' },
+          { label: 'Pending', value: isLoading ? '—' : pending, color: '#d97706' },
+          { label: 'Checked In', value: isLoading ? '—' : checkedIn, color: '#1d4ed8' },
+          { label: 'Completed', value: isLoading ? '—' : completed, color: '#7c3aed' },
+          { label: 'Cancelled', value: isLoading ? '—' : cancelled, color: '#dc2626' },
         ]}
       />
 
@@ -654,7 +654,7 @@ export default function BookingsPage() {
       {!isLoading && !isError && filtered.length === 0 && (
         <div style={{ ...CARD, padding: '60px', textAlign: 'center' }}>
           <CalendarOutlined style={{ fontSize: 48, color: '#e5e7eb', display: 'block', margin: '0 auto 16px' }} />
-          <Empty description={bookings.length === 0 ? (canManage ? 'No bookings yet.' : 'No bookings yet ? pick a space on the map to book!') : 'No bookings match your filters.'} />
+          <Empty description={bookings.length === 0 ? (canManage ? 'No bookings yet.' : 'No bookings yet — pick a space on the map to book!') : 'No bookings match your filters.'} />
           {isPortalBooker && bookings.length === 0 && (
             <button onClick={() => navigate(PORTAL_MAP_PATH)} style={{ marginTop: 16, padding: '10px 22px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Open map
@@ -689,7 +689,7 @@ export default function BookingsPage() {
                   <div style={{ width: 30, height: 30, borderRadius: 7, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><EnvironmentOutlined style={{ color: '#2563eb', fontSize: 13 }} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: th.text }}>{spaceName}</div>
-                    <div style={{ fontSize: 11, color: th.textMuted }}>{(b as any).space?.type?.replace(/_/g,' ') ?? '?'}</div>
+                    <div style={{ fontSize: 11, color: th.textMuted }}>{(b as any).space?.type?.replace(/_/g,' ') ?? '—'}</div>
                   </div>
                 </div>
                 <div>

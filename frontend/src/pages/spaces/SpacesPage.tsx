@@ -45,17 +45,17 @@ const TYPE_LABEL: Record<SpaceType, string> = {
 };
 
 const TYPE_ICON: Record<SpaceType, string> = {
-  DEDICATED_OFFICE: '??',
-  FLEXIBLE_DESK:    '??',
-  HOT_DESK:         '??',
-  MEETING_ROOM:     '??',
-  CONFERENCE_ROOM:  '??',
-  PHONE_BOOTH:      '??',
-  EVENT_SPACE:      '??',
+  DEDICATED_OFFICE: '🏢',
+  FLEXIBLE_DESK:    '🪑',
+  HOT_DESK:         '💻',
+  MEETING_ROOM:     '📋',
+  CONFERENCE_ROOM:  '🎯',
+  PHONE_BOOTH:      '📞',
+  EVENT_SPACE:      '🎪',
 };
 
 function formatPrice(space: Space): string {
-  const sym = space.currency === 'EUR' ? '�' : space.currency === 'GBP' ? '�' : '$';
+  const sym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
   if (space.price_per_month) return `${sym}${parseFloat(space.price_per_month).toLocaleString()}/mo`;
   if (space.price_per_day)   return `${sym}${parseFloat(space.price_per_day).toLocaleString()}/day`;
   if (space.price_per_hour)  return `${sym}${parseFloat(space.price_per_hour).toLocaleString()}/hr`;
@@ -151,7 +151,7 @@ function SpaceCard({
         </div>
 
         <div style={{ display: 'flex', gap: 14, marginBottom: 10, fontSize: 12, color: th.textSub }}>
-          <span>?? {parseFloat(space.area_sqm).toFixed(0)} m�</span>
+          <span>📐 {parseFloat(space.area_sqm).toFixed(0)} m²</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <TeamOutlined style={{ fontSize: 11 }} /> {space.capacity} {space.capacity === 1 ? 'person' : 'people'}
           </span>
@@ -296,17 +296,17 @@ export default function SpacesPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
           {[
-            { label: 'Total',       value: counts.total,       color: '#2563eb', bg: '#eff6ff', icon: '??' },
-            { label: 'Available',   value: counts.available,   color: '#059669', bg: '#f0fdf4', icon: '?' },
-            { label: 'Occupied',    value: counts.occupied,    color: '#d97706', bg: '#fffbeb', icon: '??' },
-            { label: 'Reserved',    value: counts.reserved,    color: '#7c3aed', bg: '#f5f3ff', icon: '??' },
-            { label: 'Maintenance', value: counts.maintenance, color: '#dc2626', bg: '#fef2f2', icon: '??' },
+            { label: 'Total',       value: counts.total,       color: '#2563eb', bg: '#eff6ff', icon: '🏠' },
+            { label: 'Available',   value: counts.available,   color: '#059669', bg: '#f0fdf4', icon: '✅' },
+            { label: 'Occupied',    value: counts.occupied,    color: '#d97706', bg: '#fffbeb', icon: '🏢' },
+            { label: 'Reserved',    value: counts.reserved,    color: '#7c3aed', bg: '#f5f3ff', icon: '📌' },
+            { label: 'Maintenance', value: counts.maintenance, color: '#dc2626', bg: '#fef2f2', icon: '🔧' },
           ].map(s => (
             <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub, fontWeight: 500 }}>{s.label}</p>
-                  <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? '�' : s.value}</p>
+                  <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
                 </div>
                 <div style={{ width: 34, height: 34, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{s.icon}</div>
               </div>
@@ -429,9 +429,9 @@ export default function SpacesPage() {
                     <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <h3 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: th.text }}>{space.name}</h3>
-                        <p style={{ margin: '0 0 6px', fontSize: 12, color: th.textSub }}>#{space.slug ?? space.code} � {TYPE_LABEL[space.type]}</p>
+                        <p style={{ margin: '0 0 6px', fontSize: 12, color: th.textSub }}>#{space.slug ?? space.code} · {TYPE_LABEL[space.type]}</p>
                         <div style={{ display: 'flex', gap: 14, fontSize: 12, color: th.textSub }}>
-                          <span>?? {parseFloat(space.area_sqm).toFixed(0)} m�</span>
+                          <span>📐 {parseFloat(space.area_sqm).toFixed(0)} m²</span>
                           <span><TeamOutlined style={{ marginRight: 3 }} />{space.capacity} people</span>
                         </div>
                       </div>
@@ -608,7 +608,7 @@ function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void 
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Area (m�) *</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: th.text, display: 'block', marginBottom: 5 }}>Area (m²) *</label>
               <input type="number" step="0.01" min="0" style={{ width: '100%', padding: '9px 12px', border: `1px solid ${errors.area_sqm ? '#ef4444' : '#e5e7eb'}`, borderRadius: 8, fontSize: 13 }} value={form.area_sqm} onChange={e => setF('area_sqm', e.target.value)} />
               {errors.area_sqm && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.area_sqm}</div>}
             </div>

@@ -64,7 +64,7 @@ function payMethod(p: Payment) {
   return String((p as any).method ?? p.payment_method ?? 'BANK_TRANSFER');
 }
 function payTenantLabel(p: Payment) {
-  return (p as any).tenant?.name ?? (p as any).invoice?.tenant?.name ?? '�';
+  return (p as any).tenant?.name ?? (p as any).invoice?.tenant?.name ?? '—';
 }
 function payableInvoices(list: Invoice[]) {
   return list.filter((i) => !['PAID', 'CANCELLED'].includes(i.status));
@@ -112,7 +112,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
 
   const handleContractChange = (v: string) => {
     const c = contracts.find((x: any) => x.id === v);
-    setForm(f => ({ ...f, contract_id: v, amount: c ? c.monthly_rent : f.amount, currency: c ? c.currency : f.currency, description: c ? `Monthly rent � ${c.contract_number}` : f.description }));
+    setForm(f => ({ ...f, contract_id: v, amount: c ? c.monthly_rent : f.amount, currency: c ? c.currency : f.currency, description: c ? `Monthly rent — ${c.contract_number}` : f.description }));
     setErrors(e => { const n = { ...e }; delete n.contract_id; return n; });
   };
 
@@ -162,11 +162,11 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
   };
 
   const INVOICE_TYPES = [
-    { value: 'MONTHLY_RENT',  label: '?? Monthly Rent'  },
-    { value: 'USAGE_BASED',   label: '?? Usage Based'   },
-    { value: 'DEPOSIT',       label: '?? Deposit'       },
-    { value: 'ADDON_SERVICE', label: '? Addon Service' },
-    { value: 'LATE_FEE',      label: '?? Late Fee'      },
+    { value: 'MONTHLY_RENT',  label: '🏠 Monthly Rent'  },
+    { value: 'USAGE_BASED',   label: '📊 Usage Based'   },
+    { value: 'DEPOSIT',       label: '🔐 Deposit'       },
+    { value: 'ADDON_SERVICE', label: '✨ Addon Service' },
+    { value: 'LATE_FEE',      label: '⚠️ Late Fee'      },
   ];
 
   return (
@@ -181,7 +181,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
           {/* Contract */}
           <div style={{ border: '2px solid #2563eb', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>?? Source Contract</div>
-            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c: any) => ({ value: c.id, label: `${c.contract_number} � ${c.tenant?.name ?? 'Tenant'} � ${c.status} � ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
+            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c: any) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
             {errors.contract_id && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.contract_id}</div>}
             {selectedContract && (
               <div style={{ marginTop: 10, background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#1d4ed8', display: 'flex', gap: 16 }}>
@@ -204,7 +204,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
             <div><label style={LABEL}>Currency</label><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={['QAR','USD','EUR','GBP','AED'].map(c => ({ value: c, label: c }))} /></div>
           </div>
           {/* Description */}
-          <div><label style={LABEL}>Description</label><input style={INPUT} type="text" placeholder="e.g. Monthly rent � April 2026" value={form.description} onChange={e => setF('description', e.target.value)} /></div>
+          <div><label style={LABEL}>Description</label><input style={INPUT} type="text" placeholder="e.g. Monthly rent — April 2026" value={form.description} onChange={e => setF('description', e.target.value)} /></div>
           {/* Preview */}
           {form.amount && form.contract_id && (() => {
             const subtotal = parseFloat(form.amount || '0');
@@ -314,7 +314,7 @@ function RecordPaymentModal({
   const mutation = useMutation({
     mutationFn: (d: any) => billingApi.createPayment(d).then((res) => res.data),
     onSuccess: () => {
-      message.success(isSubmit ? 'Payment submitted � awaiting finance confirmation' : 'Payment recorded!');
+      message.success(isSubmit ? 'Payment submitted — awaiting finance confirmation' : 'Payment recorded!');
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['payments'] });
       qc.invalidateQueries({ queryKey: ['billing-summary'] });
@@ -376,7 +376,7 @@ function RecordPaymentModal({
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
         onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
         <div style={{ background: th.cardBg, borderRadius: 16, padding: 32, maxWidth: 400, textAlign: 'center' }}>
-          <Empty description="No unpaid invoices � all invoices are paid or cancelled." />
+          <Empty description="No unpaid invoices — all invoices are paid or cancelled." />
           <button onClick={onClose} style={{ marginTop: 16, padding: '9px 20px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer' }}>Close</button>
         </div>
       </div>
@@ -398,7 +398,7 @@ function RecordPaymentModal({
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: th.text }}>{isSubmit ? 'Submit Payment' : 'Record Payment Received'}</h2>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: th.textMuted }}>
-              {invoice ? `${invoice.invoice_number}${(invoice as any).tenant?.name ? ` � ${(invoice as any).tenant.name}` : ''}` : isSubmit ? 'Tell us how you paid � finance will confirm' : 'Select invoice and payment details'}
+              {invoice ? `${invoice.invoice_number}${(invoice as any).tenant?.name ? ` · ${(invoice as any).tenant.name}` : ''}` : isSubmit ? 'Tell us how you paid — finance will confirm' : 'Select invoice and payment details'}
             </p>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: th.textSub }}><CloseOutlined style={{ fontSize: 13 }} /></button>
@@ -415,7 +415,7 @@ function RecordPaymentModal({
                 style={{ width: '100%' }}
                 options={unpaid.map((i) => ({
                   value: i.id,
-                  label: `${(i as any).tenant?.name ? `${(i as any).tenant.name} � ` : ''}${i.invoice_number} � ${formatAmt(i.total_amount, i.currency)} (${i.status})`,
+                  label: `${(i as any).tenant?.name ? `${(i as any).tenant.name} · ` : ''}${i.invoice_number} · ${formatAmt(i.total_amount, i.currency)} (${i.status})`,
                 }))}
               />
               {errors.invoice && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.invoice}</div>}
@@ -577,7 +577,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
             <div>
               <div style={{ fontSize: 11, color: th.textMuted, fontWeight: 500, marginBottom: 4 }}>Total Amount</div>
               <div style={{ fontSize: 28, fontWeight: 900, color: th.text }}>{formatAmt(invoice.total_amount, invoice.currency)}</div>
-              {overdueBg && <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, marginTop: 4 }}>? OVERDUE � due {formatDate(invoice.due_date)}</div>}
+              {overdueBg && <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, marginTop: 4 }}>⚠ OVERDUE — due {formatDate(invoice.due_date)}</div>}
             </div>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: sm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>??</div>
           </div>
@@ -612,7 +612,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
                 <EditOutlined /> Edit
               </button>
             )}
-            {/* -- PDF Preview button � all roles -- */}
+            {/* -- PDF Preview button — all roles -- */}
             <button onClick={() => { onClose(); onPreview(invoice); }} style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               ?? View PDF
             </button>
@@ -692,7 +692,7 @@ export default function BillingPage() {
   const cancelMut = useMutation({ mutationFn: (id: string) => billingApi.cancelInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Cancelled'); },    onError: () => message.error('Failed') });
   const deleteMut = useMutation({ mutationFn: (id: string) => billingApi.deleteInvoice(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); message.success('Deleted'); },      onError: () => message.error('Failed') });
   const refundMut  = useMutation({ mutationFn: (id: string) => billingApi.refundPayment(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Refunded'); }, onError: () => message.error('Failed') });
-  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed � invoice marked as paid'); }, onError: (err: any) => message.error(err?.response?.data?.message ?? 'Failed to confirm') });
+  const confirmMut = useMutation({ mutationFn: (id: string) => billingApi.confirmPayment(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['payments'] }); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['billing-summary'] }); message.success('Payment confirmed — invoice marked as paid'); }, onError: (err: any) => message.error(err?.response?.data?.message ?? 'Failed to confirm') });
 
   const filteredInv = invoices.filter(inv => {
     if (q && !inv.invoice_number.toLowerCase().includes(q.toLowerCase()) &&
@@ -830,7 +830,7 @@ export default function BillingPage() {
               <Input prefix={<SearchOutlined style={{ color: th.textMuted }} />} placeholder={activeTab === 'payments' ? 'Search payments, tenant, invoice...' : 'Search invoices...'} value={q} onChange={e => setQ(e.target.value)} style={{ width: 220, borderRadius: 8 }} size="small" />
               {activeTab === 'invoices' && (
                 <Select value={statusFilt || 'all'} onChange={v => setStatus(v === 'all' ? '' : v)} style={{ width: 150 }} size="small"
-                  options={[{ value: 'all', label: 'All Status' },{ value: 'DRAFT', label: '?? Draft' },{ value: 'ISSUED', label: '?? Issued' },{ value: 'SENT', label: '?? Sent' },{ value: 'PARTIALLY_PAID', label: '?? Partial' },{ value: 'PAID', label: '? Paid' },{ value: 'OVERDUE', label: '?? Overdue' },{ value: 'CANCELLED', label: '? Cancelled' }]}
+                  options={[{ value: 'all', label: 'All Status' },{ value: 'DRAFT', label: '📝 Draft' },{ value: 'ISSUED', label: '📤 Issued' },{ value: 'SENT', label: '📨 Sent' },{ value: 'PARTIALLY_PAID', label: '🟡 Partial' },{ value: 'PAID', label: '✅ Paid' },{ value: 'OVERDUE', label: '⚠️ Overdue' },{ value: 'CANCELLED', label: '❌ Cancelled' }]}
                 />
               )}
               {activeTab === 'payments' && canManage && (
@@ -856,7 +856,7 @@ export default function BillingPage() {
                   ) : filteredInv.length === 0 ? (
                     <div style={{ padding: '40px 0', textAlign: 'center' }}>
                       <FileTextOutlined style={{ fontSize: 40, color: '#e5e7eb', display: 'block', margin: '0 auto 12px' }} />
-                      <Empty description={invoices.length === 0 ? (canManage ? 'No invoices yet � generate one from an active contract.' : 'No invoices yet.') : 'No invoices match your filters.'} />
+                      <Empty description={invoices.length === 0 ? (canManage ? 'No invoices yet — generate one from an active contract.' : 'No invoices yet.') : 'No invoices match your filters.'} />
                       {canManage && invoices.length === 0 && <button onClick={() => setGenerate(true)} style={{ marginTop: 12, padding: '9px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}><FileTextOutlined style={{ marginRight: 6 }} /> Generate First Invoice</button>}
                     </div>
                   ) : (
@@ -919,7 +919,7 @@ export default function BillingPage() {
                       })}
                       <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
                         <span>Showing {filteredInv.length} of {invoices.length} invoices</span>
-                        <span>{paidCount} paid � {pendingCount} pending � {overdueCount} overdue</span>
+                        <span>{paidCount} paid · {pendingCount} pending · {overdueCount} overdue</span>
                       </div>
                     </>
                   )}
@@ -1004,7 +1004,7 @@ export default function BillingPage() {
                         </div>
                       ))}
                       <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
-                        <span>Showing {filteredPay.length} of {payments.length} payments{tenantPayFilt ? ` � ${tenants.find(t => t.id === tenantPayFilt)?.name ?? 'tenant'}` : ''}</span>
+                        <span>Showing {filteredPay.length} of {payments.length} payments{tenantPayFilt ? ` · ${tenants.find(t => t.id === tenantPayFilt)?.name ?? 'tenant'}` : ''}</span>
                         <span>Total collected: <strong style={{ color: th.text }}>${totalCollected.toLocaleString()}</strong></span>
                       </div>
                     </>

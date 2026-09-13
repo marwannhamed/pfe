@@ -122,15 +122,15 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
             loading={spacesLoading}
             placeholder={
               (spaces as any[]).length === 0 && !spacesLoading
-                ? 'Book a space first � only your booked spaces appear here'
+                ? 'Book a space first — only your booked spaces appear here'
                 : 'Select the affected space...'
             }
             notFoundContent={
               spacesLoading
                 ? 'Loading...'
                 : spacesError
-                  ? 'Could not load spaces � refresh and try again'
-                  : 'No spaces � create a booking for a space first'
+                  ? 'Could not load spaces — refresh and try again'
+                  : 'No spaces — create a booking for a space first'
             }
             filterOption={(input, opt) => (opt?.label as string ?? '').toLowerCase().includes(input.toLowerCase())}
             options={(spaces as any[]).map(s => ({ value: s.id, label: `${s.name} (${s.slug ?? s.type})` }))}
@@ -254,11 +254,11 @@ function TicketDetailModal({
           ['Title',       ticket.title],
           ['Category',    CATEGORY_LABELS[ticket.category] ?? ticket.category],
           ['Space',       (ticket as any).space?.name ?? ticket.space_id.substring(0, 8)],
-          ['Created by',  (ticket as any).createdBy ? `${(ticket as any).createdBy.first_name} ${(ticket as any).createdBy.last_name}` : '�'],
-          ['Assigned to', assignee ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email : 'Unassigned � waiting for a technician'],
+          ['Created by',  (ticket as any).createdBy ? `${(ticket as any).createdBy.first_name} ${(ticket as any).createdBy.last_name}` : '—'],
+          ['Assigned to', assignee ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email : 'Unassigned — waiting for a technician'],
           ['Reported',    formatDate(ticket.reported_at)],
-          ['Resolved',    ticket.resolved_at ? formatDate(ticket.resolved_at) : '�'],
-          ['Cost',        ticket.cost ? `$${parseFloat(ticket.cost).toLocaleString()}` : '�'],
+          ['Resolved',    ticket.resolved_at ? formatDate(ticket.resolved_at) : '—'],
+          ['Cost',        ticket.cost ? `$${parseFloat(ticket.cost).toLocaleString()}` : '—'],
         ].map(([k, v]) => (
           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${th.divider}`, fontSize: 13 }}>
             <span style={{ color: th.textSub }}>{k}</span>
@@ -277,7 +277,7 @@ function TicketDetailModal({
               disabled={acceptMut.isPending}
               style={{ padding: '9px 18px', borderRadius: 8, background: '#2563eb', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              {acceptMut.isPending ? 'Accepting...' : '? Accept Ticket'}
+              {acceptMut.isPending ? 'Accepting...' : '✅ Accept Ticket'}
             </button>
           </div>
         )}
@@ -365,7 +365,7 @@ export default function MaintenancePage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maintenance'] });
       qc.invalidateQueries({ queryKey: ['maintenance-stats'] });
-      message.success('Ticket accepted � it is now on your list');
+      message.success('Ticket accepted — it is now on your list');
     },
     onError: (e: unknown) => {
       const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
@@ -436,11 +436,11 @@ export default function MaintenancePage() {
         {/* KPI */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14 }}>
           {[
-            { label: 'Total',       value: stats?.total       ?? '�', sub: 'All tickets',     color: '#2563eb', bg: '#eff6ff', icon: '??' },
-            { label: 'Open',        value: stats?.open        ?? '�', sub: 'Need attention',  color: '#d97706', bg: '#fffbeb', icon: '??' },
-            { label: 'In Progress', value: stats?.in_progress ?? '�', sub: 'Being worked on', color: '#7c3aed', bg: '#f5f3ff', icon: '??' },
-            { label: 'Resolved',    value: stats?.resolved    ?? '�', sub: 'Pending close',   color: '#059669', bg: '#f0fdf4', icon: '?' },
-            { label: 'Total Cost',  value: stats?.total_cost !== undefined ? `$${Number(stats.total_cost).toLocaleString()}` : '�', sub: 'Closed tickets', color: '#0369a1', bg: '#f0f9ff', icon: '??' },
+            { label: 'Total',       value: stats?.total       ?? '—', sub: 'All tickets',     color: '#2563eb', bg: '#eff6ff', icon: '🔧' },
+            { label: 'Open',        value: stats?.open        ?? '—', sub: 'Need attention',  color: '#d97706', bg: '#fffbeb', icon: '⚠️' },
+            { label: 'In Progress', value: stats?.in_progress ?? '—', sub: 'Being worked on', color: '#7c3aed', bg: '#f5f3ff', icon: '🔄' },
+            { label: 'Resolved',    value: stats?.resolved    ?? '—', sub: 'Pending close',   color: '#059669', bg: '#f0fdf4', icon: '✅' },
+            { label: 'Total Cost',  value: stats?.total_cost !== undefined ? `$${Number(stats.total_cost).toLocaleString()}` : '—', sub: 'Closed tickets', color: '#0369a1', bg: '#f0f9ff', icon: '💰' },
           ].map(s => (
             <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -496,7 +496,7 @@ export default function MaintenancePage() {
           options={[{ value: 'all', label: 'All Categories' }, ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }))]}
         />
         <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
-          <strong style={{ color: th.text }}>{isLoading ? '�' : filtered.length}</strong> of {(tickets as any[]).length}
+          <strong style={{ color: th.text }}>{isLoading ? '—' : filtered.length}</strong> of {(tickets as any[]).length}
         </div>
       </div>
 
@@ -619,7 +619,7 @@ export default function MaintenancePage() {
 
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
             <span>Showing {filtered.length} of {(tickets as any[]).length} tickets</span>
-            <span>{stats?.open ?? 0} open � {stats?.in_progress ?? 0} in progress</span>
+            <span>{stats?.open ?? 0} open · {stats?.in_progress ?? 0} in progress</span>
           </div>
         </div>
       )}

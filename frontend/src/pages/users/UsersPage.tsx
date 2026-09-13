@@ -316,15 +316,15 @@ export default function UsersPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
           {[
             { label: isSuperAdmin ? 'Total Users' : 'Team members', value: all.length, sub: isSuperAdmin ? 'All accounts' : 'In your organization', color: '#2563eb', bg: '#eff6ff', icon: '👥' },
-            { label: 'Active',       value: active,      sub: 'Can log in',      color: '#059669', bg: '#f0fdf4', icon: '?' },
-            { label: 'Pending',      value: pending,     sub: 'Awaiting setup',  color: '#d97706', bg: '#fffbeb', icon: '?' },
-            { label: 'Roles in use', value: Object.values(counts).filter(v => v > 0).length, sub: 'Distinct roles', color: '#7c3aed', bg: '#f5f3ff', icon: '??' },
+            { label: 'Active',       value: active,      sub: 'Can log in',      color: '#059669', bg: '#f0fdf4', icon: '✅' },
+            { label: 'Pending',      value: pending,     sub: 'Awaiting setup',  color: '#d97706', bg: '#fffbeb', icon: '⏳' },
+            { label: 'Roles in use', value: Object.values(counts).filter(v => v > 0).length, sub: 'Distinct roles', color: '#7c3aed', bg: '#f5f3ff', icon: '🔑' },
           ].map(s => (
             <div key={s.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub, fontWeight: 500 }}>{s.label}</p>
-                  <p style={{ margin: '0 0 3px', fontSize: 26, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? '�' : s.value}</p>
+                  <p style={{ margin: '0 0 3px', fontSize: 26, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? '—' : s.value}</p>
                   <p style={{ margin: 0, fontSize: 11, color: s.color }}>{s.sub}</p>
                 </div>
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{s.icon}</div>
@@ -397,7 +397,7 @@ export default function UsersPage() {
           </button>
         )}
         <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
-          Showing <strong style={{ color: th.text }}>{isLoading ? '�' : filtered.length}</strong> of {all.length} users
+          Showing <strong style={{ color: th.text }}>{isLoading ? '—' : filtered.length}</strong> of {all.length} users
         </div>
       </div>
 
@@ -560,7 +560,7 @@ export default function UsersPage() {
                       style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       title="Delete"
                     >
-                      <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>�</span>
+                      <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>✕</span>
                     </button>
                   )}
                 </div>
@@ -572,7 +572,7 @@ export default function UsersPage() {
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: th.textMuted }}>Showing {filtered.length} of {all.length} users</span>
             <span style={{ fontSize: 12, color: th.textSub }}>
-              {active} active � {pending} pending
+              {active} active · {pending} pending
             </span>
           </div>
         </div>
