@@ -5,7 +5,6 @@ import {
   Col,
   Statistic,
   DatePicker,
-  Select,
   Table,
   Progress,
   Tag,
@@ -18,8 +17,6 @@ import {
   Empty,
 } from 'antd';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   BarChart,
@@ -31,7 +28,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import {
@@ -43,7 +39,6 @@ import {
   DownloadOutlined,
   ReloadOutlined,
   RiseOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import { analyticsApi, exportApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';

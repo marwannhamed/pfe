@@ -5,7 +5,6 @@ import {
   clearAuthStorage,
   getStoredAccessToken,
   getStoredRefreshToken,
-  readStoredUser,
   writeStoredUser,
   writeTokens,
 } from '../store/authStorage';

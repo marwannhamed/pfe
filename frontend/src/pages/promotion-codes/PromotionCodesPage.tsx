@@ -6,7 +6,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   CopyOutlined,
-  EyeOutlined,
   GiftOutlined,
   PercentageOutlined,
   DollarOutlined,
@@ -42,7 +41,7 @@ export default function PromotionCodesPage() {
     try {
       const response = await promotionCodeApi.getAll();
       setPromotionCodes(response.data || []);
-    } catch (error) {
+    } catch {
       message.error('Failed to load promotion codes');
     } finally {
       setLoading(false);
@@ -83,7 +82,7 @@ export default function PromotionCodesPage() {
 
       setModalVisible(false);
       loadPromotionCodes();
-    } catch (error) {
+    } catch {
       message.error('Failed to save promotion code');
     }
   };
@@ -93,7 +92,7 @@ export default function PromotionCodesPage() {
       await promotionCodeApi.remove(id);
       message.success('Promotion code deleted successfully');
       loadPromotionCodes();
-    } catch (error) {
+    } catch {
       message.error('Failed to delete promotion code');
     }
   };
@@ -109,7 +108,7 @@ export default function PromotionCodesPage() {
       const stats = { data: { totalUses: 0, totalSavings: 0 } };
       setSelectedCodeStats(stats.data);
       setUsageStatsModal(true);
-    } catch (error) {
+    } catch {
       message.error('Failed to load usage statistics');
     }
   };

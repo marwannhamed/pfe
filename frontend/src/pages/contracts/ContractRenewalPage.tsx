@@ -492,7 +492,7 @@ export default function ContractRenewalPage() {
               key={c.id}
               contract={c}
               onRenew={setRenewing}
-              onView={c => navigate('/admin/contracts')}
+              onView={_c => navigate('/admin/contracts')}
             />
           ))}
         </div>

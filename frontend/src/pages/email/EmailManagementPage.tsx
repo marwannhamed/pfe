@@ -5,11 +5,9 @@ import {
   MailOutlined,
   SendOutlined,
   EyeOutlined,
-  EditOutlined,
   ExperimentOutlined,
   FileTextOutlined,
   UserOutlined,
-  CalendarOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   BarChartOutlined,
@@ -112,7 +110,7 @@ export default function EmailManagementPage() {
     try {
       // Simulate loading templates - in real app, this would call the API
       setTemplates(EMAIL_TEMPLATES);
-    } catch (error) {
+    } catch {
       message.error('Failed to load email templates');
     } finally {
       setLoading(false);
@@ -162,7 +160,7 @@ export default function EmailManagementPage() {
       const response = await enhancedEmailApi.previewTemplate(template.key, mockData);
       setPreviewContent(response.data);
       setPreviewModalVisible(true);
-    } catch (error) {
+    } catch {
       message.error('Failed to load email preview');
     } finally {
       setLoading(false);
@@ -179,7 +177,7 @@ export default function EmailManagementPage() {
       await enhancedEmailApi.testBookingConfirmed(payload);
       message.success('Test email sent successfully');
       setTestModalVisible(false);
-    } catch (error) {
+    } catch {
       message.error('Failed to send test email');
     }
   };
@@ -194,7 +192,7 @@ export default function EmailManagementPage() {
         try {
           // Mock bulk send
           message.success('Bulk email sent successfully');
-        } catch (error) {
+        } catch {
           message.error('Failed to send bulk email');
         }
       },

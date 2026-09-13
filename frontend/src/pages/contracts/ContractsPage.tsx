@@ -35,10 +35,6 @@ const STATUS_META: Record<ContractStatus, { label: string; bg: string; color: st
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-function toDateInputValue(d: string | undefined) {
-  if (!d) return '';
-  return d.includes('T') ? d.split('T')[0] : d;
-}
 function getDaysLeft(endDate: string): number {
   return Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000);
 }
@@ -190,7 +186,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
               <Select
                 allowClear
                 showSearch
-                placeholder={contractBookings.length ? 'Choose booking to pre-fill dates & tenantù' : 'No eligible bookings yet'}
+                placeholder={contractBookings.length ? 'Choose booking to pre-fill dates & tenantÔøΩ' : 'No eligible bookings yet'}
                 style={{ width: '100%' }}
                 value={selectedBookingId || undefined}
                 onChange={(v) => applyBookingPrefill(v ?? '')}
@@ -200,7 +196,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
                   const statusLabel = b.status.replace(/_/g, ' ').toLowerCase();
                   return {
                     value: b.id,
-                    label: `${b.booking_number} ù ${space} ù ${statusLabel}`,
+                    label: `${b.booking_number} ÔøΩ ${space} ÔøΩ ${statusLabel}`,
                   };
                 })}
               />
@@ -225,7 +221,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
                   Contract created from Booking {bookingRef?.booking_number}
                 </div>
                 <div style={{ fontSize: 12, color: '#bfdbfe', lineHeight: 1.5 }}>
-                  Space: <strong style={{ color: '#fff' }}>{bookingRef?.space_name || 'ù'}</strong><br />
+                  Space: <strong style={{ color: '#fff' }}>{bookingRef?.space_name || 'ÔøΩ'}</strong><br />
                   Tenant, dates and currency have been <strong style={{ color: '#fff' }}>pre-filled automatically</strong>.<br />
                   You only need to fill in the <strong style={{ color: '#fde68a' }}>Monthly Rent</strong> and <strong style={{ color: '#fde68a' }}>Security Deposit</strong>.
                 </div>
@@ -278,7 +274,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
             )}
           </div>
 
-          {/* Financials ù needs to be filled manually */}
+          {/* Financials ÔøΩ needs to be filled manually */}
           <div style={{ border: '2px solid #f59e0b', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
               ?? Financials <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PLEASE FILL IN</span>
@@ -322,7 +318,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
               </Field>
               <Field label="Auto Renew">
                 <Select value={form.auto_renew} onChange={v => setF('auto_renew', v)} style={{ width: '100%' }}
-                  options={[{ value: 'false', label: '? No ù manual renewal' }, { value: 'true', label: '? Yes ù auto renew' }]} />
+                  options={[{ value: 'false', label: '? No ÔøΩ manual renewal' }, { value: 'true', label: '? Yes ÔøΩ auto renew' }]} />
               </Field>
             </div>
           </div>
@@ -421,7 +417,7 @@ function ContractDetailModal({ contract, onClose, canManage, isTenantAdmin }: {
   const [showRenew, setShowRenew] = useState(false);
   const signMut = useMutation({
     mutationFn: (id: string) => contractApi.sign(id),
-    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['contracts'] }); message.success('Contract signed ù now ACTIVE! ??'); onClose(); },
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['contracts'] }); message.success('Contract signed ÔøΩ now ACTIVE! ??'); onClose(); },
     onError:    () => message.error('Failed to sign'),
   });
   const terminateMut = useMutation({
@@ -450,13 +446,13 @@ function ContractDetailModal({ contract, onClose, canManage, isTenantAdmin }: {
             {isTenantAdmin && contract.status === 'DRAFT' && (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                 <span style={{ fontSize: 20 }}>??</span>
-                <div><div style={{ fontWeight: 700, color: '#1d4ed8' }}>Action required ù please review and sign</div><div style={{ color: '#3b82f6', fontSize: 12, marginTop: 2 }}>This contract is waiting for your signature.</div></div>
+                <div><div style={{ fontWeight: 700, color: '#1d4ed8' }}>Action required ÔøΩ please review and sign</div><div style={{ color: '#3b82f6', fontSize: 12, marginTop: 2 }}>This contract is waiting for your signature.</div></div>
               </div>
             )}
             {daysLeft > 0 && daysLeft <= 30 && contract.status === 'ACTIVE' && (
               <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                 <WarningOutlined style={{ color: '#d97706' }} />
-                <span style={{ color: '#92400e', fontWeight: 500 }}>Expires in {daysLeft} days{canManage ? ' ù consider renewing' : ' ù contact your manager'}</span>
+                <span style={{ color: '#92400e', fontWeight: 500 }}>Expires in {daysLeft} days{canManage ? ' ÔøΩ consider renewing' : ' ÔøΩ contact your manager'}</span>
               </div>
             )}
             <div style={{ background: th.tableHead, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 24 }}>
@@ -684,7 +680,7 @@ export default function ContractsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub, fontWeight: 500 }}>{s.label}</p>
-                  <p style={{ margin: '0 0 3px', fontSize: typeof s.value === 'string' ? 16 : 22, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? 'ù' : s.value}</p>
+                  <p style={{ margin: '0 0 3px', fontSize: typeof s.value === 'string' ? 16 : 22, fontWeight: 800, color: th.text, lineHeight: 1 }}>{isLoading ? 'ÔøΩ' : s.value}</p>
                   <p style={{ margin: 0, fontSize: 11, color: s.color }}>{s.sub}</p>
                 </div>
                 <div style={{ width: 34, height: 34, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{s.icon}</div>
@@ -720,7 +716,7 @@ export default function ContractsPage() {
       {!isLoading && !isError && filtered.length === 0 && (
         <div style={{ ...CARD, padding: '60px', textAlign: 'center' }}>
           <FileTextOutlined style={{ fontSize: 48, color: '#e5e7eb', display: 'block', margin: '0 auto 16px' }} />
-          <Empty description={isTenantAdmin ? (contracts.length === 0 ? 'No contracts yet ù your manager will send you one.' : 'No matches.') : (contracts.length === 0 ? 'No contracts yet.' : 'No matches.')} />
+          <Empty description={isTenantAdmin ? (contracts.length === 0 ? 'No contracts yet ÔøΩ your manager will send you one.' : 'No matches.') : (contracts.length === 0 ? 'No contracts yet.' : 'No matches.')} />
           {canManage && contracts.length === 0 && <button onClick={handleOpenNew} style={{ marginTop: 16, padding: '10px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}><PlusOutlined style={{ marginRight: 6 }} /> New Contract</button>}
         </div>
       )}
@@ -772,7 +768,7 @@ export default function ContractsPage() {
           })}
           <div style={{ padding: '12px 20px', borderTop: `1px solid ${th.divider}`, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
             <span>Showing {filtered.length} of {contracts.length} contracts</span>
-            <span>{isTenantAdmin ? `${active} active ù ${draft} pending signature` : `${active} active ù ${draft} pending ù $${Math.round(totalRent).toLocaleString()}/mo`}</span>
+            <span>{isTenantAdmin ? `${active} active ÔøΩ ${draft} pending signature` : `${active} active ÔøΩ ${draft} pending ÔøΩ $${Math.round(totalRent).toLocaleString()}/mo`}</span>
           </div>
         </div>
       )}

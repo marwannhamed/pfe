@@ -35,9 +35,6 @@ function toArray<T>(raw: any): T[] {
 function fmtMonth(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 function daysSince(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
 }

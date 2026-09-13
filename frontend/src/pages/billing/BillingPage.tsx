@@ -84,7 +84,7 @@ function toArray<T>(raw: any): T[] {
 }
 
 // --- Generate Invoice Modal ---------------------------------------------------
-function GenerateInvoiceModal({ onClose, userId, tenantId, canManage }: {
+function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
   onClose: () => void; userId: string; tenantId: string; canManage: boolean;
 }) {
   const { card: CARD, input: INPUT, t: th } = usePageTheme();

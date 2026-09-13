@@ -37,9 +37,6 @@ function toArray<T>(raw: any): T[] {
 function fmtMonth(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 function fmtTime(d: string) {
   return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }

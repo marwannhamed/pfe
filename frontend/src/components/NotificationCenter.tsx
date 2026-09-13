@@ -25,14 +25,12 @@ import {
   CheckOutlined,
   DeleteOutlined,
   SettingOutlined,
-  UserOutlined,
   CalendarOutlined,
   DollarOutlined,
   ToolOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
   ExclamationCircleOutlined,
-  CloseCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useNotifications } from '../hooks/useNotifications';
@@ -52,7 +50,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ classNam
   const {
     notifications,
     unreadCount,
-    stats,
     isConnected,
     loading,
     loadNotifications,

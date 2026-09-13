@@ -90,7 +90,7 @@ export default function ReportGenerationPage() {
         reportType: r.type ?? r.reportType,
       }));
       setReports(normalized);
-    } catch (error) {
+    } catch {
       message.error('Failed to load reports');
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function ReportGenerationPage() {
       message.success('Report generation started successfully');
       setGenerateModalVisible(false);
       loadReports();
-    } catch (error) {
+    } catch {
       message.error('Failed to generate report');
     } finally {
       setLoading(false);
@@ -133,7 +133,7 @@ export default function ReportGenerationPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
       message.success('Report downloaded successfully');
-    } catch (error) {
+    } catch {
       message.error('Failed to download report');
     }
   };
@@ -143,7 +143,7 @@ export default function ReportGenerationPage() {
       await enhancedReportApi.remove(reportId);
       message.success('Report deleted successfully');
       loadReports();
-    } catch (error) {
+    } catch {
       message.error('Failed to delete report');
     }
   };

@@ -5,10 +5,8 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
   FileTextOutlined,
   DollarOutlined,
-  CalendarOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
@@ -174,7 +172,7 @@ export default function ContractItemsPage() {
 
       setContractItems(items.length > 0 ? items : mockContractItems);
       setDeposits(depositRows.length > 0 ? depositRows : mockDeposits);
-    } catch (error) {
+    } catch {
       message.error('Failed to load contract data');
     } finally {
       setLoading(false);
@@ -215,7 +213,7 @@ export default function ContractItemsPage() {
 
       setItemModalVisible(false);
       loadData();
-    } catch (error) {
+    } catch {
       message.error('Failed to save contract item');
     }
   };
@@ -252,7 +250,7 @@ export default function ContractItemsPage() {
 
       setDepositModalVisible(false);
       loadData();
-    } catch (error) {
+    } catch {
       message.error('Failed to save deposit');
     }
   };
@@ -284,7 +282,7 @@ export default function ContractItemsPage() {
         message.success('Deposit refunded successfully');
       }
       loadData();
-    } catch (error) {
+    } catch {
       message.error('Failed to delete');
     }
   };

@@ -11,10 +11,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   UserOutlined,
-  CalendarOutlined,
   FileTextOutlined,
-  UploadOutlined,
-  CameraOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 import { maintenanceApi } from '../../api/services';
@@ -115,7 +112,7 @@ export default function MaintenanceManagementPage() {
     try {
       const response = await maintenanceApi.getAll();
       setTickets(response.data || []);
-    } catch (error) {
+    } catch {
       message.error('Failed to load maintenance tickets');
     } finally {
       setLoading(false);
@@ -156,7 +153,7 @@ export default function MaintenanceManagementPage() {
 
       setModalVisible(false);
       loadTickets();
-    } catch (error) {
+    } catch {
       message.error('Failed to save maintenance ticket');
     }
   };
@@ -171,7 +168,7 @@ export default function MaintenanceManagementPage() {
       await maintenanceApi.remove(id);
       message.success('Maintenance ticket deleted successfully');
       loadTickets();
-    } catch (error) {
+    } catch {
       message.error('Failed to delete maintenance ticket');
     }
   };
