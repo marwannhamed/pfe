@@ -1,6 +1,6 @@
 import React from 'react';
 import { Spin } from 'antd';
-import { useLoading } from '../contexts/LoadingContext';
+import { useLoading } from '../contexts/loading-context';
 
 const LoadingOverlay: React.FC = () => {
   const { isLoading, loadingMessage } = useLoading();

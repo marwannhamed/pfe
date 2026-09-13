@@ -200,7 +200,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
         </div>
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ background: th.tableHead, border: `1px solid ${th.cardBorder}`, borderRadius: 12, padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>?? Building ? Floor ? Space</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>📍 Building · Floor · Space</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <Field label="Building" required><Select loading={loadingB} value={selectedBuildingId || undefined} onChange={v => { setSelectedBuildingId(v); setSelectedFloorId(''); setSelectedSpaceId(''); }} placeholder="Select building..." style={{ width: '100%' }} options={buildings.map(b => ({ value: b.id, label: b.name }))} /></Field>
               <Field label="Floor" required><Select loading={loadingF} value={selectedFloorId || undefined} onChange={v => { setSelectedFloorId(v); setSelectedSpaceId(''); }} placeholder={selectedBuildingId ? 'Select floor...' : 'Select building first'} disabled={!selectedBuildingId} style={{ width: '100%' }} options={floors.map(f => ({ value: f.id, label: `Floor ${f.floor_number} ? ${f.name}` }))} /></Field>
@@ -208,7 +208,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
             </div>
             {selectedSpace && (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 16, fontSize: 12, color: '#1d4ed8', flexWrap: 'wrap' }}>
-                <span>?? {selectedSpace.name}</span><span>?? Cap: {selectedSpace.capacity}</span>
+                <span>🏢 {selectedSpace.name}</span><span>👥 Cap: {selectedSpace.capacity}</span>
                 {selectedSpace.price_per_hour  && <span>?? ${parseFloat(selectedSpace.price_per_hour)}/hr</span>}
                 {selectedSpace.price_per_day   && <span>?? ${parseFloat(selectedSpace.price_per_day)}/day</span>}
                 {selectedSpace.price_per_month && <span>?? ${parseFloat(selectedSpace.price_per_month)}/mo</span>}
@@ -216,7 +216,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
             )}
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>?? Date & Time</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>📅 Date & Time</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14 }}>
               <Field label="Start Date" required error={errors.start_date}><input style={{ ...INPUT, borderColor: errors.start_date ? '#ef4444' : '#e5e7eb' }} type="date" min={today} value={form.start_date} onChange={e => setF('start_date', e.target.value)} /></Field>
               <Field label="Start Time" required><input style={INPUT} type="time" value={form.start_time} onChange={e => setF('start_time', e.target.value)} /></Field>
@@ -318,7 +318,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
         </div>
         <div style={{ padding: '20px 24px' }}>
           <div style={{ background: th.tableHead, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>??</div>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📋</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: th.text }}>{spaceName}</div>
               <div style={{ fontSize: 12, color: th.textSub }}>{(booking as any).space?.type?.replace(/_/g,' ') ?? 'Office Space'}</div>
@@ -335,7 +335,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>Ready to create a lease contract?</div>
-                <div style={{ fontSize: 11, color: '#bfdbfe', marginTop: 2 }}>Booking <strong style={{ color: '#fff' }}>{booking.booking_number}</strong> ? Dates & tenant will be pre-filled</div>
+                <div style={{ fontSize: 11, color: '#bfdbfe', marginTop: 2 }}>Booking <strong style={{ color: '#fff' }}>{booking.booking_number}</strong> — Dates & tenant will be pre-filled</div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button onClick={() => { onClose(); onCreateContract(booking); }} style={{ padding: '8px 16px', borderRadius: 8, background: th.cardBg, border: 'none', color: '#1d4ed8', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -648,7 +648,7 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {isError && <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}><div style={{ fontSize: 36, marginBottom: 12 }}>??</div><div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load</div><button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button></div>}
+      {isError && <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}><div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div><div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load</div><button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Retry</button></div>}
       {isLoading && <div style={CARD}>{Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ padding: '16px 20px', borderBottom: i < 4 ? `1px solid ${th.divider}` : 'none' }}><Skeleton active paragraph={{ rows: 1 }} /></div>)}</div>}
 
       {!isLoading && !isError && filtered.length === 0 && (

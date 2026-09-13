@@ -1,20 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface LoadingContextType {
-  isLoading: boolean;
-  loadingMessage: string;
-  setLoading: (loading: boolean, message?: string) => void;
-}
-
-const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
-
-export const useLoading = () => {
-  const context = useContext(LoadingContext);
-  if (!context) {
-    throw new Error('useLoading must be used within LoadingProvider');
-  }
-  return context;
-};
+import React, { useState, type ReactNode } from 'react';
+import { LoadingContext } from './loading-context';
 
 interface LoadingProviderProps {
   children: ReactNode;

@@ -1,34 +1,6 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { App } from 'antd';
-
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-interface ToastMessage {
-  id: string;
-  type: ToastType;
-  title: string;
-  description?: string;
-  duration?: number;
-}
-
-interface ToastContextType {
-  showToast: (type: ToastType, title: string, description?: string, duration?: number) => void;
-  showSuccess: (title: string, description?: string) => void;
-  showError: (title: string, description?: string) => void;
-  showWarning: (title: string, description?: string) => void;
-  showInfo: (title: string, description?: string) => void;
-  showLoading: (title: string, description?: string) => () => void;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
-
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
-  }
-  return context;
-};
+import { ToastContext, type ToastType } from './toast-context';
 
 interface ToastProviderProps {
   children: ReactNode;

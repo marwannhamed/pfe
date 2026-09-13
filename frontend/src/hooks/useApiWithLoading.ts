@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { useLoading } from '../contexts/LoadingContext';
-import { useToast } from '../contexts/ToastContext';
+import { useLoading } from '../contexts/loading-context';
+import { useToast } from '../contexts/toast-context';
 
 interface UseApiWithLoadingOptions {
   showSuccessMessage?: boolean;

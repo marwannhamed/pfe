@@ -101,6 +101,18 @@ function SectionHeader({ title, sub }: { title: string; sub: string }) {
   );
 }
 
+// --- Empty chart placeholder --------------------------------------------------
+// Declared here rather than inside ReportsPage: a component created during
+// render is a new type on every pass, so React remounts it and it loses state.
+function EmptyChart({ height = 200 }: { height?: number }) {
+  return (
+    <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontSize: 32 }}>📊</div>
+      <div style={{ fontSize: 12 }}>No data for this period</div>
+    </div>
+  );
+}
+
 // --- KPI Card -----------------------------------------------------------------
 function KpiCard({ label, value, sub, color, bg, icon, trend }: {
   label: string; value: string | number; sub: string;
@@ -259,7 +271,7 @@ export default function ReportsPage() {
   if (!canAccess) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>??</div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
         <h2 style={{ color: '#0f172a' }}>Access Restricted</h2>
         <p style={{ color: '#64748b' }}>Reports are available to Super Admin, Site Manager, and Finance roles only.</p>
       </div>
@@ -272,13 +284,6 @@ export default function ReportsPage() {
     { key: '3m',  label: '3 Months' },
     { key: '1y',  label: '1 Year'   },
   ];
-
-  const EmptyChart = ({ height = 200 }: { height?: number }) => (
-    <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 32 }}>??</div>
-      <div style={{ fontSize: 12 }}>No data for this period</div>
-    </div>
-  );
 
   return (
     <div style={{ padding: 24, minHeight: '100%' }}>

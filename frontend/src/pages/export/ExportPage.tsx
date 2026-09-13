@@ -147,8 +147,10 @@ export default function ExportPage() {
   const tenantId = (user as any)?.tenant_id ?? '';
 
   // Default date range: last 30 days
-  const defaultTo   = new Date().toISOString().slice(0, 10);
-  const defaultFrom = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const [[defaultFrom, defaultTo]] = useState(() => [
+    new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+    new Date().toISOString().slice(0, 10),
+  ]);
 
   // Filter cards by role
   const visibleCards = EXPORTS.filter(c => c.roles.includes(role));

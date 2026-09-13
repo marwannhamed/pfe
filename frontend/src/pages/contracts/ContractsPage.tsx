@@ -255,7 +255,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
                     type="date" min={today} value={form.start_date} onChange={e => setF('start_date', e.target.value)}
                   />
                 </Field>
-                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>? Auto-filled from booking</div>}
+                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>✓ Auto-filled from booking</div>}
               </div>
               <div>
                 <Field label="End Date" required error={errors.end_date}>
@@ -264,7 +264,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
                     type="date" min={form.start_date || today} value={form.end_date} onChange={e => setF('end_date', e.target.value)}
                   />
                 </Field>
-                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>? Auto-filled from booking</div>}
+                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>✓ Auto-filled from booking</div>}
               </div>
             </div>
             {durationMonths && (
@@ -304,14 +304,14 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
                   <Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }}
                     options={['USD','EUR','GBP','AED','TND'].map(c => ({ value: c, label: c }))} />
                 </Field>
-                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>? Auto-filled</div>}
+                {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>✓ Auto-filled</div>}
               </div>
             </div>
           </div>
 
           {/* Settings */}
           <div style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>?? Settings</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>⚙️ Settings</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <Field label="Payment Due Day (1-28)">
                 <input style={INPUT} type="number" min="1" max="28" value={form.payment_due_day} onChange={e => setF('payment_due_day', e.target.value)} />
@@ -326,7 +326,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
           {/* Summary */}
           {form.monthly_rent && form.deposit_amount && (
             <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 18px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 10 }}>?? Contract Summary</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 10 }}>📋 Contract Summary</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
                 <div style={{ background: th.cardBg, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: th.textSub, marginBottom: 3 }}>Monthly Rent</div>
@@ -445,7 +445,7 @@ function ContractDetailModal({ contract, onClose, canManage, isTenantAdmin }: {
           <div style={{ padding: '20px 24px' }}>
             {isTenantAdmin && contract.status === 'DRAFT' && (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-                <span style={{ fontSize: 20 }}>??</span>
+                <span style={{ fontSize: 20 }}>✍️</span>
                 <div><div style={{ fontWeight: 700, color: '#1d4ed8' }}>Action required — please review and sign</div><div style={{ color: '#3b82f6', fontSize: 12, marginTop: 2 }}>This contract is waiting for your signature.</div></div>
               </div>
             )}
@@ -692,7 +692,7 @@ export default function ContractsPage() {
 
       {isTenantAdmin && needsSigning > 0 && (
         <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 22 }}>??</span>
+          <span style={{ fontSize: 22 }}>✍️</span>
           <div><span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 14 }}>{needsSigning} contract{needsSigning > 1 ? 's' : ''} waiting for your signature</span><div style={{ color: '#3b82f6', fontSize: 12, marginTop: 2 }}>Click on a Draft contract and sign it to activate your lease.</div></div>
         </div>
       )}
@@ -710,7 +710,7 @@ export default function ContractsPage() {
         <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>Showing <strong style={{ color: th.text }}>{filtered.length}</strong> of {contracts.length}</div>
       </div>
 
-      {isError && <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}><div style={{ fontSize: 36, marginBottom: 12 }}>??</div><div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load</div><button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button></div>}
+      {isError && <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}><div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div><div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load</div><button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button></div>}
       {isLoading && <div style={CARD}>{Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ padding: '16px 20px', borderBottom: i < 3 ? `1px solid ${th.divider}` : 'none' }}><Skeleton active paragraph={{ rows: 1 }} /></div>)}</div>}
 
       {!isLoading && !isError && filtered.length === 0 && (
@@ -740,10 +740,10 @@ export default function ContractsPage() {
               >
                 <div>
                   <div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#2563eb' }}>{c.contract_number}</div>
-                  {needsSign    && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 700 }}>? Awaiting your signature</div>}
+                  {needsSign    && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 700 }}>✍ Awaiting your signature</div>}
                   {expiringSoon && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 600 }}>? {daysLeft}d left</div>}
-                  {overdue && c.status === 'ACTIVE' && <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>? Overdue</div>}
-                  {c.auto_renew && <div style={{ fontSize: 10, color: '#059669' }}>? Auto-renew</div>}
+                  {overdue && c.status === 'ACTIVE' && <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>⚠ Overdue</div>}
+                  {c.auto_renew && <div style={{ fontSize: 10, color: '#059669' }}>↻ Auto-renew</div>}
                 </div>
                 <div style={{ fontSize: 12, color: th.text }}>{formatDate(c.start_date)}</div>
                 <div style={{ fontSize: 12, color: expiringSoon ? '#d97706' : overdue ? '#dc2626' : '#374151', fontWeight: expiringSoon || overdue ? 600 : 400 }}>{formatDate(c.end_date)}</div>

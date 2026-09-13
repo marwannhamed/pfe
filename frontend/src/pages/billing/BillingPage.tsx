@@ -90,8 +90,12 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
   const { card: CARD, input: INPUT, t: th } = usePageTheme();
   const LABEL: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: th.textSub, display: 'block', marginBottom: 5 };
   const qc = useQueryClient();
-  const today      = new Date().toISOString().split('T')[0];
-  const dueDefault = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+  // Computed once per mount: these only seed the form below, and calling
+  // Date.now() on every render makes the value drift under the React Compiler.
+  const [[today, dueDefault]] = useState(() => [
+    new Date().toISOString().split('T')[0],
+    new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+  ]);
 
   const [form, setForm] = useState({ contract_id: '', type: 'MONTHLY_RENT', issue_date: today, due_date: dueDefault, description: '', currency: DEFAULT_CURRENCY, amount: '', tax_rate: '0' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -180,7 +184,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Contract */}
           <div style={{ border: '2px solid #2563eb', borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>?? Source Contract</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>📄 Source Contract</div>
             <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c: any) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
             {errors.contract_id && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.contract_id}</div>}
             {selectedContract && (
@@ -579,7 +583,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
               <div style={{ fontSize: 28, fontWeight: 900, color: th.text }}>{formatAmt(invoice.total_amount, invoice.currency)}</div>
               {overdueBg && <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, marginTop: 4 }}>⚠ OVERDUE — due {formatDate(invoice.due_date)}</div>}
             </div>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: sm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>??</div>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: sm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🧾</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 20 }}>
             {rows.map(([k, v]) => (
@@ -593,7 +597,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
           </div>
           {!canManage && awaitingConfirm && (
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>?</span><span>Your payment was submitted and is awaiting confirmation from finance.</span>
+              <span>⏳</span><span>Your payment was submitted and is awaiting confirmation from finance.</span>
             </div>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
@@ -816,7 +820,7 @@ export default function BillingPage() {
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
           <WarningOutlined style={{ color: '#dc2626', fontSize: 18 }} />
           <span style={{ fontWeight: 600, color: '#b91c1c', fontSize: 14 }}>{overdueCount} overdue invoice{overdueCount > 1 ? 's' : ''} require immediate attention.</span>
-          <button onClick={() => setStatus('OVERDUE')} style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 7, background: '#dc2626', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View Overdue ?</button>
+          <button onClick={() => setStatus('OVERDUE')} style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 7, background: '#dc2626', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View Overdue →</button>
         </div>
       )}
 
@@ -878,7 +882,7 @@ export default function BillingPage() {
                           >
                             <div>
                               <div onClick={() => setDetailInvoice(inv)} style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#2563eb', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }} title="View details">{inv.invoice_number}</div>
-                              {overdueBg && <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>? OVERDUE</div>}
+                              {overdueBg && <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>⚠ OVERDUE</div>}
                             </div>
                             <div style={{ fontSize: 11, color: th.textSub, background: th.tableHead, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>{inv.type?.replace(/_/g,' ').toLowerCase()}</div>
                             <div style={{ fontSize: 12, color: th.text }}>{formatDate(inv.issue_date)}</div>

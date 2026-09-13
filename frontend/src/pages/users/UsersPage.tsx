@@ -404,7 +404,7 @@ export default function UsersPage() {
       {/* -- Error -- */}
       {isError && (
         <div style={{ ...CARD, padding: '40px', textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>??</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
           <div style={{ fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load users</div>
           <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
         </div>

@@ -1,23 +1,19 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { usePageTheme } from '../hooks/usePageTheme';
 
-type ThemedPageContext = ReturnType<typeof usePageTheme>;
-
-const ctx: { current: ThemedPageContext | null } = { current: null };
-
-/** Read theme from nearest ThemedPage wrapper (for modals defined in the same file). */
-export function useThemedPage(): ThemedPageContext {
-  const hook = usePageTheme();
-  return ctx.current ?? hook;
-}
-
 /**
  * Wraps admin/portal list pages so cards, text, and tables follow dark/light mode.
  * Usage: replace outer `<motionless style={{ padding: 24, background: '#f8fafc'...}}>` with `<ThemedPage>`.
+ *
+ * This file previously also exported useThemedPage/useThemedCard, which read the
+ * theme from a module-level `{ current }` box that ThemedPage assigned to during
+ * render. That made "the nearest wrapper" really mean "whichever ThemedPage
+ * rendered last", and writing to module scope during render is not safe under
+ * concurrent rendering. Nothing imported either hook, so both are gone; if the
+ * need returns, use a React context rather than the box.
  */
 export default function ThemedPage({ children }: { children: ReactNode }) {
   const theme = usePageTheme();
-  ctx.current = theme;
 
   const wrap: CSSProperties = {
     padding: 24,
@@ -29,9 +25,4 @@ export default function ThemedPage({ children }: { children: ReactNode }) {
   };
 
   return <div className="lm-themed-page" style={wrap}>{children}</div>;
-}
-
-/** Card style matching existing pages (use instead of module-level CARD). */
-export function useThemedCard(): CSSProperties {
-  return useThemedPage().card;
 }

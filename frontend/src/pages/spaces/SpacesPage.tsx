@@ -377,7 +377,7 @@ export default function SpacesPage() {
 
           {isError && (
             <div style={{ ...CARD, padding: '32px', textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>??</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: th.text, marginBottom: 8 }}>Failed to load spaces</div>
               <button onClick={() => refetch()} style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Try Again</button>
             </div>
