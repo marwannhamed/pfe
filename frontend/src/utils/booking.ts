@@ -17,6 +17,7 @@ export function mapBooking(raw: Record<string, unknown>): Booking {
 
 export function mapBookings(raw: unknown): Booking[] {
   if (!raw) return [];
-  const list = Array.isArray(raw) ? raw : Array.isArray((raw as any)?.data) ? (raw as any).data : [];
+  const wrapped = (raw as { data?: unknown }).data;
+  const list = Array.isArray(raw) ? raw : Array.isArray(wrapped) ? wrapped : [];
   return list.map((b) => mapBooking(b as Record<string, unknown>));
 }

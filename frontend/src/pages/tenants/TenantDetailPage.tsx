@@ -392,8 +392,7 @@ export default function TenantDetailPage() {
                     <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No bookings yet.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {bookings.map((b: unknown) => {
-                        const booking = b as any;
+                      {bookings.map((booking) => {
                         return (
                         <div key={booking.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
                           <div style={{ width: 36, height: 36, borderRadius: 9, background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

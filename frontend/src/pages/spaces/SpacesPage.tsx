@@ -475,7 +475,6 @@ export default function SpacesPage() {
 function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void }) {
   const { t: th } = usePageTheme();
   const qc = useQueryClient();
-  const s = space as any;
   const [form, setForm] = useState({
     name: space.name,
     code: space.code,
@@ -485,22 +484,22 @@ function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void 
     price_per_month: space.price_per_month,
     currency: space.currency,
     status: space.status,
-    description: s.description ?? '',
+    description: space.description ?? '',
     featuresText: (space.features ?? []).map((f: { name?: string; feature_name?: string }) => f.name ?? f.feature_name ?? '').filter(Boolean).join('\n'),
     is_listed: space.is_listed ?? false,
-    is_published: s.is_published ?? false,
-    address: s.address ?? '',
-    city: s.city ?? '',
-    state: s.state ?? '',
-    zip: s.zip ?? '',
-    country: s.country ?? '',
-    map_lat: s.map_lat != null ? String(s.map_lat) : '',
-    map_lng: s.map_lng != null ? String(s.map_lng) : '',
-    transportation_notes: s.transportation_notes ?? '',
+    is_published: space.is_published ?? false,
+    address: space.address ?? '',
+    city: space.city ?? '',
+    state: space.state ?? '',
+    zip: space.zip ?? '',
+    country: space.country ?? '',
+    map_lat: space.map_lat != null ? String(space.map_lat) : '',
+    map_lng: space.map_lng != null ? String(space.map_lng) : '',
+    transportation_notes: space.transportation_notes ?? '',
   });
   const [media, setMedia] = useState<SpaceMediaValues>({
     photoFiles: [],
-    virtual_tour_url: s.virtual_tour_url ?? '',
+    virtual_tour_url: space.virtual_tour_url ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const setF = (k: string, v: string | boolean) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
@@ -653,8 +652,8 @@ function EditSpaceModal({ space, onClose }: { space: Space; onClose: () => void 
           </div>
 
           <SpaceMediaFields values={media} onChange={(patch) => setMedia((p) => ({ ...p, ...patch }))} />
-          {s.photos?.length > 0 && (
-            <p style={{ margin: 0, fontSize: 12, color: th.textSub }}>{s.photos.length} existing photo(s) on this listing.</p>
+          {space.photos?.length > 0 && (
+            <p style={{ margin: 0, fontSize: 12, color: th.textSub }}>{space.photos.length} existing photo(s) on this listing.</p>
           )}
 
           <SpaceLocationFields

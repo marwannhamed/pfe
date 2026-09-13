@@ -119,6 +119,8 @@ export default function AddonServicesPage() {
     return { total: services.length, active, inactive: services.length - active };
   }, [services]);
 
+  type AddOnRow = { unit_price?: number | string; line_total: number; quantity?: number };
+
   const bookingAddOns = useMemo(() => bookings.flatMap((booking) => {
     const addOns = Array.isArray(booking?.addOns) ? booking.addOns : [];
     return addOns.map((addOn) => ({
@@ -210,13 +212,13 @@ export default function AddonServicesPage() {
       title: 'Unit price',
       key: 'unit_price',
       align: 'right' as const,
-      render: (_: unknown, r: any) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
     },
     {
       title: 'Total',
       key: 'line_total',
       align: 'right' as const,
-      render: (_: unknown, r: any) => (
+      render: (_: unknown, r: AddOnRow) => (
         <span style={{ fontWeight: 700, color: th.text }}>${Number(r.line_total ?? 0).toFixed(2)}</span>
       ),
     },

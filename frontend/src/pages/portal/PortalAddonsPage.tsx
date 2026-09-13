@@ -63,6 +63,8 @@ export default function PortalAddonsPage() {
 
   useEffect(() => { load(); }, []);
 
+  type AddOnRow = { unit_price?: number | string; line_total: number; quantity?: number };
+
   const myBookingAddons = useMemo(() => bookings.flatMap((booking) => {
     const addOns = Array.isArray(booking.addOns) ? booking.addOns : [];
     return addOns.map((addOn) => ({
@@ -83,12 +85,12 @@ export default function PortalAddonsPage() {
     {
       title: 'Unit price',
       key: 'unit_price',
-      render: (_: unknown, r: any) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
     },
     {
       title: 'Line total',
       key: 'line_total',
-      render: (_: unknown, r: any) => `$${Number(r.line_total ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => `$${Number(r.line_total ?? 0).toFixed(2)}`,
     },
   ];
 

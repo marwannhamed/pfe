@@ -135,7 +135,7 @@ export default function FinanceDashboard() {
   const payments  = toArray<Payment>(paymentsRaw);
   const contracts = toArray<LeaseContract>(contractsRaw);
   const tenants   = toArray<Tenant>(tenantsRaw);
-  const summary   = summaryRaw as any;
+  const summary   = summaryRaw;
 
   const totalRevenue    = Number(summary?.total_paid     ?? 0);
   const totalPending    = Number(summary?.total_pending  ?? 0);
