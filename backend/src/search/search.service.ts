@@ -373,7 +373,9 @@ export class SearchService {
 
     if (conditions.search) {
       where.OR = [
-        { contract_number: { contains: conditions.search, mode: 'insensitive' } },
+        {
+          contract_number: { contains: conditions.search, mode: 'insensitive' },
+        },
       ];
     }
 
@@ -600,7 +602,7 @@ export class SearchService {
     const highlights: string[] = [];
     const searchLower = search.toLowerCase();
 
-    Object.entries(item).forEach(([key, value]) => {
+    Object.entries(item).forEach(([, value]) => {
       const valueStr = String(value);
       if (valueStr.toLowerCase().includes(searchLower)) {
         const start = Math.max(
@@ -653,26 +655,34 @@ export class SearchService {
     // the names of other organisations and their spaces.
     const tenantId = this.tenantScopeFor(user, undefined);
 
+    // `type` was accepted and then ignored, so asking for space suggestions
+    // also returned organisation names.
+    const wants = (kind: string) => !type || type === 'all' || type === kind;
+
     const [spaces, tenants] = await Promise.all([
-      (this.prisma as any).space.findMany({
-        where: {
-          name: { contains: query, mode: 'insensitive' },
-          ...(tenantId && { floor: { building: { tenant_id: tenantId } } }),
-        },
-        select: { name: true },
-        take: 5,
-      }),
-      (this.prisma as any).tenant.findMany({
-        where: {
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { contact_email: { contains: query, mode: 'insensitive' } },
-          ],
-          ...(tenantId && { id: tenantId }),
-        },
-        select: { name: true },
-        take: 5,
-      }),
+      wants('spaces')
+        ? (this.prisma as any).space.findMany({
+            where: {
+              name: { contains: query, mode: 'insensitive' },
+              ...(tenantId && { floor: { building: { tenant_id: tenantId } } }),
+            },
+            select: { name: true },
+            take: 5,
+          })
+        : [],
+      wants('tenants')
+        ? (this.prisma as any).tenant.findMany({
+            where: {
+              OR: [
+                { name: { contains: query, mode: 'insensitive' } },
+                { contact_email: { contains: query, mode: 'insensitive' } },
+              ],
+              ...(tenantId && { id: tenantId }),
+            },
+            select: { name: true },
+            take: 5,
+          })
+        : [],
     ]);
 
     spaces.forEach((space) => suggestions.push(space.name));

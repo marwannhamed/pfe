@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { LoggingService } from '../logging/logging.service';
 
 export interface PerformanceMetrics {
@@ -37,12 +37,10 @@ export class PerformanceService implements OnModuleInit {
     fn: () => Promise<T>,
     metadata?: Record<string, any>,
   ): Promise<T> {
-    const startTime = Date.now();
     const startHrTime = process.hrtime.bigint();
 
     try {
       const result = await fn();
-      const endTime = Date.now();
       const endHrTime = process.hrtime.bigint();
       const duration = Number(endHrTime - startHrTime) / 1000000; // Convert to milliseconds
 
@@ -64,7 +62,6 @@ export class PerformanceService implements OnModuleInit {
 
       return result;
     } catch (error) {
-      const endTime = Date.now();
       const endHrTime = process.hrtime.bigint();
       const duration = Number(endHrTime - startHrTime) / 1000000;
 
@@ -91,12 +88,10 @@ export class PerformanceService implements OnModuleInit {
     fn: () => T,
     metadata?: Record<string, any>,
   ): T {
-    const startTime = Date.now();
     const startHrTime = process.hrtime.bigint();
 
     try {
       const result = fn();
-      const endTime = Date.now();
       const endHrTime = process.hrtime.bigint();
       const duration = Number(endHrTime - startHrTime) / 1000000;
 
@@ -117,7 +112,6 @@ export class PerformanceService implements OnModuleInit {
 
       return result;
     } catch (error) {
-      const endTime = Date.now();
       const endHrTime = process.hrtime.bigint();
       const duration = Number(endHrTime - startHrTime) / 1000000;
 

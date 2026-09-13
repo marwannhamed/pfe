@@ -25,7 +25,8 @@ function makeService() {
   return { prisma, service: new SearchService(prisma as any) };
 }
 
-const whereOf = (m: { findMany: jest.Mock }) => m.findMany.mock.calls[0][0].where;
+const whereOf = (m: { findMany: jest.Mock }) =>
+  m.findMany.mock.calls[0][0].where;
 
 describe('SearchService — global search cannot cross the tenant boundary', () => {
   it('scopes every entity type for an ordinary user', async () => {
@@ -60,9 +61,7 @@ describe('SearchService — global search cannot cross the tenant boundary', () 
     expect(prisma.leaseContract.findMany).toHaveBeenCalled();
     expect(whereOf(prisma.leaseContract)).toMatchObject({
       tenant_id: 'tenant-a',
-      OR: [
-        { contract_number: { contains: 'ctr-001', mode: 'insensitive' } },
-      ],
+      OR: [{ contract_number: { contains: 'ctr-001', mode: 'insensitive' } }],
     });
   });
 

@@ -1,9 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  NOTIFICATION_CHANNEL,
-  NOTIFICATION_PRIORITY,
-  NOTIFICATION_TYPE,
-} from '../../constants/enums';
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateNotificationDto {

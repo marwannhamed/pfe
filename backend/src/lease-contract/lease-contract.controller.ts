@@ -26,9 +26,7 @@ import { CreateDepositDto, RefundDepositDto } from './dto/create-deposit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { USER_ROLE } from '../constants/enums';
-import type { AuthUser } from '../auth/types/auth-user';
 
 @ApiTags('Lease Contracts')
 @ApiBearerAuth()

@@ -1,9 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CONTRACT_STATUS } from '../../constants/enums';
 import {
   IsBoolean,
   IsDateString,
-  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,

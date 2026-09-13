@@ -12,7 +12,6 @@ import { Roles } from '../auth/roles.decorator';
 import { USER_ROLE } from '../constants/enums';
 import { ResponseDto } from '../utils/response.dto';
 import {
-  EmailDTO,
   BookingEmailDTO,
   InvoiceEmailDTO,
   ContractEmailDTO,

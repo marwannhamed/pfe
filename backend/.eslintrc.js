@@ -21,9 +21,21 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
-    // ~70 pre-existing violations (mostly unused imports and destructured
-    // discards). Kept visible as warnings so new code is flagged, without
-    // failing CI on legacy cruft. Burn down, then promote back to 'error'.
-    '@typescript-eslint/no-unused-vars': 'warn',
+    // Burned down from ~70 and promoted back to 'error', so a genuinely
+    // unused value fails the build. Two of those warnings turned out to be
+    // cross-tenant reads (analytics dashboards and global search computing a
+    // tenant filter they never applied), which is why this is worth keeping
+    // strict. Deliberate discards opt out by name: a leading underscore for
+    // parameters a signature must keep, and rest siblings for the
+    // `const { omitted, ...rest }` idiom.
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
   },
 };

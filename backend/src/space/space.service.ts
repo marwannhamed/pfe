@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
@@ -354,7 +353,7 @@ export class SpaceService {
           )
         : current.slug;
 
-    const updated = await this.prisma.space.update({
+    await this.prisma.space.update({
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),

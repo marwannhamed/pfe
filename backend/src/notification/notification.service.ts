@@ -1,12 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import {
-  NOTIFICATION_CHANNEL,
-  NOTIFICATION_PRIORITY,
-  NOTIFICATION_TYPE,
-  USER_ROLE,
-} from '../constants/enums';
+import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 
 @Injectable()

@@ -1,7 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CONTRACT_ITEM_TYPE } from '../../constants/enums';
 import {
-  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,

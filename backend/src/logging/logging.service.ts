@@ -253,7 +253,7 @@ export class LoggingService {
         size: stats.size,
         lastModified: stats.mtime,
       };
-    } catch (error) {
+    } catch {
       return { size: 0, lastModified: new Date() };
     }
   }

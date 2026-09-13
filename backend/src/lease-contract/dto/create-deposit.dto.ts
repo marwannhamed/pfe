@@ -1,8 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DEPOSIT_REFUND_STATUS } from '../../constants/enums';
 import {
   IsDateString,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,

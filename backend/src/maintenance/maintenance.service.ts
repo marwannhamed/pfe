@@ -621,7 +621,7 @@ export class MaintenanceService {
   private async sendStatusUpdateNotifications(
     ticket: any,
     newStatus: string,
-    updatedByUserId?: string,
+    _updatedByUserId?: string,
   ) {
     // Basic notification implementation
     console.log(`Ticket ${ticket.id} status updated to ${newStatus}`);

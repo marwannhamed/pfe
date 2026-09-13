@@ -34,12 +34,10 @@ export class PerformanceInterceptor implements NestInterceptor {
       timestamp: new Date().toISOString(),
     };
 
-    const startTime = Date.now();
     const startHrTime = process.hrtime.bigint();
 
     return next.handle().pipe(
       tap(() => {
-        const endTime = Date.now();
         const endHrTime = process.hrtime.bigint();
         const duration = Number(endHrTime - startHrTime) / 1000000; // Convert to milliseconds
 
@@ -61,7 +59,6 @@ export class PerformanceInterceptor implements NestInterceptor {
         }
       }),
       catchError((error) => {
-        const endTime = Date.now();
         const endHrTime = process.hrtime.bigint();
         const duration = Number(endHrTime - startHrTime) / 1000000;
 

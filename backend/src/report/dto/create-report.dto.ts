@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { REPORT_FORMAT, REPORT_TYPE } from '../../constants/enums';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateReportDto {
   @ApiProperty({ example: 'uuid-du-user' })

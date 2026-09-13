@@ -1,14 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
-import { TENANT_STATUS } from '../../constants/enums';
 
 export class CreateTenantDto {
   @ApiProperty({ example: 'Acme Corp' })

@@ -1,9 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BOOKING_STATUS } from '../../constants/enums';
 import {
   IsArray,
   IsDateString,
-  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,

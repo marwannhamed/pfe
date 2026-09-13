@@ -445,7 +445,7 @@ export class AuthService {
       });
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -535,7 +535,7 @@ export class AuthService {
           throw verifyError;
         }
       }
-    } catch (error) {
+    } catch {
       return false;
     }
   }

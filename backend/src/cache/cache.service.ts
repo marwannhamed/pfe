@@ -139,18 +139,12 @@ export class CacheService {
   // Cache statistics
   async getCacheStats(): Promise<{ keys: number; memory: string }> {
     try {
-      let totalKeys = 0;
-      const stores = this.cacheManager.stores;
-
-      for (const store of stores) {
-        // Note: Getting keys from individual stores would require store-specific implementation
-        // This is a simplified implementation
-        totalKeys += 0; // Would need actual key counting logic
-      }
-
+      // Counting keys means reaching into each store's own API, which differs
+      // per backend (memory vs redis); the loop that used to sit here added 0
+      // per store and reported nothing.
       return {
-        keys: totalKeys,
-        memory: 'Not available', // Would need cache manager specific implementation
+        keys: 0,
+        memory: 'Not available',
       };
     } catch (error) {
       this.logger.error('Error getting cache stats:', error);

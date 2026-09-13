@@ -602,7 +602,7 @@ export class BookingService {
   }
 
   // ─── APPROVE ─────────────────────────────────────────────────
-  async approve(user: AuthUser, id: string, approvedByUserId: string) {
+  async approve(user: AuthUser, id: string, _approvedByUserId: string) {
     if (
       ![
         USER_ROLE.SUPER_ADMIN,

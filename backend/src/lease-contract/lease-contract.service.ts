@@ -287,7 +287,7 @@ export class LeaseContractService {
     return { id: uuidv4(), contract_id: contractId, ...dto };
   }
 
-  async refundDeposit(contractId: string, dto: RefundDepositDto) {
+  async refundDeposit(contractId: string, _dto: RefundDepositDto) {
     await this.findOne(contractId);
     this.logger.warn('refundDeposit: Deposit model does not exist in schema');
     return { refunded: true };

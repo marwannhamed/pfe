@@ -147,7 +147,7 @@ export class AddonServiceService {
   }
 
   async update(id: string, dto: UpdateAddonServiceDto) {
-    const existing = await this.findOne(id);
+    await this.findOne(id);
 
     if (dto.tenant_id) {
       const tenant = await this.prisma.tenant.findUnique({

@@ -40,7 +40,7 @@ export class NotificationsGateway
     private readonly prisma: PrismaService,
   ) {}
 
-  afterInit(server: Server) {
+  afterInit(_server: Server) {
     this.logger.log('WebSocket Gateway initialized');
   }
 
@@ -293,7 +293,6 @@ export class NotificationsGateway
     }
 
     if (room.startsWith('role:')) {
-      const requiredRole = room.replace('role:', '');
       // Super admins can access any role room
       if (user.role === 'SUPER_ADMIN') return true;
       // Users can access their own role room
