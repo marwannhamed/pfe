@@ -15,7 +15,7 @@ import {
 import { promotionCodeApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
-import type { PromotionCode } from '../../types';
+import type { PromotionCode, PromotionCodeStats } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -27,7 +27,7 @@ export default function PromotionCodesPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCode, setEditingCode] = useState<PromotionCode | null>(null);
   const [usageStatsModal, setUsageStatsModal] = useState(false);
-  const [selectedCodeStats, setSelectedCodeStats] = useState<any>(null);
+  const [selectedCodeStats, setSelectedCodeStats] = useState<PromotionCodeStats | null>(null);
   const [form] = Form.useForm();
 
   const isBackOffice = ['SUPER_ADMIN', 'MANAGER', 'FINANCE'].includes(user?.role || '');

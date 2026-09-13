@@ -67,7 +67,7 @@ function getDuration(startDate: string, startTime: string, endDate: string, endT
 
 // ─── Inline Booking Panel ─────────────────────────────────────────────────────
 function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
-  space: any;
+  space: Space;
   tenantId: string;
   userId: string;
   onClose: () => void;
@@ -535,7 +535,7 @@ export default function SpaceDetailPage() {
                           ['Currency', space.currency],
                           ['Approval', space.requires_approval ? 'Required' : 'Not required'],
                           ['Floor',    space.floor ? `Floor ${space.floor.floor_number} — ${space.floor.name}` : 'N/A'],
-                          ['Building', (space.floor as any)?.building?.name ?? 'N/A'],
+                          ['Building', space.floor?.building?.name ?? 'N/A'],
                           ['Created',  new Date(space.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
                         ] as [string, string][]).map(([k, v]) => (
                           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f8fafc', fontSize: 13 }}>

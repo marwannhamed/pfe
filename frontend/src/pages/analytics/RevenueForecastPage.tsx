@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { errorMessage } from '../../utils/errors';
+import type { RevenueForecast, Tenant } from '../../types';
 
 const { Title, Paragraph } = Typography;
 
@@ -16,7 +17,7 @@ export default function RevenueForecastPage() {
   const [tenants, setTenants] = useState<{ id: string; name: string }[]>([]);
   const [tenantId, setTenantId] = useState<string | undefined>();
   const [horizon, setHorizon] = useState(12);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<RevenueForecast | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isSuper = user?.role === 'SUPER_ADMIN';
@@ -27,7 +28,7 @@ export default function RevenueForecastPage() {
       tenantApi
         .getAll()
         .then((r) => {
-          const list = Array.isArray(r.data) ? r.data : (r.data as any)?.data ?? [];
+          const list = Array.isArray(r.data) ? r.data : (r.data as { data?: Tenant[] })?.data ?? [];
           setTenants(list.map((t) => ({ id: t.id, name: t.name })));
         })
         .catch(() => setTenants([]));
@@ -41,7 +42,7 @@ export default function RevenueForecastPage() {
         tenantId: tenantId || undefined,
         horizonMonths: horizon,
       });
-      setData((res as { data?: unknown })?.data ?? res);
+      setData(((res as { data?: RevenueForecast })?.data ?? res) as RevenueForecast);
     } catch (e) {
       message.error(errorMessage(e, 'Failed to load forecast'));
     } finally {

@@ -8,10 +8,11 @@ import {
 } from '@ant-design/icons';
 import { authApi } from '../../api/services';
 import { asApiError } from '../../utils/errors';
+import type { FormInstance } from 'antd';
 
 const { Title, Text } = Typography;
 
-function CompanyStep({ form }: { form: any }) {
+function CompanyStep({ form }: { form: FormInstance }) {
   return (
     <>
       <Form.Item

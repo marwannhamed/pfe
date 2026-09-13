@@ -69,7 +69,7 @@ export default function AddonServicesPage() {
   const [services, setServices] = useState<AddOnService[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState<any>(null);
+  const [editingService, setEditingService] = useState<AddOnService | null>(null);
   const [serviceForm] = Form.useForm();
 
   const loadData = useCallback(async () => {

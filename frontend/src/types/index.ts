@@ -728,3 +728,33 @@ export interface TenantApplication {
   applicant_tenant?:     Tenant;
   space?:                Space;
 }
+
+/** GET /analytics/revenue-forecast */
+export interface RevenueForecast {
+  generatedAt: string;
+  horizonMonths: number;
+  summary: {
+    activeMonthlyRecurring: number;
+    expiringNext90DaysContracts: number;
+  };
+  monthly: Array<{ month: string; activeMrr: number; expiringMrr: number }>;
+  expiringSoon: Array<{
+    id: string;
+    contract_number: string;
+    end_date: string;
+    monthly_rent: number;
+    status: ContractStatus;
+  }>;
+}
+
+/**
+ * Usage figures for a promotion code. There is no endpoint behind this yet —
+ * PromotionCodesPage fills it with a placeholder — so the fields are the ones
+ * that screen renders.
+ */
+export interface PromotionCodeStats {
+  totalUses: number;
+  totalSavings: number;
+  averageSavings?: number;
+  lastUsed?: string | null;
+}

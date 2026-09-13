@@ -1,5 +1,6 @@
 ﻿import axios, { AxiosError } from 'axios';
-import type { User } from '../types';
+import type { InternalAxiosRequestConfig } from 'axios';
+import type { ApiError, User } from '../types';
 import { getIsRestoringSession, getRefreshInFlight, setRefreshInFlight } from '../store/authSession';
 import {
   clearAuthStorage,
@@ -85,7 +86,8 @@ api.interceptors.response.use(
     return res;
   },
   async (error: AxiosError) => {
-    const req = error.config as any;
+    // The retry flag is ours, added to the request config we re-issue.
+    const req = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
     if (error.response?.status === 401 && req && !req._retry) {
       req._retry = true;
@@ -108,13 +110,18 @@ api.interceptors.response.use(
         message = `Cannot reach the API. Start the backend: cd backend && npm run start:dev`;
       }
     }
-    const data = error.response?.data as any;
+    // The body is normally ResponseDto, but a proxy can answer with plain text.
+    const data: unknown = error.response?.data;
     if (data) {
-      if (typeof data === 'string' && data.length < 300) message = data;
-      else if (data?.message) message = Array.isArray(data.message) ? data.message[0] : String(data.message);
-      else if (data?.error) message = String(data.error);
+      if (typeof data === 'string' && data.length < 300) {
+        message = data;
+      } else {
+        const body = data as { message?: string | string[]; error?: string };
+        if (body.message) message = Array.isArray(body.message) ? body.message[0] : String(body.message);
+        else if (body.error) message = String(body.error);
+      }
     }
-    (error as any).userMessage = message;
+    (error as ApiError).userMessage = message;
 
     return Promise.reject(error);
   },
