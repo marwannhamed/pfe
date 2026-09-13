@@ -16,7 +16,7 @@ import {
 import { maintenanceApi, userApi } from '../../api/services';
 
 function getAssignee(ticket: any) {
-  return ticket?.assignedTo ?? ticket?.assignee ?? null;
+  return ticket?.assignedTo ?? null;
 }
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -224,14 +224,14 @@ export default function MaintenanceDashboard() {
   const workload = useMemo(() => {
     const w: Record<string, { name: string; Open: number; InProgress: number; Resolved: number }> = {};
     tickets.forEach(t => {
-      if (!t.assigned_to_user_id) return;
-      if (!w[t.assigned_to_user_id]) {
-        const u = users.find(u => u.id === t.assigned_to_user_id);
-        w[t.assigned_to_user_id] = { name: u ? `${u.first_name} ${u.last_name}` : 'Unknown', Open: 0, InProgress: 0, Resolved: 0 };
+      if (!t.assigned_to) return;
+      if (!w[t.assigned_to]) {
+        const u = users.find(u => u.id === t.assigned_to);
+        w[t.assigned_to] = { name: u ? `${u.first_name} ${u.last_name}` : 'Unknown', Open: 0, InProgress: 0, Resolved: 0 };
       }
-      if (t.status === 'OPEN' || t.status === 'ASSIGNED') w[t.assigned_to_user_id].Open++;
-      else if (t.status === 'IN_PROGRESS') w[t.assigned_to_user_id].InProgress++;
-      else if (['RESOLVED','CLOSED'].includes(t.status)) w[t.assigned_to_user_id].Resolved++;
+      if (t.status === 'OPEN' || t.status === 'ASSIGNED') w[t.assigned_to].Open++;
+      else if (t.status === 'IN_PROGRESS') w[t.assigned_to].InProgress++;
+      else if (['RESOLVED','CLOSED'].includes(t.status)) w[t.assigned_to].Resolved++;
     });
     return Object.values(w).sort((a, b) => (b.Open + b.InProgress) - (a.Open + a.InProgress)).slice(0, 6);
   }, [tickets, users]);

@@ -305,7 +305,7 @@ export interface MaintenanceTicket {
   id:                   string;
   space_id:             string;
   created_by_user_id:   string;
-  assigned_to_user_id?: string;
+  assigned_to?:         string;
   ticket_number:        string;
   title:                string;
   category:             TicketCategory;

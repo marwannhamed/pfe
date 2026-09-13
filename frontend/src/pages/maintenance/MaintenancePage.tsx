@@ -49,7 +49,7 @@ function formatDate(d: string) {
 
 function getAssignee(ticket: MaintenanceTicket | null | undefined) {
   if (!ticket) return null;
-  return (ticket as any).assignedTo ?? (ticket as any).assignee ?? null;
+  return ticket.assignedTo ?? null;
 }
 
 function canAcceptTicket(ticket: MaintenanceTicket, isMaintenance: boolean) {
@@ -74,8 +74,7 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
     queryKey: ['maintenance-accessible-spaces'],
     queryFn:  async () => {
       const res = await maintenanceApi.getAccessibleSpaces();
-      const list = Array.isArray(res) ? res : (res as { data?: unknown[] })?.data;
-      return Array.isArray(list) ? list : [];
+      return Array.isArray(res.data) ? res.data : [];
     },
     enabled:  open,
   });
@@ -122,7 +121,7 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
             showSearch
             loading={spacesLoading}
             placeholder={
-              (spaces as any[]).length === 0 && !spacesLoading
+              spaces.length === 0 && !spacesLoading
                 ? 'Book a space first — only your booked spaces appear here'
                 : 'Select the affected space...'
             }
@@ -134,7 +133,7 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
                   : 'No spaces — create a booking for a space first'
             }
             filterOption={(input, opt) => (opt?.label as string ?? '').toLowerCase().includes(input.toLowerCase())}
-            options={(spaces as any[]).map(s => ({ value: s.id, label: `${s.name} (${s.slug ?? s.type})` }))}
+            options={spaces.map(s => ({ value: s.id, label: `${s.name} (${s.slug ?? s.type})` }))}
           />
         </Form.Item>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -254,8 +253,8 @@ function TicketDetailModal({
           ['Ticket #',    ticket.ticket_number],
           ['Title',       ticket.title],
           ['Category',    CATEGORY_LABELS[ticket.category] ?? ticket.category],
-          ['Space',       (ticket as any).space?.name ?? ticket.space_id.substring(0, 8)],
-          ['Created by',  (ticket as any).createdBy ? `${(ticket as any).createdBy.first_name} ${(ticket as any).createdBy.last_name}` : '—'],
+          ['Space',       ticket.space?.name ?? ticket.space_id.substring(0, 8)],
+          ['Created by',  ticket.createdBy ? `${ticket.createdBy.first_name} ${ticket.createdBy.last_name}` : '—'],
           ['Assigned to', assignee ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email : 'Unassigned — waiting for a technician'],
           ['Reported',    formatDate(ticket.reported_at)],
           ['Resolved',    ticket.resolved_at ? formatDate(ticket.resolved_at) : '—'],
@@ -284,7 +283,7 @@ function TicketDetailModal({
         )}
 
         {/* Assign to maintenance user (managers) */}
-        {canManage && !isMaintenance && ticket.status === 'OPEN' && (maintenanceUsers as any[]).length > 0 && (
+        {canManage && !isMaintenance && ticket.status === 'OPEN' && maintenanceUsers.length > 0 && (
           <div style={{ marginTop: 16, padding: '12px', background: th.tableHead, borderRadius: 8, border: `1px solid ${th.cardBorder}` }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: th.text, marginBottom: 8 }}>Assign to Technician</div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -294,7 +293,7 @@ function TicketDetailModal({
                 style={{ flex: 1, padding: '7px 10px', border: `1px solid ${th.cardBorder}`, borderRadius: 7, fontSize: 13, outline: 'none' }}
               >
                 <option value="">Select technician...</option>
-                {(maintenanceUsers as any[]).map(u => (
+                {maintenanceUsers.map(u => (
                   <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
                 ))}
               </select>
@@ -497,7 +496,7 @@ export default function MaintenancePage() {
           options={[{ value: 'all', label: 'All Categories' }, ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }))]}
         />
         <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}>
-          <strong style={{ color: th.text }}>{isLoading ? '—' : filtered.length}</strong> of {(tickets as any[]).length}
+          <strong style={{ color: th.text }}>{isLoading ? '—' : filtered.length}</strong> of {tickets.length}
         </div>
       </div>
 
@@ -562,7 +561,7 @@ export default function MaintenancePage() {
 
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: th.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
-                  <div style={{ fontSize: 11, color: th.textMuted }}>{(t as any).space?.name ?? 'Unknown space'}</div>
+                  <div style={{ fontSize: 11, color: th.textMuted }}>{t.space?.name ?? 'Unknown space'}</div>
                 </div>
 
                 <span style={{ fontSize: 11, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: 6 }}>
@@ -619,7 +618,7 @@ export default function MaintenancePage() {
           })}
 
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
-            <span>Showing {filtered.length} of {(tickets as any[]).length} tickets</span>
+            <span>Showing {filtered.length} of {tickets.length} tickets</span>
             <span>{stats?.open ?? 0} open · {stats?.inProgress ?? 0} in progress</span>
           </div>
         </div>

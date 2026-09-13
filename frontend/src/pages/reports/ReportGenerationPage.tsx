@@ -325,7 +325,7 @@ export default function ReportGenerationPage() {
       key: 'actions',
       render: (record) => (
         <Space>
-          {(record as any).status === 'COMPLETED' && (
+          {record.status === 'COMPLETED' && (
             <Tooltip title="Download">
               <Button
                 type="text"
@@ -351,8 +351,8 @@ export default function ReportGenerationPage() {
     },
   ];
 
-  const completedReports = reports.filter(r => (r as any).status === 'COMPLETED').length;
-  const processingReports = reports.filter(r => (r as any).status === 'PROCESSING').length;
+  const completedReports = reports.filter(r => r.status === 'COMPLETED').length;
+  const processingReports = reports.filter(r => r.status === 'PROCESSING').length;
 
   return (
     <div style={{ padding: 24 }}>
