@@ -61,7 +61,7 @@ function getTypeMeta(type: string) {
 
 // ─── Notification Item ────────────────────────────────────────────────────────
 function NotifItem({ notif, onRead, onDelete }: {
-  notif: any;
+  notif: Notification;
   onRead:   (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -196,7 +196,7 @@ export default function NotificationsPage() {
   const total  = notifs.length;
 
   // ── Group by date ──────────────────────────────────────────────────────────
-  const grouped = notifs.reduce((acc: Record<string, any[]>, n) => {
+  const grouped = notifs.reduce((acc: Record<string, Notification[]>, n) => {
     const d   = new Date(n.created_at);
     const now = new Date();
     let key: string;

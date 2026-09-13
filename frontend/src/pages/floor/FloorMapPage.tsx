@@ -13,6 +13,7 @@ import PageShell from '../../components/ui/PageShell';
 import { api } from '../../api/client';
 import type { ApiError } from '../../types';
 import { asApiError } from '../../utils/errors';
+import type { Building, Floor } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface MapSpace {
@@ -223,7 +224,7 @@ export default function FloorMapPage() {
 
   const isAdmin  = !!(user?.role && ['SUPER_ADMIN', 'MANAGER'].includes(user.role));
   const isTenant = !!(user?.role && ['TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user.role));
-  const tenantId = (user as any)?.tenant_id ?? '';
+  const tenantId = user?.tenant_id ?? '';
   const userId   = user?.id ?? '';
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -252,15 +253,15 @@ export default function FloorMapPage() {
   // while the query is still loading, which made the effects below re-run each
   // pass and setPositions churn.
   const buildings = useMemo(
-    () => (Array.isArray(buildingsRaw) ? buildingsRaw : (buildingsRaw as any)?.data ?? []),
+    () => (Array.isArray(buildingsRaw) ? buildingsRaw : (buildingsRaw as { data?: Building[] })?.data ?? []),
     [buildingsRaw],
   );
   const floors = useMemo(
-    () => (Array.isArray(floorsRaw) ? floorsRaw : (floorsRaw as any)?.data ?? []),
+    () => (Array.isArray(floorsRaw) ? floorsRaw : (floorsRaw as { data?: Floor[] })?.data ?? []),
     [floorsRaw],
   );
   const spaces: MapSpace[] = useMemo(
-    () => (Array.isArray(spacesRaw) ? spacesRaw : (spacesRaw as any)?.data ?? []),
+    () => ((Array.isArray(spacesRaw) ? spacesRaw : (spacesRaw as { data?: unknown[] })?.data ?? []) as MapSpace[]),
     [spacesRaw],
   );
 

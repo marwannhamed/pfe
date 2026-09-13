@@ -189,7 +189,7 @@ export default function ReportsPage() {
   const rangePayments  = payments.filter(p  => inRange(p.payment_date));
 
   // -- KPIs ---------------------------------------------------------------------
-  const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
+  const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p) => s + parseFloat(p.amount || '0'), 0);
   const activeContracts= contracts.filter(c => c.status === 'ACTIVE').length;
   const totalBookings  = rangeBookings.length;
   const confirmedBookings = rangeBookings.filter(b => ['CONFIRMED','CHECKED_IN','COMPLETED'].includes(b.status)).length;

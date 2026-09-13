@@ -17,6 +17,7 @@ import { applicationFormsApi, spaceApi, tenantApplicationsApi } from '../../api/
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { asApiError } from '../../utils/errors';
+import type { TenantApplication } from '../../types';
 
 const { Text, Paragraph } = Typography;
 
@@ -63,7 +64,7 @@ export default function ApplicationsPage() {
   });
   const { data, isLoading, refetch, isError } = useQuery({
     queryKey: ['tenant-applications-pending'],
-    queryFn: () => tenantApplicationsApi.listPending().then((r) => toArray(r.data)),
+    queryFn: () => tenantApplicationsApi.listPending().then((r) => toArray<TenantApplication>(r.data)),
   });
 
   const approve = useMutation({
@@ -220,7 +221,7 @@ export default function ApplicationsPage() {
             {
               title: 'Applicant',
               key: 'app',
-              render: (_: unknown, row: any) => (
+              render: (_: unknown, row: TenantApplication) => (
                 <div>
                   <div style={{ fontWeight: 600 }}>{row.applicant_tenant?.name ?? row.company_name}</div>
                   <Text type="secondary">{row.applicant_tenant?.contact_email ?? row.contact_email}</Text>
@@ -231,14 +232,14 @@ export default function ApplicationsPage() {
               title: 'Status',
               key: 'st',
               width: 120,
-              render: (_: unknown, row: any) => (
+              render: (_: unknown, row: TenantApplication) => (
                 <Tag color="gold">{row.applicant_tenant?.status ?? 'PENDING'}</Tag>
               ),
             },
             {
               title: 'Space',
               key: 'loc',
-              render: (_: unknown, row: any) => (
+              render: (_: unknown, row: TenantApplication) => (
                 <div>
                   {row.space?.name && (
                     <Text type="secondary">
@@ -252,8 +253,8 @@ export default function ApplicationsPage() {
               title: 'Documents',
               key: 'docs',
               width: 200,
-              render: (_: unknown, row: any) => {
-                const docs = row.applicant_tenant?.application_documents as { kind?: string; url?: string }[] | undefined;
+              render: (_: unknown, row: TenantApplication) => {
+                const docs = row.applicant_tenant?.application_documents ?? undefined;
                 if (!docs?.length) return <Text type="secondary">—</Text>;
                 return (
                   <Space orientation="vertical" size={0}>
@@ -270,7 +271,7 @@ export default function ApplicationsPage() {
               title: 'Actions',
               key: 'act',
               width: 220,
-              render: (_: unknown, row: any) => (
+              render: (_: unknown, row: TenantApplication) => (
                 <Space>
                   <Button
                     type="primary"

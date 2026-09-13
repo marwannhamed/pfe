@@ -63,6 +63,8 @@ export interface Tenant {
   max_spaces:        number;
   organization_type?: 'CLIENT' | 'RENTER';
   settings?:         Record<string, unknown>;
+  /** Json column; the typeform flow stores the uploaded files here. */
+  application_documents?: Array<{ kind?: string; url?: string }> | null;
   created_at:        string;
   // relations
   users?:            User[];
@@ -707,4 +709,22 @@ export interface ChartTooltipProps {
     dataKey?: string | number;
     payload?: Record<string, unknown>;
   }>;
+}
+
+/** GET /tenant-applications — a prospective renter's application to a landlord. */
+export interface TenantApplication {
+  id:                    string;
+  landlord_tenant_id:    string;
+  space_id?:             string | null;
+  status:                string;
+  typeform_response_id?: string | null;
+  applicant_tenant_id?:  string | null;
+  contact_email?:        string | null;
+  company_name?:         string | null;
+  created_at:            string;
+  updated_at:            string;
+  // relations
+  landlord_tenant?:      Tenant;
+  applicant_tenant?:     Tenant;
+  space?:                Space;
 }

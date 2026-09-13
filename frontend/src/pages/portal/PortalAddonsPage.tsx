@@ -15,10 +15,10 @@ import type { AddOnService, Booking } from '../../types';
 
 type TabKey = 'catalog' | 'bookings';
 
-const normalizeList = (payload: unknown): any[] => {
+const normalizeList = <T,>(payload: unknown): T[] => {
   if (Array.isArray(payload)) return payload;
   if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)) {
-    return (payload as { data: any[] }).data;
+    return (payload as { data: T[] }).data;
   }
   return [];
 };

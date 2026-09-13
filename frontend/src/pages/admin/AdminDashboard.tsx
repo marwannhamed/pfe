@@ -252,7 +252,7 @@ export default function AdminDashboard() {
   const totalPending    = Number(summary?.total_pending ?? 0);
   const totalInvoiced   = Number(summary?.total_invoiced ?? 0);
   const collectionRate  = totalInvoiced > 0 ? Math.round((totalRevenue / totalInvoiced) * 100) : 0;
-  const completedPays   = payments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
+  const completedPays   = payments.filter(p => p.status === 'COMPLETED').reduce((s: number, p) => s + parseFloat(p.amount || '0'), 0);
 
   const expiringCount = contracts.filter(c => { const d = daysUntil(c.end_date); return c.status === 'ACTIVE' && d <= 90; }).length;
   const criticalCount = contracts.filter(c => { const d = daysUntil(c.end_date); return c.status === 'ACTIVE' && d <= 30; }).length;

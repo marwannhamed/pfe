@@ -12,7 +12,7 @@ import { addonServiceApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
-import type { ApiError } from '../../types';
+import type { AddOnService, ApiError, Booking } from '../../types';
 
 const { TextArea } = Input;
 
@@ -46,10 +46,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 type TabKey = 'catalog' | 'bookings';
 
-const normalizeList = (payload: unknown): any[] => {
+const normalizeList = <T,>(payload: unknown): T[] => {
   if (Array.isArray(payload)) return payload;
   if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)) {
-    return (payload as { data: any[] }).data;
+    return (payload as { data: T[] }).data;
   }
   return [];
 };
@@ -66,8 +66,8 @@ export default function AddonServicesPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('catalog');
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [services, setServices] = useState<AddOnService[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm] = Form.useForm();

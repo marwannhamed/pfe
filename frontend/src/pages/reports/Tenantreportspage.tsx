@@ -9,7 +9,7 @@ import {
 import { ReloadOutlined } from '@ant-design/icons';
 import { bookingApi, billingApi, contractApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { Booking, Invoice, LeaseContract, Payment } from '../../types';
+import type { Booking, ChartTooltipProps, Invoice, LeaseContract, Payment } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 type Range = '7d' | '30d' | '3m' | '1y';
@@ -80,7 +80,7 @@ const RANGES: { key: Range; label: string }[] = [
 ];
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label, currency = true }: any) {
+function ChartTooltip({ active, payload, label, currency = true }: ChartTooltipProps & { currency?: boolean }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
@@ -186,7 +186,7 @@ export default function TenantReportsPage() {
   const rangePayments = payments.filter(p => inRange(p.payment_date));
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
-  const totalSpent      = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p: any) => s + parseFloat(p.amount || '0'), 0);
+  const totalSpent      = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p) => s + parseFloat(p.amount || '0'), 0);
   const activeContracts = contracts.filter(c => c.status === 'ACTIVE').length;
   const pendingInvoices = invoices.filter(i => ['ISSUED','SENT','PARTIALLY_PAID'].includes(i.status)).length;
   const overdueInvoices = invoices.filter(i => i.status === 'OVERDUE').length;
@@ -230,7 +230,7 @@ export default function TenantReportsPage() {
   }, [invoices]);
 
   // ── Monthly cost from active contracts ───────────────────────────────────────
-  const monthlyCommitment = contracts.filter(c => c.status === 'ACTIVE').reduce((s: number, c: any) => s + parseFloat(c.monthly_rent || '0'), 0);
+  const monthlyCommitment = contracts.filter(c => c.status === 'ACTIVE').reduce((s: number, c) => s + parseFloat(c.monthly_rent || '0'), 0);
 
   // ── Upcoming invoices (due in next 30 days) ──────────────────────────────────
   const upcomingInvoices = invoices.filter(i => {
