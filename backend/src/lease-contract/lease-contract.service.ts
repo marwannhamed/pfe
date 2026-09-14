@@ -158,16 +158,107 @@ export class LeaseContractService {
     return contracts.map((c) => this.mapContractForFrontend(c));
   }
 
+  /**
+   * Only the platform owner lists across organisations. This used to single
+   * out TENANT_ADMIN, which left every other role — including a renter's
+   * employee — free to pass any tenantId, or none at all and read the lot.
+   */
   async findAllForUser(user: AuthUser, tenantId?: string, status?: string) {
-    if (user.role === USER_ROLE.TENANT_ADMIN) {
-      if (tenantId && tenantId !== user.tenant_id) {
-        throw new ForbiddenException(
-          'You cannot access contracts for another organization',
-        );
-      }
-      return this.findAll(user.tenant_id, status);
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
+      return this.findAll(tenantId, status);
     }
-    return this.findAll(tenantId, status);
+    if (tenantId && tenantId !== user.tenant_id) {
+      throw new ForbiddenException(
+        'You cannot access contracts for another organization',
+      );
+    }
+    return this.findAll(user.tenant_id, status);
+  }
+
+  /**
+   * The tenant a contract belongs to, or a 403. Every by-id route goes through
+   * here: without it any authenticated user could read, amend or delete any
+   * contract on the platform by guessing its id.
+   */
+  private async assertContractReadable(user: AuthUser, id: string) {
+    const contract = await this.prisma.leaseContract.findUnique({
+      where: { id },
+      select: { tenant_id: true },
+    });
+    if (!contract)
+      throw new NotFoundException(`LeaseContract #${id} not found`);
+    if (
+      user.role !== USER_ROLE.SUPER_ADMIN &&
+      contract.tenant_id !== user.tenant_id
+    ) {
+      throw new ForbiddenException('You cannot access this contract');
+    }
+  }
+
+  async findOneForUser(user: AuthUser, id: string) {
+    await this.assertContractReadable(user, id);
+    return this.findOne(id);
+  }
+
+  async updateForUser(user: AuthUser, id: string, dto: UpdateLeaseContractDto) {
+    await this.assertContractReadable(user, id);
+    return this.update(id, dto);
+  }
+
+  async removeForUser(user: AuthUser, id: string) {
+    await this.assertContractReadable(user, id);
+    return this.remove(id);
+  }
+
+  async signForUser(user: AuthUser, id: string) {
+    await this.assertContractReadable(user, id);
+    return this.sign(id);
+  }
+
+  async terminateForUser(user: AuthUser, id: string) {
+    await this.assertContractReadable(user, id);
+    return this.terminate(id);
+  }
+
+  async renewForUser(user: AuthUser, id: string, newEndDate: string) {
+    await this.assertContractReadable(user, id);
+    return this.renew(id, newEndDate);
+  }
+
+  async addItemForUser(user: AuthUser, id: string, dto: CreateContractItemDto) {
+    await this.assertContractReadable(user, id);
+    return this.addItem(id, dto);
+  }
+
+  async removeItemForUser(user: AuthUser, id: string, itemId: string) {
+    await this.assertContractReadable(user, id);
+    return this.removeItem(id, itemId);
+  }
+
+  async createDepositForUser(
+    user: AuthUser,
+    id: string,
+    dto: CreateDepositDto,
+  ) {
+    await this.assertContractReadable(user, id);
+    return this.createDeposit(id, dto);
+  }
+
+  async refundDepositForUser(
+    user: AuthUser,
+    id: string,
+    dto: RefundDepositDto,
+  ) {
+    await this.assertContractReadable(user, id);
+    return this.refundDeposit(id, dto);
+  }
+
+  async getExpiringContractsForUser(user: AuthUser, daysAhead?: number) {
+    const rows = await this.getExpiringContracts(daysAhead);
+    if (user.role === USER_ROLE.SUPER_ADMIN) return rows;
+    return rows.filter(
+      (c: { tenant_id?: string }) => c.tenant_id === user.tenant_id,
+    );
   }
 
   // ─── FIND ONE ─────────────────────────────────────────────────────────────
