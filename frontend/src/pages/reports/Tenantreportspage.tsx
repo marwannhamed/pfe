@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from 'antd';
 import {
@@ -145,9 +145,10 @@ export default function TenantReportsPage() {
 
   const [range,      setRange]      = useState<Range>('30d');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [now] = useState(() => Date.now());
 
   const rangeStart = getRangeStart(range);
-  const inRange = (d: string) => new Date(d) >= rangeStart;
+  const inRange = useCallback((d: string) => new Date(d) >= rangeStart, [rangeStart]);
 
   // ── Fetch only this tenant's data ─────────────────────────────────────────
   const { data: bookingsRaw,  isLoading: l1 } = useQuery({
@@ -178,14 +179,14 @@ export default function TenantReportsPage() {
 
   const isLoading = l1 || l2 || l3 || l4;
 
-  const bookings  = toArray<Booking>(bookingsRaw);
-  const invoices  = toArray<Invoice>(invoicesRaw);
-  const payments  = toArray<Payment>(paymentsRaw);
-  const contracts = toArray<LeaseContract>(contractsRaw);
+  const bookings = useMemo(() => toArray<Booking>(bookingsRaw), [bookingsRaw]);
+  const invoices = useMemo(() => toArray<Invoice>(invoicesRaw), [invoicesRaw]);
+  const payments = useMemo(() => toArray<Payment>(paymentsRaw), [paymentsRaw]);
+  const contracts = useMemo(() => toArray<LeaseContract>(contractsRaw), [contractsRaw]);
 
   // ── Filtered by range ────────────────────────────────────────────────────────
-  const rangeBookings = bookings.filter(b => inRange(b.created_at));
-  const rangePayments = payments.filter(p => inRange(p.payment_date));
+  const rangeBookings = useMemo(() => bookings.filter(b => inRange(b.created_at)), [bookings, inRange]);
+  const rangePayments = useMemo(() => payments.filter(p => inRange(p.payment_date)), [payments, inRange]);
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
   const totalSpent      = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p) => s + parseFloat(p.amount || '0'), 0);
@@ -405,7 +406,7 @@ export default function TenantReportsPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {upcomingInvoices.map((inv) => {
-                const daysLeft = Math.ceil((new Date(inv.due_date).getTime() - Date.now()) / 86400000);
+                const daysLeft = Math.ceil((new Date(inv.due_date).getTime() - now) / 86400000);
                 const urgent = daysLeft <= 7;
                 return (
                   <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f8fafc' }}>

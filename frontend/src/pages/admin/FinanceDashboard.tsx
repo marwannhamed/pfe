@@ -117,6 +117,7 @@ export default function FinanceDashboard() {
   const { t }    = useThemeStore();
   const [refreshKey, setRefreshKey] = useState(0);
   const [revenueRange, setRevenueRange] = useState<6 | 12>(6);
+  const [now] = useState(() => Date.now());
   const opts = (k: string) => ({ queryKey: [k, refreshKey], enabled: authReady });
 
   const CARD: React.CSSProperties = {
@@ -133,10 +134,10 @@ export default function FinanceDashboard() {
 
   const isLoading = l1 || l2 || l3 || l4;
 
-  const invoices  = toArray<Invoice>(invoicesRaw);
-  const payments  = toArray<Payment>(paymentsRaw);
-  const contracts = toArray<LeaseContract>(contractsRaw);
-  const tenants   = toArray<Tenant>(tenantsRaw);
+  const invoices = useMemo(() => toArray<Invoice>(invoicesRaw), [invoicesRaw]);
+  const payments = useMemo(() => toArray<Payment>(paymentsRaw), [paymentsRaw]);
+  const contracts = useMemo(() => toArray<LeaseContract>(contractsRaw), [contractsRaw]);
+  const tenants = useMemo(() => toArray<Tenant>(tenantsRaw), [tenantsRaw]);
   const summary   = summaryRaw;
 
   const totalRevenue    = Number(summary?.total_paid     ?? 0);
@@ -145,12 +146,12 @@ export default function FinanceDashboard() {
   const totalInvoiced   = Number(summary?.total_invoiced ?? 0);
   const collectionRate  = totalInvoiced > 0 ? Math.round((totalRevenue / totalInvoiced) * 100) : 0;
 
-  const completedPays = payments.filter(p => p.status === 'COMPLETED');
+  const completedPays = useMemo(() => payments.filter(p => p.status === 'COMPLETED'), [payments]);
   const refundedPays  = payments.filter(p => p.status === 'REFUNDED');
   const totalCollected = completedPays.reduce((s, p) => s + parseFloat(p.amount || '0'), 0);
   const totalRefunded  = refundedPays.reduce((s,  p) => s + parseFloat(p.amount || '0'), 0);
 
-  const overdueInvoices   = invoices.filter(i => i.status === 'OVERDUE');
+  const overdueInvoices   = useMemo(() => invoices.filter(i => i.status === 'OVERDUE'), [invoices]);
   const paidInvoices      = invoices.filter(i => i.status === 'PAID');
   const pendingInvoices   = invoices.filter(i => ['ISSUED','SENT','PARTIALLY_PAID'].includes(i.status));
   const activeContracts   = contracts.filter(c => c.status === 'ACTIVE');
@@ -591,7 +592,7 @@ export default function FinanceDashboard() {
                 <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>All payments are on time.</div>
               </div>
             : recentOverdue.map((inv, i) => {
-              const daysLate = Math.ceil((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
+              const daysLate = Math.ceil((now - new Date(inv.due_date).getTime()) / 86400000);
               return (
                 <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: i < recentOverdue.length - 1 ? `1px solid ${t.divider}` : 'none', background: '#fff9f9', transition: 'background 0.1s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
