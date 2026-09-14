@@ -222,9 +222,19 @@ Optional integrations stay dormant until their keys are present:
 | Typeform | `TYPEFORM_FORM_ID`, `TYPEFORM_WEBHOOK_SECRET` | Disabled |
 | AI assistant | `OPENAI_API_KEY`, `OPENAI_MODEL` | Disabled |
 | Marketplaces | `LIQUIDSPACE_API_TOKEN`, `COWORKER_API_TOKEN` | Disabled |
-| Media uploads | `CLOUDINARY_*` | Avatars fall back to local disk; space photos and floor plans need Cloudinary |
+| Media uploads | `CLOUDINARY_*` | Local disk under `UPLOAD_DIR` — every upload kind, not just avatars |
 
 All three webhook endpoints verify an HMAC signature with `timingSafeEqual` before doing any work.
+
+Email picks its route at request time and falls back on failure: in development it prefers SMTP so
+mail lands in the Mailtrap inbox, otherwise Brevo, otherwise SMTP, and finally the log. `GET
+/mail/settings` reports which provider is active and why, which is the quickest way to tell whether
+a missing email is a configuration problem or a code one.
+
+A note on model names: `OPENAI_MODEL` points at whatever your provider still serves. Groq retires
+models fairly often, and when that happens every AI route answers 502 `model_not_found` — list what
+a key can still reach with
+`curl -s $OPENAI_BASE_URL/models -H "Authorization: Bearer $OPENAI_API_KEY"`.
 
 ## Testing and CI
 
