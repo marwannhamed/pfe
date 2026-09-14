@@ -154,9 +154,14 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
   }, 0);
   const grandTotal = autoPrice + addonsTotal;
 
-  useEffect(() => { setSelectedAddons([]); }, [selectedSpaceId]);
-
-  useEffect(() => { if (selectedSpace?.currency) setF('currency', selectedSpace.currency); }, [selectedSpace?.id, selectedSpace?.currency]);
+  // Reset the add-ons and adopt the space's currency when the selection
+  // changes, compared during render rather than in an effect.
+  const [prevSpaceId, setPrevSpaceId] = useState(selectedSpaceId);
+  if (selectedSpaceId !== prevSpaceId) {
+    setPrevSpaceId(selectedSpaceId);
+    setSelectedAddons([]);
+    if (selectedSpace?.currency) setF('currency', selectedSpace.currency);
+  }
 
   const mutation = useMutation({
     mutationFn: (d: unknown) => bookingApi.create(d),

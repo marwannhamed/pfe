@@ -160,10 +160,13 @@ export default function GuestMapPage() {
     if (found) setSelected(found);
   }, [spaces, searchParams, navigate, setSearchParams]);
 
-  useEffect(() => {
+  // Same pattern: a new space clears the media tab and its add-ons.
+  const [prevSelectedId, setPrevSelectedId] = useState(selected?.id);
+  if (selected?.id !== prevSelectedId) {
+    setPrevSelectedId(selected?.id);
     setMediaTab('photo');
     setSelectedAddons([]);
-  }, [selected?.id]);
+  }
 
   const goApply = (space: MapSpace) =>
     navigate(`/apply/${space.id}`, {
