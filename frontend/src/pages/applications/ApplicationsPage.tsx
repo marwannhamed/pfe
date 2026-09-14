@@ -21,11 +21,13 @@ import type { TenantApplication } from '../../types';
 
 const { Text, Paragraph } = Typography;
 
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw;
   if (Array.isArray((raw as { data?: T[] })?.data)) return (raw as { data: T[] }).data;
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 export default function ApplicationsPage() {

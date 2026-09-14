@@ -14,12 +14,14 @@ import { useAuthStore } from '../store/authStore';
 import type { Booking, Invoice, LeaseContract, MaintenanceTicket, Space, Tenant } from '../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw as T[];
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 function highlight(text: string, query: string): React.ReactNode {

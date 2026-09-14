@@ -12,11 +12,13 @@ import { asApiError } from '../../utils/errors';
 const { Title, Text } = Typography;
 const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
 
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw;
   if (Array.isArray((raw as { data?: T[] })?.data)) return (raw as { data: T[] }).data;
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 export default function ReceptionStaffPage() {

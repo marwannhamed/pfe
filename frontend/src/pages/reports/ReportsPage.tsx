@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from 'antd';
 import {
@@ -15,12 +15,14 @@ import type { Booking, ChartTooltipProps, Invoice, LeaseContract, Payment, Site,
 // --- Types & Helpers ----------------------------------------------------------
 type Range = '7d' | '30d' | '3m' | '1y';
 
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw as T[];
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 function getRangeStart(range: Range): Date {
@@ -182,11 +184,23 @@ export default function ReportsPage() {
   const spaces    = toArray<Space>(spacesRaw);
 
   // -- Filter by range ----------------------------------------------------------
-  const inRange = (d: string) => new Date(d) >= rangeStart;
+  const inRange = useCallback((d: string) => new Date(d) >= rangeStart, [rangeStart]);
 
-  const rangeBookings  = bookings.filter(b  => inRange(b.created_at));
-  const rangeInvoices  = invoices.filter(i  => inRange(i.issue_date));
-  const rangePayments  = payments.filter(p  => inRange(p.payment_date));
+  // Memoized because every chart below depends on these: as plain filter()
+  // results they were a fresh array each render, so the charts' own useMemo
+  // could never hold and the React Compiler skipped the whole component.
+  const rangeBookings = useMemo(
+    () => bookings.filter((b) => inRange(b.created_at)),
+    [bookings, inRange],
+  );
+  const rangeInvoices = useMemo(
+    () => invoices.filter((i) => inRange(i.issue_date)),
+    [invoices, inRange],
+  );
+  const rangePayments = useMemo(
+    () => payments.filter((p) => inRange(p.payment_date)),
+    [payments, inRange],
+  );
 
   // -- KPIs ---------------------------------------------------------------------
   const totalRevenue   = rangePayments.filter(p => p.status === 'COMPLETED').reduce((s: number, p) => s + parseFloat(p.amount || '0'), 0);

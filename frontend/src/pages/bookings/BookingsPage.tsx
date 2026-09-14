@@ -53,12 +53,14 @@ function getDuration(start: string, end: string): string {
   if (diff < 1440) return `${Math.round(diff / 60)}h`;
   return `${Math.round(diff / 1440)}d`;
 }
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw as T[];
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 function calcDurationMonths(startDate: string, startTime: string, endDate: string, endTime: string): number {
   if (!startDate || !endDate) return 1;

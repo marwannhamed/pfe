@@ -30,12 +30,14 @@ import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw as T[];
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

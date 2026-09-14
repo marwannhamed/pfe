@@ -28,14 +28,16 @@ const INPUT: React.CSSProperties   = { width: '100%', padding: '9px 12px', borde
 const LABEL: React.CSSProperties   = { fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 };
 
 // Helper: safely extract array from any API response shape
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw;
   const wrapper = raw as { data?: unknown; items?: unknown; results?: unknown };
   if (Array.isArray(wrapper.data)) return wrapper.data as T[];
   if (Array.isArray(wrapper.items)) return wrapper.items as T[];
   if (Array.isArray(wrapper.results)) return wrapper.results as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

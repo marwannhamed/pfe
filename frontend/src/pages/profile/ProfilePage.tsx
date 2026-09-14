@@ -18,12 +18,14 @@ import type { ApiError, Booking, Invoice, LeaseContract, Notification } from '..
 import { asApiError } from '../../utils/errors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw as T[];
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });

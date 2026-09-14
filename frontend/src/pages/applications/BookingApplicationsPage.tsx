@@ -18,11 +18,13 @@ import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { asApiError } from '../../utils/errors';
 
+const EMPTY_LIST: readonly unknown[] = [];
+
 function toArray<T>(raw: unknown): T[] {
-  if (!raw) return [];
+  if (!raw) return EMPTY_LIST as unknown as T[];
   if (Array.isArray(raw)) return raw;
   if (Array.isArray((raw as { data?: T[] })?.data)) return (raw as { data: T[] }).data;
-  return [];
+  return EMPTY_LIST as unknown as T[];
 }
 
 type Row = {
