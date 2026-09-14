@@ -33,7 +33,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:up": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-postgres.ps1",
     "db:down": "docker compose down",
-    "db:ps": "docker compose ps"
+    "db:ps": "docker compose ps",
+    "audit:access": "node scripts/audit-access.mjs"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.3.7",

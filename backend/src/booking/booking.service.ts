@@ -447,33 +447,35 @@ export class BookingService {
     if (opts.status) where.status = opts.status;
     if (opts.spaceId) where.space_id = opts.spaceId;
 
-    if (
-      user.role === USER_ROLE.SUPER_ADMIN ||
-      user.role === USER_ROLE.FINANCE
-    ) {
+    // Only the platform owner reads across organisations — see
+    // AccessPolicyService.isCrossTenantReader. FINANCE used to sit in this
+    // branch, which let a finance user at one property company list bookings
+    // held in another company's buildings.
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
       if (opts.tenantId) where.tenant_id = opts.tenantId;
     } else if (
       user.role === USER_ROLE.MANAGER ||
-      user.role === USER_ROLE.CLIENT_ADMIN
+      user.role === USER_ROLE.CLIENT_ADMIN ||
+      user.role === USER_ROLE.FINANCE
     ) {
       where.space = { floor: { building: { tenant_id: user.tenant_id } } };
       if (opts.tenantId) where.tenant_id = opts.tenantId;
     } else if (
       user.role === USER_ROLE.MAINTENANCE ||
-      user.role === USER_ROLE.TENANT_ADMIN
+      user.role === USER_ROLE.TENANT_ADMIN ||
+      user.role === USER_ROLE.TENANT_EMPLOYEE
     ) {
       if (opts.tenantId && opts.tenantId !== user.tenant_id) {
         throw new ForbiddenException("Cannot list another tenant's bookings");
       }
       where.tenant_id = user.tenant_id;
+      // An employee sees only what they booked themselves.
+      if (user.role === USER_ROLE.TENANT_EMPLOYEE) where.user_id = user.id;
     } else if (user.role === USER_ROLE.RECEPTIONIST) {
       where.space = { floor: { building: { tenant_id: user.tenant_id } } };
       if (opts.status) {
         where.status = opts.status;
       }
-    } else if (user.role === USER_ROLE.TENANT_EMPLOYEE) {
-      where.tenant_id = user.tenant_id;
-      where.user_id = user.id;
     } else {
       where.user_id = user.id;
     }

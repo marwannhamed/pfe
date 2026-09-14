@@ -38,6 +38,7 @@ function makeService(opts: { readable?: boolean; found?: boolean } = {}) {
         .mockResolvedValue(opts.found === false ? null : booking),
       update: jest.fn().mockResolvedValue(booking),
       delete: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
   // prisma, mail, notification, audit, billing, leaseContract, access, upload
@@ -157,5 +158,90 @@ describe('BookingService — approval is limited to managers', () => {
         'a',
       ),
     ).rejects.toThrow(ForbiddenException);
+  });
+});
+
+describe('BookingService.findAllForUser — who may list what', () => {
+  const whereOf = (fn: jest.Mock) => fn.mock.calls[0][0]?.where;
+
+  it('scopes finance to bookings in buildings its organisation owns', async () => {
+    const { prisma, service } = makeService();
+
+    // FINANCE used to share the SUPER_ADMIN branch, so a finance user at one
+    // property company could list bookings held in another company's building.
+    await service.findAllForUser(userWith(USER_ROLE.FINANCE, 'tenant-a'), {});
+
+    expect(whereOf(prisma.booking.findMany)).toMatchObject({
+      space: { floor: { building: { tenant_id: 'tenant-a' } } },
+    });
+  });
+
+  it('scopes a client admin the same way', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(
+      userWith(USER_ROLE.CLIENT_ADMIN, 'tenant-a'),
+      {},
+    );
+
+    expect(whereOf(prisma.booking.findMany)).toMatchObject({
+      space: { floor: { building: { tenant_id: 'tenant-a' } } },
+    });
+  });
+
+  it('leaves the platform owner unscoped', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(
+      userWith(USER_ROLE.SUPER_ADMIN, 'platform'),
+      {},
+    );
+
+    const where = whereOf(prisma.booking.findMany);
+    expect(where).not.toHaveProperty('tenant_id');
+    expect(where).not.toHaveProperty('space');
+  });
+
+  it('narrows the platform owner to one organisation when asked', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(userWith(USER_ROLE.SUPER_ADMIN, 'platform'), {
+      tenantId: 'tenant-b',
+    });
+
+    expect(whereOf(prisma.booking.findMany)).toMatchObject({
+      tenant_id: 'tenant-b',
+    });
+  });
+
+  it.each([
+    USER_ROLE.TENANT_ADMIN,
+    USER_ROLE.TENANT_EMPLOYEE,
+    USER_ROLE.MAINTENANCE,
+  ])(
+    'refuses %s a forged tenantId rather than quietly returning nothing',
+    async (role) => {
+      const { service } = makeService();
+
+      await expect(
+        service.findAllForUser(userWith(role, 'tenant-a'), {
+          tenantId: 'tenant-b',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    },
+  );
+
+  it('limits a renter employee to the bookings they made themselves', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(
+      userWith(USER_ROLE.TENANT_EMPLOYEE, 'tenant-a'),
+      {},
+    );
+
+    expect(whereOf(prisma.booking.findMany)).toMatchObject({
+      tenant_id: 'tenant-a',
+      user_id: 'user-TENANT_EMPLOYEE',
+    });
   });
 });
