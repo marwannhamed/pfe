@@ -40,9 +40,12 @@ export function GoogleBusinessPanel({ siteId, oauthReturn }: Props) {
 
   const locations = locationsRaw?.locations ?? [];
 
-  useEffect(() => {
+  // Adopt the saved location once it arrives, compared during render.
+  const [prevSavedLocation, setPrevSavedLocation] = useState(status?.gmb_location_id);
+  if (status?.gmb_location_id !== prevSavedLocation) {
+    setPrevSavedLocation(status?.gmb_location_id);
     if (status?.gmb_location_id) setLocationId(status.gmb_location_id);
-  }, [status?.gmb_location_id]);
+  }
 
   useEffect(() => {
     if (oauthReturn === 'connected') {

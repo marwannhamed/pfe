@@ -125,8 +125,11 @@ export default function CompanyProfilePage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (!org) return;
+  // Load the fetched organisation into the form once, compared during render
+  // rather than in an effect so the page does not render empty first.
+  const [loadedOrgId, setLoadedOrgId] = useState(org?.id);
+  if (org && org.id !== loadedOrgId) {
+    setLoadedOrgId(org.id);
     setForm({
       name: org.name ?? '',
       contact_email: org.contact_email ?? '',
@@ -140,7 +143,7 @@ export default function CompanyProfilePage() {
       business_hours: org.business_hours ?? '',
       description: org.description ?? '',
     });
-  }, [org]);
+  }
 
   const setF = (key: keyof typeof form, value: string) => {
     setForm((f) => ({ ...f, [key]: value }));

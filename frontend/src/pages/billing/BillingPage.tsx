@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useRef, useEffect, type CSSProperties } from 'react';
+﻿import { useState, useMemo, useRef, type CSSProperties } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import PageShell from '../../components/ui/PageShell';
@@ -338,10 +338,15 @@ function RecordPaymentModal({
     },
   });
 
-  useEffect(() => {
-    if (!invoice) return;
-    setForm((f) => (f.amount ? f : { ...f, amount: String(invoiceRemaining(invoice)) }));
-  }, [invoice]);
+  // Prefill the amount when a different invoice is chosen; the updater keeps
+  // it from overwriting anything already typed.
+  const [prevInvoiceId, setPrevInvoiceId] = useState(invoice?.id);
+  if (invoice?.id !== prevInvoiceId) {
+    setPrevInvoiceId(invoice?.id);
+    if (invoice) {
+      setForm((f) => (f.amount ? f : { ...f, amount: String(invoiceRemaining(invoice)) }));
+    }
+  }
 
   const validate = () => {
     const e: Record<string, string> = {};

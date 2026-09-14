@@ -86,16 +86,17 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (spaceId) {
-      setForm((f) => ({
-        ...f,
-        space_id: spaceId,
-        start_date: dateStr,
-        end_date: dateStr,
-      }));
-    }
-  }, [spaceId, dateStr]);
+  // Prefill from the space and date the caller opened this with.
+  const [prefilledFor, setPrefilledFor] = useState(`${spaceId}|${dateStr}`);
+  if (spaceId && `${spaceId}|${dateStr}` !== prefilledFor) {
+    setPrefilledFor(`${spaceId}|${dateStr}`);
+    setForm((f) => ({
+      ...f,
+      space_id: spaceId,
+      start_date: dateStr,
+      end_date: dateStr,
+    }));
+  }
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
 
   const selectedSpace = bookableSpaces.find(s => s.id === form.space_id);
