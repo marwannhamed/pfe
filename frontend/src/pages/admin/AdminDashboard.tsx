@@ -232,13 +232,13 @@ export default function AdminDashboard() {
 
   const isLoading = l1||l2||l3||l4||l5||l6||l7||l8||l9;
 
-  const sites     = toArray<Site>(sitesRaw);
-  const spaces    = toArray<Space>(spacesRaw);
-  const tenants   = toArray<Tenant>(tenantsRaw);
-  const bookings  = toArray<Booking>(bookingsRaw);
-  const invoices  = toArray<Invoice>(invoicesRaw);
-  const payments  = toArray<Payment>(paymentsRaw);
-  const contracts = toArray<LeaseContract>(contractsRaw);
+  const sites = useMemo(() => toArray<Site>(sitesRaw), [sitesRaw]);
+  const spaces = useMemo(() => toArray<Space>(spacesRaw), [spacesRaw]);
+  const tenants = useMemo(() => toArray<Tenant>(tenantsRaw), [tenantsRaw]);
+  const bookings = useMemo(() => toArray<Booking>(bookingsRaw), [bookingsRaw]);
+  const invoices = useMemo(() => toArray<Invoice>(invoicesRaw), [invoicesRaw]);
+  const payments = useMemo(() => toArray<Payment>(paymentsRaw), [paymentsRaw]);
+  const contracts = useMemo(() => toArray<LeaseContract>(contractsRaw), [contractsRaw]);
 
   const available   = spaces.filter(s => s.status === 'AVAILABLE').length;
   const occupied    = spaces.filter(s => s.status === 'OCCUPIED').length;

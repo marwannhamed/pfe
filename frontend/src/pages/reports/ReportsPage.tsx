@@ -175,13 +175,13 @@ export default function ReportsPage() {
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || (canListTenants && l6);
 
-  const bookings  = toArray<Booking>(bookingsRaw);
-  const invoices  = toArray<Invoice>(invoicesRaw);
-  const payments  = toArray<Payment>(paymentsRaw);
-  const contracts = toArray<LeaseContract>(contractsRaw);
-  const sites     = toArray<Site>(sitesRaw);
-  const tenants   = toArray<Tenant>(tenantsRaw);
-  const spaces    = toArray<Space>(spacesRaw);
+  const bookings = useMemo(() => toArray<Booking>(bookingsRaw), [bookingsRaw]);
+  const invoices = useMemo(() => toArray<Invoice>(invoicesRaw), [invoicesRaw]);
+  const payments = useMemo(() => toArray<Payment>(paymentsRaw), [paymentsRaw]);
+  const contracts = useMemo(() => toArray<LeaseContract>(contractsRaw), [contractsRaw]);
+  const sites = useMemo(() => toArray<Site>(sitesRaw), [sitesRaw]);
+  const tenants = useMemo(() => toArray<Tenant>(tenantsRaw), [tenantsRaw]);
+  const spaces = useMemo(() => toArray<Space>(spacesRaw), [spacesRaw]);
 
   // -- Filter by range ----------------------------------------------------------
   const inRange = useCallback((d: string) => new Date(d) >= rangeStart, [rangeStart]);
