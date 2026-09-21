@@ -88,6 +88,10 @@ export function canAccessPath(role: string | undefined, path: string): boolean {
   if (path.includes('/admin/addon-services')) {
     return CLIENT_OPS.has(r);
   }
+  // Discount codes are commercial terms — finance reads them alongside ops.
+  if (path.includes('/admin/promotion-codes')) {
+    return CLIENT_OPS.has(r) || r === 'FINANCE';
+  }
   if (path.includes('/admin/booking-addons') || path.includes('/admin/price-plans')) {
     return false;
   }

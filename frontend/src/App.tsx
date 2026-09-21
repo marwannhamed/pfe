@@ -84,6 +84,7 @@ const PaymentsPage            = lazy(() => import('./pages/billing/PaymentsPage'
 const AdminMaintenancePage    = lazy(() => import('./pages/maintenance/MaintenancePage'));
 const AuditPage               = lazy(() => import('./pages/audit/AuditPage'));
 const AddonServicesPage       = lazy(() => import('./pages/services/AddonServicesPage'));
+const PromotionCodesPage      = lazy(() => import('./pages/promotion-codes/PromotionCodesPage'));
 const AdminNotifications      = lazy(() => import('./pages/notifications/NotificationsPage'));
 const ProfilePage             = lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage            = lazy(() => import('./pages/settings/SettingsPage'));
@@ -263,6 +264,7 @@ export default function App() {
                   <Route path="email"               element={<RoleRoute allowed={['SUPER_ADMIN']}><L><EmailManagementPage /></L></RoleRoute>} />
                   <Route path="price-plans"         element={<Navigate to="/admin/addon-services" replace />} />
                   <Route path="addon-services"      element={<RoleRoute allowed={['SUPER_ADMIN','CLIENT_ADMIN','MANAGER']}><L><AddonServicesPage /></L></RoleRoute>} />
+                  <Route path="promotion-codes"     element={<RoleRoute allowed={['SUPER_ADMIN','CLIENT_ADMIN','MANAGER','FINANCE']}><L><PromotionCodesPage /></L></RoleRoute>} />
                   <Route path="booking-addons"      element={<Navigate to="/admin/addon-services" replace />} />
 
                   {/* All back-office */}

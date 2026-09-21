@@ -23,7 +23,7 @@ const { Option } = Select;
 export default function PromotionCodesPage() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [promotionCodes, setPromotionCodes] = useState([]);
+  const [promotionCodes, setPromotionCodes] = useState<PromotionCode[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCode, setEditingCode] = useState<PromotionCode | null>(null);
   const [usageStatsModal, setUsageStatsModal] = useState(false);
@@ -39,8 +39,7 @@ export default function PromotionCodesPage() {
   const loadPromotionCodes = async () => {
     setLoading(true);
     try {
-      const response = await promotionCodeApi.getAll();
-      setPromotionCodes(response.data || []);
+      setPromotionCodes(await promotionCodeApi.getAll());
     } catch {
       message.error('Failed to load promotion codes');
     } finally {

@@ -49,6 +49,7 @@ function getSidebarItems(role: string) {
     { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'  },
     { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    { icon: <TagOutlined />,         label: 'Promo Codes',  path: '/admin/promotion-codes' },
     // Analytics & reporting (platform owner — not tenant billing)
     { icon: <LineChartOutlined />,    label: 'Analytics',    path: '/admin/analytics'    },
     { icon: <ExportOutlined />,       label: 'Export',       path: '/admin/export'       },
@@ -82,6 +83,7 @@ function getSidebarItems(role: string) {
     { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'    },
     { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    { icon: <TagOutlined />,         label: 'Promo Codes',  path: '/admin/promotion-codes' },
     { icon: <CreditCardOutlined />,  label: 'Billing & Payments', path: '/admin/billing' },
     { icon: <HeatMapOutlined />,      label: 'Occupancy', path: '/admin/occupancy-heatmap' },
     { icon: <FundOutlined />,        label: 'Revenue forecast', path: '/admin/revenue-forecast' },
@@ -104,6 +106,7 @@ function getSidebarItems(role: string) {
     { icon: <FileTextOutlined />,    label: 'Contracts',    path: '/admin/contracts'    },
     { icon: <ToolOutlined />,        label: 'Maintenance',  path: '/admin/maintenance'    },
     { icon: <TagOutlined />,         label: 'Add-on Services', path: '/admin/addon-services' },
+    { icon: <TagOutlined />,         label: 'Promo Codes',  path: '/admin/promotion-codes' },
     { icon: <CreditCardOutlined />,  label: 'Billing & Payments', path: '/admin/billing' },
     { icon: <TeamOutlined />,        label: 'Team',         path: '/admin/users'        },
     { icon: <HeatMapOutlined />,      label: 'Occupancy', path: '/admin/occupancy-heatmap' },
