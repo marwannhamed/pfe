@@ -1,16 +1,44 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsGateway } from '../websocket/notifications.gateway';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gateway: NotificationsGateway,
+  ) {}
+
+  /**
+   * Push a freshly created notification to whoever is watching.
+   *
+   * The gateway exposed sendToUser/sendToTenant but nothing ever called them,
+   * so every client fell back to polling and a notification took up to 30
+   * seconds to appear. Delivery is best-effort: a socket problem must never
+   * fail the write that already succeeded.
+   */
+  private broadcast(notification: {
+    user_id?: string | null;
+    tenant_id?: string | null;
+    [k: string]: unknown;
+  }) {
+    try {
+      if (notification.user_id) {
+        this.gateway.sendToUser(notification.user_id, notification);
+      } else if (notification.tenant_id) {
+        this.gateway.sendToTenant(notification.tenant_id, notification);
+      }
+    } catch {
+      // websocket delivery is a convenience; the row is already persisted
+    }
+  }
 
   // ─── CREATE ──────────────────────────────────────────────────
   async create(dto: CreateNotificationDto) {
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         priority: dto.priority ?? 'NORMAL',
         user_id: dto.user_id,
@@ -23,6 +51,8 @@ export class NotificationService {
         read_at: null,
       },
     });
+    this.broadcast(created);
+    return created;
   }
 
   // ─── Créer plusieurs notifications d'un coup ─────────────────
@@ -39,7 +69,9 @@ export class NotificationService {
       message: dto.message,
       priority: dto.priority,
     }));
-    return (this.prisma as any).notification.createMany({ data });
+    const result = await (this.prisma as any).notification.createMany({ data });
+    for (const row of data) this.broadcast(row);
+    return result;
   }
 
   // ─── NOTIFICATION PREFERENCES ──────────────────────────────────

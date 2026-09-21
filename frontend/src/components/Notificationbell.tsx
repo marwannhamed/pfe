@@ -6,6 +6,7 @@ import { BellOutlined, CheckOutlined, CheckCircleOutlined } from '@ant-design/ic
 import { useAuthStore } from '../store/authStore';
 import type { Notification } from '../types';
 import { notificationApi } from '../api/services'
+import { useNotificationSocket } from '../hooks/useNotificationSocket';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -62,6 +63,10 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Pushes invalidate the queries below, so a notification lands immediately
+  // instead of on the next poll.
+  const { isLive } = useNotificationSocket();
+
   // Close on outside click
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -76,7 +81,9 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
     queryKey: ['notif-count', userId],
     queryFn:  () => notificationApi.getUnreadCount(userId).then(r => r.data),
     enabled:  !!userId,
-    refetchInterval: 30000,
+    // Fallback only — the socket is what makes this current. Kept so the bell
+    // still updates if the websocket cannot connect.
+    refetchInterval: isLive ? 120000 : 30000,
   });
   const unreadCount =
     typeof countRaw === 'number'
@@ -156,6 +163,14 @@ export default function NotificationBell({ basePath = '/admin' }: { basePath?: s
           <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontWeight: 800, fontSize: 14, color: '#0f172a' }}>Notifications</span>
+              <span
+                title={isLive ? 'Live — updates arrive instantly' : 'Reconnecting — checking periodically'}
+                style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: isLive ? '#22c55e' : '#cbd5e1',
+                  flexShrink: 0,
+                }}
+              />
               {unreadCount > 0 && (
                 <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 20 }}>
                   {unreadCount} new
