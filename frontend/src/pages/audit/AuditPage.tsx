@@ -101,8 +101,8 @@ export function AuditPage() {
                 <div style={{ fontSize: 12, color: '#374151' }}>{formatDateTime(log.created_at)}</div>
                 <span style={{ background: am.bg, color: am.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-block' }}>{am.label}</span>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{log.resource_type}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>{log.resource_id.substring(0, 12)}...</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{log.resource_type ?? '—'}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>{log.resource_id ? log.resource_id.substring(0, 12) + '...' : '—'}</div>
                 </div>
                 <div style={{ fontSize: 11, color: th.textSub, fontFamily: 'monospace' }}>{log.user_id ? log.user_id.substring(0, 12) + '...' : 'System'}</div>
                 <span style={{ background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{sm.label}</span>

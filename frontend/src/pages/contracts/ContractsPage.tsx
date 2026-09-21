@@ -23,6 +23,7 @@ import {
   type ContractPrefillFromBooking,
 } from '../../utils/contractFromBooking';
 import { asApiError } from '../../utils/errors';
+import LeaseAssistantCard from '../../components/LeaseAssistantCard';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<ContractStatus, { label: string; bg: string; color: string }> = {
@@ -774,6 +775,14 @@ export default function ContractsPage() {
             <span>Showing {filtered.length} of {contracts.length} contracts</span>
             <span>{isTenantAdmin ? `${active} active · ${draft} pending signature` : `${active} active · ${draft} pending · $${Math.round(totalRent).toLocaleString()}/mo`}</span>
           </div>
+        </div>
+      )}
+
+      {/* Lease questions belong where the leases are. Staff only — tenants
+          have their own assistant in the portal. */}
+      {!isTenantAdmin && (
+        <div style={{ marginTop: 20 }}>
+          <LeaseAssistantCard />
         </div>
       )}
     </PageShell>
