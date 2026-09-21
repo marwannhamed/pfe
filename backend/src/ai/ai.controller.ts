@@ -1,5 +1,20 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -8,6 +23,10 @@ import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 import { OpenAiService } from './openai.service';
 import { MaintenanceTriageService } from './maintenance-triage.service';
+import {
+  DocumentExtractionService,
+  type DocumentKind,
+} from './document-extraction.service';
 import {
   LeaseAssistantDto,
   TenantAssistantDto,
@@ -31,7 +50,37 @@ export class AiController {
   constructor(
     private readonly openAi: OpenAiService,
     private readonly triage: MaintenanceTriageService,
+    private readonly documents: DocumentExtractionService,
   ) {}
+
+  @Post('documents/extract')
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.FINANCE,
+    USER_ROLE.RECEPTIONIST,
+  )
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      // Held in memory only for the length of the request — nothing is
+      // written to disk and nothing is persisted.
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Read a trade licence, CR, QID or cheque and return the fields a manager would retype',
+  })
+  async extractDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('kind') kind: DocumentKind = 'other',
+  ) {
+    if (!file) throw new BadRequestException('No file was uploaded');
+    return this.documents.extract(file, kind);
+  }
 
   @Post('lease-assistant')
   @Roles(...AI_ROLES)

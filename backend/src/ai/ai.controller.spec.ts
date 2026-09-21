@@ -12,10 +12,16 @@ const user: AuthUser = {
 function makeController(reply: string) {
   const openAi = { chat: jest.fn().mockResolvedValue(reply) };
   const triage = { triage: jest.fn() };
+  const documents = { extract: jest.fn() };
   return {
     openAi,
     triage,
-    controller: new AiController(openAi as never, triage as never),
+    documents,
+    controller: new AiController(
+      openAi as never,
+      triage as never,
+      documents as never,
+    ),
   };
 }
 
