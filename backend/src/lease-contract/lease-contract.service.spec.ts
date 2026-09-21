@@ -15,6 +15,8 @@ function makeService() {
     leaseContract: {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
+      // the landlord's claim runs through the building, checked separately
+      findFirst: jest.fn().mockResolvedValue(null),
     },
   };
   const mail = {};
@@ -45,9 +47,15 @@ describe('LeaseContractService — contracts stay inside one organisation', () =
 
     await service.findAllForUser(userWith(role, 'tenant-a'));
 
-    expect(whereOf(prisma.leaseContract.findMany)).toMatchObject({
-      tenant_id: 'tenant-a',
-    });
+    // Every branch of the scope names the caller's own organisation: the
+    // renter holds the contract, the property company hosts it through the
+    // building. Neither reaches anything else.
+    const where = whereOf(prisma.leaseContract.findMany);
+    expect(where.OR).toHaveLength(2);
+    expect(JSON.stringify(where)).not.toContain('tenant-b');
+    for (const branch of where.OR) {
+      expect(JSON.stringify(branch)).toContain('tenant-a');
+    }
   });
 
   it.each([
@@ -189,5 +197,84 @@ describe('LeaseContractService.getExpiringContractsForUser', () => {
     );
 
     expect(rows).toHaveLength(2);
+  });
+});
+
+describe('LeaseContractService — a landlord reaches leases through the building', () => {
+  // A contract's tenant_id is the renter that holds it, so scoping a property
+  // company on tenant_id returned nothing and the Contracts page read
+  // "No contracts yet" against fully leased buildings.
+  const portfolio = (tenantId: string) => ({
+    invoices: {
+      some: {
+        bookings: {
+          some: { space: { floor: { building: { tenant_id: tenantId } } } },
+        },
+      },
+    },
+  });
+
+  it('lists both the leases it holds and the leases on its buildings', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(userWith(USER_ROLE.MANAGER, 'tenant-a'));
+
+    const where = whereOf(prisma.leaseContract.findMany);
+    expect(where.OR).toEqual([
+      { tenant_id: 'tenant-a' },
+      portfolio('tenant-a'),
+    ]);
+  });
+
+  it('still refuses an explicit request for another organisation', async () => {
+    const { service } = makeService();
+
+    await expect(
+      service.findAllForUser(
+        userWith(USER_ROLE.MANAGER, 'tenant-a'),
+        'tenant-b',
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('leaves the platform owner unscoped', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(userWith(USER_ROLE.SUPER_ADMIN, 'tenant-a'));
+
+    const where = whereOf(prisma.leaseContract.findMany);
+    expect(where.OR).toBeUndefined();
+    expect(where).not.toHaveProperty('tenant_id');
+  });
+
+  it('opens a lease on a building it owns, though the renter holds it', async () => {
+    const { prisma, service } = makeService();
+    prisma.leaseContract.findUnique.mockResolvedValue({
+      tenant_id: 'renter-x',
+    });
+    prisma.leaseContract.findFirst.mockResolvedValue({ id: 'c1' });
+
+    await expect(
+      service.findOneForUser(userWith(USER_ROLE.MANAGER, 'tenant-a'), 'c1'),
+    ).resolves.toBeDefined();
+
+    expect(prisma.leaseContract.findFirst.mock.calls[0][0].where).toMatchObject(
+      {
+        id: 'c1',
+        ...portfolio('tenant-a'),
+      },
+    );
+  });
+
+  it('refuses a lease on a rival company’s building', async () => {
+    const { prisma, service } = makeService();
+    prisma.leaseContract.findUnique.mockResolvedValue({
+      tenant_id: 'renter-x',
+    });
+    prisma.leaseContract.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.findOneForUser(userWith(USER_ROLE.MANAGER, 'tenant-a'), 'c1'),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

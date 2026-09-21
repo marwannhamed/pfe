@@ -145,6 +145,28 @@ export class LeaseContractService {
     return this.mapContractForFrontend(created);
   }
 
+  /**
+   * A property company's claim on a lease runs through the space it covers:
+   * contract -> invoices -> bookings -> space -> floor -> building. The
+   * contract's own tenant_id is the *renter's* organisation, so scoping a
+   * landlord on it returned nothing and the Contracts page read "No contracts
+   * yet" against fully leased buildings. Same portfolio path
+   * BillingService.portfolioInvoiceWhere uses to reach an invoice.
+   */
+  private landlordContractWhere(tenantId: string) {
+    return {
+      invoices: {
+        some: {
+          bookings: {
+            some: {
+              space: { floor: { building: { tenant_id: tenantId } } },
+            },
+          },
+        },
+      },
+    };
+  }
+
   // ─── FIND ALL ─────────────────────────────────────────────────────────────
   async findAll(tenantId?: string, status?: string) {
     const contracts = await this.prisma.leaseContract.findMany({
@@ -172,7 +194,20 @@ export class LeaseContractService {
         'You cannot access contracts for another organization',
       );
     }
-    return this.findAll(user.tenant_id, status);
+
+    // A renter holds the contract; a property company hosts it.
+    const contracts = await this.prisma.leaseContract.findMany({
+      where: {
+        ...(status && { status }),
+        OR: [
+          { tenant_id: user.tenant_id },
+          this.landlordContractWhere(user.tenant_id),
+        ],
+      },
+      include: CONTRACT_INCLUDE,
+      orderBy: { created_at: 'desc' },
+    });
+    return contracts.map((c) => this.mapContractForFrontend(c));
   }
 
   /**
@@ -187,12 +222,21 @@ export class LeaseContractService {
     });
     if (!contract)
       throw new NotFoundException(`LeaseContract #${id} not found`);
-    if (
-      user.role !== USER_ROLE.SUPER_ADMIN &&
-      contract.tenant_id !== user.tenant_id
-    ) {
-      throw new ForbiddenException('You cannot access this contract');
-    }
+
+    if (user.role === USER_ROLE.SUPER_ADMIN) return;
+
+    // the renter that holds it
+    if (contract.tenant_id === user.tenant_id) return;
+
+    // or the property company whose building it covers — without this the
+    // list showed a landlord their leases and every one 403'd on opening
+    const hosted = await this.prisma.leaseContract.findFirst({
+      where: { id, ...this.landlordContractWhere(user.tenant_id) },
+      select: { id: true },
+    });
+    if (hosted) return;
+
+    throw new ForbiddenException('You cannot access this contract');
   }
 
   async findOneForUser(user: AuthUser, id: string) {
