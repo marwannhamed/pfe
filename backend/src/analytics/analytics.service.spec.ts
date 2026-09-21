@@ -117,3 +117,94 @@ describe('AnalyticsService — dashboards cannot aggregate other organisations',
     });
   });
 });
+
+describe('AnalyticsService.getOverview — KPI cards are scoped too', () => {
+  // getOverview computed a tenant filter and applied it to three of its seven
+  // queries. The rest ran unfiltered, so every dashboard's space count, ticket
+  // count and "active organisations" card showed platform-wide totals, and the
+  // occupancy rate was computed over buildings the viewer does not own.
+  function makeOverviewService() {
+    const prisma = {
+      invoice: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { total_amount: 0 } }),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      booking: { count: jest.fn().mockResolvedValue(0) },
+      space: { count: jest.fn().mockResolvedValue(0) },
+      maintenanceTicket: { count: jest.fn().mockResolvedValue(0) },
+      tenant: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const access = { assertBuildingReadable: jest.fn() };
+    return {
+      prisma,
+      service: new AnalyticsService(prisma as any, access as any),
+    };
+  }
+
+  const wheresOf = (fn: jest.Mock) =>
+    fn.mock.calls.map((c) => JSON.stringify(c[0]?.where ?? {}));
+
+  it('never counts a space, ticket or organisation outside the caller’s reach', async () => {
+    const { prisma, service } = makeOverviewService();
+
+    await service.getOverview(
+      userWith(USER_ROLE.MANAGER, 'tenant-a'),
+      FROM,
+      TO,
+    );
+
+    for (const model of [
+      prisma.space.count,
+      prisma.maintenanceTicket.count,
+      prisma.tenant.count,
+      prisma.booking.count,
+      prisma.invoice.count,
+    ] as jest.Mock[]) {
+      expect(model).toHaveBeenCalled();
+      for (const where of wheresOf(model)) {
+        expect(where).toContain('tenant-a');
+      }
+    }
+    for (const where of wheresOf(prisma.invoice.aggregate)) {
+      expect(where).toContain('tenant-a');
+    }
+  });
+
+  it('reaches a property company’s spaces and tickets through its buildings', async () => {
+    const { prisma, service } = makeOverviewService();
+
+    await service.getOverview(
+      userWith(USER_ROLE.MANAGER, 'tenant-a'),
+      FROM,
+      TO,
+    );
+
+    // A space has no tenant_id, and a ticket's tenant_id is the renter's.
+    for (const where of wheresOf(prisma.space.count)) {
+      expect(where).toContain('"building":{"tenant_id":"tenant-a"}');
+    }
+    for (const where of wheresOf(prisma.maintenanceTicket.count)) {
+      expect(where).toContain('"building":{"tenant_id":"tenant-a"}');
+    }
+  });
+
+  it('leaves the platform owner unfiltered', async () => {
+    const { prisma, service } = makeOverviewService();
+
+    await service.getOverview(
+      userWith(USER_ROLE.SUPER_ADMIN, 'tenant-a'),
+      FROM,
+      TO,
+    );
+
+    for (const model of [
+      prisma.space.count,
+      prisma.maintenanceTicket.count,
+      prisma.booking.count,
+    ] as jest.Mock[]) {
+      for (const where of wheresOf(model)) {
+        expect(where).not.toContain('tenant-a');
+      }
+    }
+  });
+});

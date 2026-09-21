@@ -180,7 +180,11 @@ describe('MaintenanceService.findAllForUser — what each role is shown', () => 
     );
 
     expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
-      AND: [{}, { assigned_to: 'tech-1' }],
+      AND: [
+        {},
+        { assigned_to: 'tech-1' },
+        { space: { floor: { building: { tenant_id: 'tenant-a' } } } },
+      ],
     });
   });
 
@@ -193,7 +197,12 @@ describe('MaintenanceService.findAllForUser — what each role is shown', () => 
     );
 
     expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
-      AND: [{}, { status: 'OPEN', assigned_to: null }],
+      AND: [
+        {},
+        { status: 'OPEN', assigned_to: null },
+        // the unclaimed queue stops at the buildings this technician works
+        { space: { floor: { building: { tenant_id: 'tenant-a' } } } },
+      ],
     });
   });
 
@@ -234,6 +243,105 @@ describe('MaintenanceService.getStatsForUser — counts respect the same boundar
       inProgress: 2,
       resolved: 1,
       urgent: 1,
+    });
+  });
+});
+
+describe('MaintenanceService — one property company never sees another’s', () => {
+  const landlordScope = (tenantId: string) => ({
+    space: { floor: { building: { tenant_id: tenantId } } },
+  });
+
+  it('confines a property manager to tickets on the buildings it owns', async () => {
+    const { prisma, service } = makeService();
+
+    // Before this scope existed, every role that was not a renter or a
+    // technician fell through to an unfiltered query and was served every
+    // ticket on the platform.
+    await service.findAllForUser(userWith(USER_ROLE.MANAGER, 'tenant-a'), {});
+
+    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
+      AND: [{}, landlordScope('tenant-a')],
+    });
+  });
+
+  it.each([USER_ROLE.CLIENT_ADMIN, USER_ROLE.FINANCE, USER_ROLE.RECEPTIONIST])(
+    'confines %s the same way',
+    async (role) => {
+      const { prisma, service } = makeService();
+
+      await service.findAllForUser(userWith(role, 'tenant-a'), {});
+
+      expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
+        AND: [{}, landlordScope('tenant-a')],
+      });
+    },
+  );
+
+  it('lets the platform owner read across every company', async () => {
+    const { prisma, service } = makeService();
+
+    await service.findAllForUser(
+      userWith(USER_ROLE.SUPER_ADMIN, 'tenant-a'),
+      {},
+    );
+
+    const where = whereOf(prisma.maintenanceTicket.findMany);
+    expect(where.AND).toBeUndefined();
+    expect(JSON.stringify(where)).not.toContain('tenant-a');
+  });
+
+  it('counts stats over the same boundary, not the whole platform', async () => {
+    const { prisma, service } = makeService();
+
+    await service.getStatsForUser(userWith(USER_ROLE.MANAGER, 'tenant-a'));
+
+    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
+      AND: [landlordScope('tenant-a')],
+    });
+  });
+
+  it('opens a ticket on a building the caller owns, though the ticket belongs to the renter', async () => {
+    const { prisma, service } = makeService();
+    // tenant_id is the renter that raised it; the manager's claim comes from
+    // owning the building, so a plain tenant_id comparison locked them out.
+    prisma.maintenanceTicket.findUnique.mockResolvedValue({
+      id: 'ticket-1',
+      tenant_id: 'renter-x',
+      space: { floor: { building: { tenant_id: 'tenant-a' } } },
+    });
+
+    await expect(
+      service.findOneForUser(
+        userWith(USER_ROLE.MANAGER, 'tenant-a'),
+        'ticket-1',
+      ),
+    ).resolves.toMatchObject({ id: 'ticket-1' });
+  });
+
+  it('still refuses a ticket on a rival company’s building', async () => {
+    const { prisma, service } = makeService();
+    prisma.maintenanceTicket.findUnique.mockResolvedValue({
+      id: 'ticket-1',
+      tenant_id: 'renter-x',
+      space: { floor: { building: { tenant_id: 'tenant-b' } } },
+    });
+
+    await expect(
+      service.findOneForUser(
+        userWith(USER_ROLE.MANAGER, 'tenant-a'),
+        'ticket-1',
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('offers only its own spaces when raising a ticket', async () => {
+    const { prisma, service } = makeService();
+
+    await service.getAccessibleSpaces(userWith(USER_ROLE.MANAGER, 'tenant-a'));
+
+    expect(whereOf(prisma.space.findMany)).toMatchObject({
+      floor: { building: { tenant_id: 'tenant-a' } },
     });
   });
 });

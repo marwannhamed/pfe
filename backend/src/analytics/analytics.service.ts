@@ -25,16 +25,23 @@ export class AnalyticsService {
   // ─── Overview KPIs ────────────────────────────────────────────────────────
   @Cache(300000) // 5 minutes cache
   async getOverview(user: AuthUser, from: Date, to: Date, tenantId?: string) {
-    const scope = this.tenantFilter(user, tenantId);
     const diffMs = to.getTime() - from.getTime();
     const prevFrom = new Date(from.getTime() - diffMs);
     const prevTo = new Date(from);
-    const tFilter = scope;
+
+    // An invoice belongs to the renter, so a property company reaches its own
+    // billing through the bookings sitting in its buildings — the same path
+    // BillingService.portfolioInvoiceWhere already uses for the invoice list.
+    // Filtering these on tenant_id alone reported zero revenue and zero
+    // bookings on every property manager's dashboard while the lists below
+    // showed the real rows.
+    const iFilter = this.invoiceTenantFilter(user, tenantId);
+    const bFilter = this.bookingTenantFilter(user, tenantId);
 
     const [rev, prevRev] = await Promise.all([
       this.prisma.invoice.aggregate({
         where: {
-          ...tFilter,
+          ...iFilter,
           status: 'PAID',
           created_at: { gte: from, lte: to },
         },
@@ -42,7 +49,7 @@ export class AnalyticsService {
       }),
       this.prisma.invoice.aggregate({
         where: {
-          ...tFilter,
+          ...iFilter,
           status: 'PAID',
           created_at: { gte: prevFrom, lte: prevTo },
         },
@@ -52,14 +59,14 @@ export class AnalyticsService {
 
     const [bookings, prevBookings, confirmedBookings] = await Promise.all([
       this.prisma.booking.count({
-        where: { ...tFilter, created_at: { gte: from, lte: to } },
+        where: { ...bFilter, created_at: { gte: from, lte: to } },
       }),
       this.prisma.booking.count({
-        where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } },
+        where: { ...bFilter, created_at: { gte: prevFrom, lte: prevTo } },
       }),
       this.prisma.booking.count({
         where: {
-          ...tFilter,
+          ...bFilter,
           status: 'CONFIRMED',
           created_at: { gte: from, lte: to },
         },
@@ -68,35 +75,44 @@ export class AnalyticsService {
 
     const [invoices, prevInvoices, overdueInvoices] = await Promise.all([
       this.prisma.invoice.count({
-        where: { ...tFilter, created_at: { gte: from, lte: to } },
+        where: { ...iFilter, created_at: { gte: from, lte: to } },
       }),
       this.prisma.invoice.count({
-        where: { ...tFilter, created_at: { gte: prevFrom, lte: prevTo } },
+        where: { ...iFilter, created_at: { gte: prevFrom, lte: prevTo } },
       }),
-      this.prisma.invoice.count({ where: { ...tFilter, status: 'OVERDUE' } }),
+      this.prisma.invoice.count({ where: { ...iFilter, status: 'OVERDUE' } }),
     ]);
 
-    const activeTenants = await this.prisma.tenant.count({
-      where: { status: 'ACTIVE' },
-    });
+    // These four counts used to run with no filter at all, so every KPI card
+    // on every dashboard showed platform-wide totals — one organisation's
+    // space count, ticket count and peer count leaking to all the others, and
+    // an occupancy rate computed over buildings the viewer does not own.
+    const activeTenants = await this.countActiveTenants(user, tenantId);
 
+    const spaceScope = this.spaceTenantFilter(user, tenantId);
     const [totalSpaces, occupiedSpaces, availableSpaces] = await Promise.all([
-      this.prisma.space.count(),
+      this.prisma.space.count({ where: spaceScope }),
       this.prisma.space.count({
-        where: { status: { in: ['OCCUPIED', 'RESERVED'] } },
+        where: { ...spaceScope, status: { in: ['OCCUPIED', 'RESERVED'] } },
       }),
-      this.prisma.space.count({ where: { status: 'AVAILABLE' } }),
+      this.prisma.space.count({
+        where: { ...spaceScope, status: 'AVAILABLE' },
+      }),
     ]);
 
+    const ticketScope = this.ticketTenantFilter(user, tenantId);
     const [tickets, prevTickets, openTickets] = await Promise.all([
       this.prisma.maintenanceTicket.count({
-        where: { created_at: { gte: from, lte: to } },
+        where: { ...ticketScope, created_at: { gte: from, lte: to } },
       }),
       this.prisma.maintenanceTicket.count({
-        where: { created_at: { gte: prevFrom, lte: prevTo } },
+        where: { ...ticketScope, created_at: { gte: prevFrom, lte: prevTo } },
       }),
       this.prisma.maintenanceTicket.count({
-        where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } },
+        where: {
+          ...ticketScope,
+          status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+        },
       }),
     ]);
 
@@ -441,6 +457,82 @@ export class AnalyticsService {
     return scope.tenant_id
       ? { floor: { building: { tenant_id: scope.tenant_id } } }
       : {};
+  }
+
+  /**
+   * A maintenance ticket's tenant_id is the renter that raised it. A property
+   * company reaches its tickets through the building instead, so filtering its
+   * staff on tenant_id would report zero while filtering on nothing reports
+   * every other company's tickets.
+   */
+  /** Bookings a property company holds are those in the buildings it owns. */
+  private bookingTenantFilter(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    if (!scope.tenant_id) return {};
+    return {
+      OR: [
+        { tenant_id: scope.tenant_id },
+        { space: { floor: { building: { tenant_id: scope.tenant_id } } } },
+      ],
+    };
+  }
+
+  /** Invoices reach a property company through those same bookings. */
+  private invoiceTenantFilter(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    if (!scope.tenant_id) return {};
+    return {
+      OR: [
+        { tenant_id: scope.tenant_id },
+        {
+          bookings: {
+            some: {
+              space: { floor: { building: { tenant_id: scope.tenant_id } } },
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  private ticketTenantFilter(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    if (!scope.tenant_id) return {};
+    return {
+      OR: [
+        { tenant_id: scope.tenant_id },
+        { space: { floor: { building: { tenant_id: scope.tenant_id } } } },
+      ],
+    };
+  }
+
+  /**
+   * "Active organisations" means every active org only to the platform owner.
+   * A property company counts the renters occupying its buildings; a renter
+   * counts only itself.
+   */
+  private async countActiveTenants(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    if (!scope.tenant_id) {
+      return this.prisma.tenant.count({ where: { status: 'ACTIVE' } });
+    }
+    return this.prisma.tenant.count({
+      where: {
+        status: 'ACTIVE',
+        OR: [
+          { id: scope.tenant_id },
+          {
+            bookings: {
+              some: {
+                space: {
+                  floor: { building: { tenant_id: scope.tenant_id } },
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
   }
 
   /** Desk / room utilization from bookings vs capacity over a window (heatmap input). */

@@ -23,6 +23,15 @@ const RENTER_EMPLOYEE = 'employee@acme-corp.test';
 const RENTER_ADMIN = 'tenant.admin@acme-corp.test';
 const PLATFORM_OWNER = 'admin@leasemanager.com';
 
+/**
+ * Two competing property companies. Renter-level isolation was the only thing
+ * checked here at first, which is precisely how a set of landlord-level leaks
+ * survived: every property manager was being served every other company's
+ * maintenance tickets and KPI totals.
+ */
+const LANDLORD_A = 'manager@msheireb.test';
+const LANDLORD_B = 'manager@west-bay.test';
+
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
 const red = (s) => `\x1b[31m${s}\x1b[0m`;
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
@@ -207,7 +216,87 @@ async function main() {
     }
   }
 
-  // ── 5. a user cannot promote themselves ──────────────────────────────────
+  // ── 5. one property company must not see another's portfolio ─────────────
+  console.log('\nProperty companies — each sees only its own portfolio:');
+  const a = await login(LANDLORD_A);
+  const b = await login(LANDLORD_B);
+
+  // buildings are the ground truth for who owns what
+  const ownBuildings = async (who) => {
+    const { payload } = await call(who.token, 'GET', '/buildings');
+    const all = payload?.data ?? [];
+    return all.filter((x) => x.tenant_id === who.user.tenant_id).map((x) => x.id);
+  };
+  const aBuildings = await ownBuildings(a);
+  const bBuildings = await ownBuildings(b);
+  note(
+    aBuildings.length > 0 && bBuildings.length > 0,
+    `both companies own buildings — ${aBuildings.length} and ${bBuildings.length}`,
+  );
+
+  // the platform owner's totals are the whole-platform figure; neither
+  // company may match it, and the two must not overlap
+  const totals = async (token, path, take) => {
+    const { payload } = await call(token, 'GET', path);
+    return take(payload?.data ?? payload);
+  };
+  const len = (d) => (Array.isArray(d) ? d.length : -1);
+
+  const ticketsAll = await totals(owner.token, '/maintenance', len);
+  const ticketsA = await totals(a.token, '/maintenance', len);
+  const ticketsB = await totals(b.token, '/maintenance', len);
+  note(
+    ticketsA < ticketsAll && ticketsB < ticketsAll,
+    `maintenance tickets — platform ${ticketsAll}, each company ${ticketsA} / ${ticketsB}`,
+  );
+
+  const idsOf = async (token, path) => {
+    const { payload } = await call(token, 'GET', path);
+    const rows = payload?.data ?? payload;
+    return new Set(Array.isArray(rows) ? rows.map((r) => r.id) : []);
+  };
+  const aTickets = await idsOf(a.token, '/maintenance');
+  const bTickets = await idsOf(b.token, '/maintenance');
+  const shared = [...aTickets].filter((id) => bTickets.has(id));
+  note(shared.length === 0, `no ticket is served to both companies`);
+
+  // opening the other company's ticket by id
+  const foreignTicket = [...bTickets][0];
+  if (foreignTicket) {
+    const { status } = await call(a.token, 'GET', `/maintenance/${foreignTicket}`);
+    note(status >= 400, `company A opens company B's ticket by id — ${status}`);
+  }
+  const ownTicket = [...aTickets][0];
+  if (ownTicket) {
+    const { status } = await call(a.token, 'GET', `/maintenance/${ownTicket}`);
+    note(status === 200, `company A opens its own ticket by id — ${status}`);
+  }
+
+  // KPI cards must not report platform-wide figures to a single company
+  const kpi = async (token) => {
+    const { payload } = await call(token, 'GET', '/analytics/overview');
+    return payload?.data ?? {};
+  };
+  const kAll = await kpi(owner.token);
+  const kA = await kpi(a.token);
+  note(
+    kA.activeTenants < kAll.activeTenants,
+    `active organisations — platform ${kAll.activeTenants}, company A ${kA.activeTenants}`,
+  );
+  note(
+    kA.occupancyRate?.total < kAll.occupancyRate?.total,
+    `spaces counted — platform ${kAll.occupancyRate?.total}, company A ${kA.occupancyRate?.total}`,
+  );
+  note(
+    kA.maintenanceTickets?.current < kAll.maintenanceTickets?.current,
+    `tickets counted — platform ${kAll.maintenanceTickets?.current}, company A ${kA.maintenanceTickets?.current}`,
+  );
+  note(
+    kA.revenue?.current > 0 && kA.revenue.current < kAll.revenue.current,
+    `revenue — platform ${kAll.revenue?.current}, company A ${kA.revenue?.current} (non-zero, not the platform figure)`,
+  );
+
+  // ── 6. a user cannot promote themselves ──────────────────────────────────
   console.log('\nPrivilege escalation:');
   await call(employee.token, 'PATCH', `/users/${employee.user.id}`, {
     role: 'SUPER_ADMIN',

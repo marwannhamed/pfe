@@ -165,6 +165,19 @@ export class MaintenanceService {
     );
   }
 
+  /**
+   * A property company's tickets are the ones raised on spaces inside the
+   * buildings it owns. The ticket's own tenant_id is the *renter's* org — the
+   * company that reported it — so scoping landlord staff on tenant_id returns
+   * nothing, and scoping them on nothing at all (what happened before) returned
+   * every other property company's tickets.
+   */
+  private landlordTicketScope(user: AuthUser) {
+    return {
+      space: { floor: { building: { tenant_id: user.tenant_id } } },
+    };
+  }
+
   private portalTicketScope(user: AuthUser) {
     return {
       OR: [
@@ -180,7 +193,13 @@ export class MaintenanceService {
   async getAccessibleSpaces(user: AuthUser) {
     if (!this.isPortalCustomer(user.role)) {
       return this.prisma.space.findMany({
-        where: { status: { not: SPACE_STATUS.OUT_OF_SERVICE } },
+        where: {
+          status: { not: SPACE_STATUS.OUT_OF_SERVICE },
+          // staff pick from their own buildings; the platform owner sees all
+          ...(user.role === USER_ROLE.SUPER_ADMIN
+            ? {}
+            : { floor: { building: { tenant_id: user.tenant_id } } }),
+        },
         select: { id: true, name: true, slug: true, type: true, status: true },
         orderBy: { name: 'asc' },
       });
@@ -405,20 +424,30 @@ export class MaintenanceService {
         };
       }
       const rows = await (this.prisma as any).maintenanceTicket.findMany({
-        where: { AND: [base, scope] },
+        where: { AND: [base, scope, this.landlordTicketScope(user)] },
         include: this.ticketInclude as any,
         orderBy: [{ priority: 'desc' }, { created_at: 'desc' }],
       });
       return this.mapTickets(rows);
     }
 
-    const rows = await this.findAllRaw(
-      filters.spaceId,
-      filters.status,
-      filters.priority,
-      filters.category,
-      filters.assignedTo,
-    );
+    // Only the platform owner reads across property companies.
+    if (user.role === USER_ROLE.SUPER_ADMIN) {
+      const rows = await this.findAllRaw(
+        filters.spaceId,
+        filters.status,
+        filters.priority,
+        filters.category,
+        filters.assignedTo,
+      );
+      return this.mapTickets(rows);
+    }
+
+    const rows = await (this.prisma as any).maintenanceTicket.findMany({
+      where: { AND: [base, this.landlordTicketScope(user)] },
+      include: this.ticketInclude as any,
+      orderBy: [{ priority: 'desc' }, { created_at: 'desc' }],
+    });
     return this.mapTickets(rows);
   }
 
@@ -471,9 +500,16 @@ export class MaintenanceService {
     if (user.role === USER_ROLE.MAINTENANCE) {
       const tickets = await (this.prisma as any).maintenanceTicket.findMany({
         where: {
-          OR: [
-            { AND: [{ status: TICKET_STATUS.OPEN }, { assigned_to: null }] },
-            { assigned_to: user.id },
+          AND: [
+            {
+              OR: [
+                {
+                  AND: [{ status: TICKET_STATUS.OPEN }, { assigned_to: null }],
+                },
+                { assigned_to: user.id },
+              ],
+            },
+            this.landlordTicketScope(user),
           ],
         },
         select: { status: true, priority: true },
@@ -493,7 +529,26 @@ export class MaintenanceService {
         ).length,
       };
     }
-    return this.getStats(spaceId);
+    if (user.role === USER_ROLE.SUPER_ADMIN) return this.getStats(spaceId);
+
+    const tickets = await (this.prisma as any).maintenanceTicket.findMany({
+      where: {
+        AND: [
+          this.landlordTicketScope(user),
+          ...(spaceId ? [{ space_id: spaceId }] : []),
+        ],
+      },
+      select: { status: true },
+    });
+    const byStatus: Record<string, number> = {};
+    for (const t of tickets) byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+    return {
+      total: tickets.length,
+      open: byStatus.OPEN ?? 0,
+      inProgress: byStatus.IN_PROGRESS ?? 0,
+      resolved: byStatus.RESOLVED ?? 0,
+      closed: byStatus.CLOSED ?? 0,
+    };
   }
 
   // ─── FIND ONE ─────────────────────────────────────────────────
@@ -505,12 +560,25 @@ export class MaintenanceService {
    */
   private assertTicketReadable(
     user: AuthUser,
-    ticket: { tenant_id?: string | null },
+    ticket: {
+      tenant_id?: string | null;
+      space?: {
+        floor?: { building?: { tenant_id?: string } | null } | null;
+      } | null;
+    },
   ) {
     if (user.role === USER_ROLE.SUPER_ADMIN) return;
-    if (!ticket.tenant_id || ticket.tenant_id !== user.tenant_id) {
-      throw new ForbiddenException('You cannot access this ticket');
-    }
+
+    // the renter that raised it
+    if (ticket.tenant_id && ticket.tenant_id === user.tenant_id) return;
+
+    // the property company whose building the ticket sits in — its tenant_id
+    // is the renter's, so equality alone would lock landlord staff out of
+    // every ticket on their own spaces
+    const owner = ticket.space?.floor?.building?.tenant_id;
+    if (owner && owner === user.tenant_id) return;
+
+    throw new ForbiddenException('You cannot access this ticket');
   }
 
   /** Scoped lookup for anything reachable over HTTP. */
@@ -520,7 +588,7 @@ export class MaintenanceService {
       include: this.ticketInclude,
     });
     if (!ticket) throw new NotFoundException(`Ticket #${id} introuvable`);
-    this.assertTicketReadable(user, ticket as { tenant_id?: string | null });
+    this.assertTicketReadable(user, ticket);
     return this.mapTicket(ticket);
   }
 
