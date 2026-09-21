@@ -60,4 +60,40 @@ export class OpenAiService {
     if (!text) throw new BadGatewayException('Empty response from OpenAI');
     return text;
   }
+
+  /** True when a key is configured — callers fall back rather than fail. */
+  isConfigured(): boolean {
+    return !!this.apiKey();
+  }
+
+  /**
+   * Ask for a single JSON object and parse it.
+   *
+   * Models wrap JSON in ``` fences or add a sentence of preamble often enough
+   * that parsing the raw string fails in normal operation, so the first
+   * balanced {...} is extracted before parsing. Returns null on anything
+   * unparseable — every caller here has a deterministic fallback, and a
+   * suggestion is never worth failing a user's request over.
+   */
+  async chatJson<T>(
+    messages: ChatMsg[],
+    systemPrompt: string,
+  ): Promise<T | null> {
+    let raw: string;
+    try {
+      raw = await this.chat(messages, systemPrompt);
+    } catch {
+      return null;
+    }
+
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start === -1 || end <= start) return null;
+
+    try {
+      return JSON.parse(raw.slice(start, end + 1)) as T;
+    } catch {
+      return null;
+    }
+  }
 }

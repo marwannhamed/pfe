@@ -303,9 +303,36 @@ export interface Payment {
   invoice?:             Invoice;
 }
 
+/** Response of POST /ai/maintenance/triage. */
+export interface MaintenanceTriage {
+  category: TicketCategory;
+  priority: TicketPriority;
+  reason: string;
+  /** "model" when the LLM classified it, "keywords" when the fallback did. */
+  source: 'model' | 'keywords';
+  /** Null for renters, and for staff whose company employs no technician. */
+  suggestedAssignee: {
+    id: string;
+    name: string;
+    basis: string;
+    resolvedInCategory: number;
+    openAssigned: number;
+  } | null;
+  similar: {
+    id: string;
+    ticket_number: string;
+    title: string;
+    status: TicketStatus;
+    resolved_at: string | null;
+    cost: number | null;
+  }[];
+}
+
 export interface MaintenanceTicket {
   id:                   string;
-  space_id:             string;
+  // Nullable in the schema, and the space relation is onDelete: SetNull — so
+  // removing a space blanks this on every ticket that referenced it.
+  space_id?:            string | null;
   created_by_user_id:   string;
   assigned_to?:         string;
   ticket_number:        string;
@@ -344,8 +371,11 @@ export interface AuditLog {
   tenant_id:     string;
   user_id?:      string;
   action:        AuditAction;
-  resource_type: string;
-  resource_id:   string;
+  // Both are nullable in the schema — an entry need not name a record, and
+  // declaring them required here is what let an unguarded .substring() past
+  // the type checker and took the whole audit page down on the first such row.
+  resource_type?: string | null;
+  resource_id?:   string | null;
   old_values?:   Record<string, unknown>;
   new_values?:   Record<string, unknown>;
   ip_address?:   string;

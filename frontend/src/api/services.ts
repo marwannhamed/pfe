@@ -10,6 +10,7 @@ import type {
   LeaseContract,
   MaintenanceStats,
   MaintenanceTicket,
+  MaintenanceTriage,
   Notification,
   Payment,
   NotificationStats,
@@ -480,8 +481,13 @@ export const aiApi = {
     api.post('/ai/lease-assistant', { messages }),
   tenantAssistant: (messages: { role: string; content: string }[]) =>
     api.post('/ai/tenant-assistant', { messages }),
-  suggestMaintenanceCategory: (title: string, description?: string) =>
-    api.post('/ai/maintenance/suggest-category', { title, description }),
+  /**
+   * Category + priority, plus a suggested technician for staff who can assign.
+   * The response interceptor already unwraps ResponseDto, so `res.data` is the
+   * triage itself — not `{ data: … }`.
+   */
+  triageMaintenance: (title: string, description?: string) =>
+    api.post<MaintenanceTriage>('/ai/maintenance/triage', { title, description }),
 };
 
 // ─── UPLOADS ──────────────────────────────────────────────────────────
@@ -533,12 +539,24 @@ export const addonServiceApi = {
 
 // ─── PROMOTION CODES ──────────────────────────────────────────────────────────
 export const promotionCodeApi = {
-  getAll: (params?: {
+  /**
+   * Returns the codes themselves. The endpoint answers with
+   * `{ data, pagination }`, so a caller that treated the response as an array
+   * got an object and crashed on .filter — normalise it here, once.
+   */
+  getAll: async (params?: {
     isActive?: boolean;
     page?: number;
     limit?: number;
     search?: string;
-  }) => dedupedGet<PromotionCode[]>('/promotion-codes', params),
+  }): Promise<PromotionCode[]> => {
+    const res = await dedupedGet<
+      PromotionCode[] | { data?: PromotionCode[] }
+    >('/promotion-codes', params);
+    const payload = res.data;
+    if (Array.isArray(payload)) return payload;
+    return Array.isArray(payload?.data) ? payload.data : [];
+  },
   getOne: (id: string) => api.get(`/promotion-codes/${id}`),
   create: (data: unknown) => api.post('/promotion-codes', data),
   update: (id: string, data: unknown) => api.patch(`/promotion-codes/${id}`, data),

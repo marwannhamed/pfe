@@ -4,9 +4,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { USER_ROLE, TICKET_CATEGORY } from '../constants/enums';
+import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
 import { OpenAiService } from './openai.service';
+import { MaintenanceTriageService } from './maintenance-triage.service';
 import {
   LeaseAssistantDto,
   TenantAssistantDto,
@@ -27,7 +28,10 @@ const AI_ROLES = [
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('ai')
 export class AiController {
-  constructor(private readonly openAi: OpenAiService) {}
+  constructor(
+    private readonly openAi: OpenAiService,
+    private readonly triage: MaintenanceTriageService,
+  ) {}
 
   @Post('lease-assistant')
   @Roles(...AI_ROLES)
@@ -63,26 +67,19 @@ User role: ${user.role}. Be short, friendly, and actionable. Never promise refun
     return { reply };
   }
 
-  @Post('maintenance/suggest-category')
+  @Post('maintenance/triage')
   @Roles(...AI_ROLES)
   @ApiOperation({
     summary:
-      'Suggest maintenance ticket category from title/description (OpenAI)',
+      'Triage a maintenance request: category, priority, and — for staff who can assign — a suggested technician and past fixes',
   })
-  async suggestMaintenanceCategory(@Body() dto: MaintenanceSuggestDto) {
-    const allowed = Object.values(TICKET_CATEGORY).join(', ');
-    const system = `Classify the maintenance request into exactly one category from: ${allowed}.
-Reply with a single line: CATEGORY|one short reason (max 120 chars). Example: PLUMBING|mentions leak`;
-    const userMsg = [dto.title, dto.description].filter(Boolean).join('\n');
-    const raw = await this.openAi.chat(
-      [{ role: 'user', content: userMsg }],
-      system,
-    );
-    const [catPart] = raw.split('|');
-    const category = (catPart ?? '').trim().toUpperCase();
-    const valid = Object.values(TICKET_CATEGORY).includes(category as any)
-      ? category
-      : TICKET_CATEGORY.OTHER;
-    return { category: valid, raw };
+  async triageMaintenance(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: MaintenanceSuggestDto,
+  ) {
+    return this.triage.triage(user, {
+      title: dto.title,
+      description: dto.description,
+    });
   }
 }

@@ -6,11 +6,11 @@ import { Input, Select, Modal, Form, Skeleton, Empty } from 'antd';
 import { message, modal } from '../../utils/feedback';
 import {
   SearchOutlined, PlusOutlined, ReloadOutlined,
-  ToolOutlined, EyeOutlined, DeleteOutlined, CheckOutlined,
+  ToolOutlined, EyeOutlined, DeleteOutlined, CheckOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
-import { maintenanceApi, userApi } from '../../api/services';
+import { maintenanceApi, userApi, aiApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
-import type { MaintenanceTicket, TicketStatus, TicketPriority, TicketCategory } from '../../types';
+import type { MaintenanceTicket, MaintenanceTriage, TicketStatus, TicketPriority, TicketCategory } from '../../types';
 import UserAvatar from '../../components/UserAvatar';
 import { formatUserName } from '../../utils/user';
 import { asApiError } from '../../utils/errors';
@@ -70,6 +70,45 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
   const qc        = useQueryClient();
   const [loading, setLoading] = useState(false);
 
+  // ── AI triage ───────────────────────────────────────────────────────────
+  // Suggestions are offered, never applied silently: the reporter stays the
+  // author of their own ticket, and a wrong guess costs them nothing.
+  const [triage, setTriage] = useState<MaintenanceTriage | null>(null);
+  const [triaging, setTriaging] = useState(false);
+  const [triageFailed, setTriageFailed] = useState(false);
+  const [assigneeAccepted, setAssigneeAccepted] = useState(false);
+
+  const resetTriage = () => {
+    setTriage(null);
+    setTriaging(false);
+    setTriageFailed(false);
+    setAssigneeAccepted(false);
+  };
+
+  const runTriage = async () => {
+    const { title, description } = form.getFieldsValue();
+    // Below this the text says too little to classify anything.
+    if (!title || title.trim().length < 8) return;
+    setTriaging(true);
+    setTriageFailed(false);
+    try {
+      const res = await aiApi.triageMaintenance(title.trim(), description?.trim());
+      setTriage(res.data ?? null);
+    } catch {
+      // Triage is an assist, not a gate — the form stays fully usable.
+      setTriageFailed(true);
+      setTriage(null);
+    } finally {
+      setTriaging(false);
+    }
+  };
+
+  const applyClassification = () => {
+    if (!triage) return;
+    form.setFieldsValue({ category: triage.category, priority: triage.priority });
+    message.success('Category and priority applied');
+  };
+
   const { data: spaces = [], isLoading: spacesLoading, isError: spacesError } = useQuery({
     queryKey: ['maintenance-accessible-spaces'],
     queryFn:  async () => {
@@ -88,13 +127,19 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
         space_id:           v.space_id,
         created_by_user_id: userId,
         title:              v.title,
+        description:        v.description?.trim() || undefined,
         category:           v.category,
         priority:           v.priority ?? 'NORMAL',
+        // only set when the manager accepted the suggested technician
+        ...(assigneeAccepted && triage?.suggestedAssignee
+          ? { assigned_to: triage.suggestedAssignee.id }
+          : {}),
       });
       message.success('Ticket created successfully');
       qc.invalidateQueries({ queryKey: ['maintenance'] });
       onClose();
       form.resetFields();
+      resetTriage();
     } catch (e) {
       const err = e as { userMessage?: string; response?: { data?: { message?: string | string[] } } };
       const msg = err?.userMessage ?? asApiError(err).response?.data?.message ?? 'Failed to create ticket';
@@ -107,14 +152,25 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
   return (
     <Modal
       open={open}
-      onCancel={() => { onClose(); form.resetFields(); }}
+      onCancel={() => { onClose(); form.resetFields(); resetTriage(); }}
       footer={null}
       width={520}
       title={<div><div style={{ fontWeight: 700, fontSize: 17 }}>Submit Maintenance Request</div><div style={{ fontSize: 13, color: th.textSub, fontWeight: 400 }}>Report an issue or request maintenance</div></div>}
     >
       <Form form={form} layout="vertical" requiredMark={false} style={{ marginTop: 16 }}>
         <Form.Item label="Title" name="title" rules={[{ required: true, message: 'Please describe the issue' }]}>
-          <Input placeholder="e.g. AC not working in Office 201" />
+          <Input placeholder="e.g. AC not working in Office 201" onBlur={runTriage} />
+        </Form.Item>
+        <Form.Item
+          label="What is happening?"
+          name="description"
+          extra="The more detail, the better the suggested category and priority."
+        >
+          <Input.TextArea
+            rows={3}
+            placeholder="When did it start, which part of the space, is it still usable?"
+            onBlur={runTriage}
+          />
         </Form.Item>
         <Form.Item label="Space" name="space_id" rules={[{ required: true, message: 'Please select a space' }]}>
           <Select
@@ -144,9 +200,116 @@ function NewTicketModal({ open, onClose, userId }: { open: boolean; onClose: () 
             <Select options={Object.entries(PRIORITY_META).map(([v, m]) => ({ value: v, label: m.label }))} />
           </Form.Item>
         </div>
+
+        {triaging && (
+          <div style={{ fontSize: 12, color: th.textSub, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <ThunderboltOutlined spin /> Reading the description…
+          </div>
+        )}
+
+        {triageFailed && (
+          <div style={{ fontSize: 12, color: th.textSub }}>
+            Could not suggest a category this time — choose one above and carry on.
+          </div>
+        )}
+
+        {triage && !triaging && (
+          <div
+            style={{
+              border: `1px solid ${th.cardBorder}`,
+              borderLeft: '3px solid #2563eb',
+              borderRadius: 8,
+              padding: '12px 14px',
+              display: 'grid',
+              gap: 10,
+              background: th.cardBg,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <ThunderboltOutlined style={{ color: '#2563eb' }} />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Suggested</span>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                background: th.hover, color: th.textSub,
+              }}>
+                {triage.source === 'model' ? 'AI' : 'keyword match'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                background: '#e0e7ff', color: '#3730a3',
+              }}>
+                {CATEGORY_LABELS[triage.category] ?? triage.category}
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                background: (PRIORITY_META[triage.priority] ?? PRIORITY_META.NORMAL).bg,
+                color: (PRIORITY_META[triage.priority] ?? PRIORITY_META.NORMAL).color,
+              }}>
+                {(PRIORITY_META[triage.priority] ?? PRIORITY_META.NORMAL).label}
+              </span>
+              <button
+                type="button"
+                onClick={applyClassification}
+                style={{
+                  marginLeft: 'auto', fontSize: 12, fontWeight: 600, padding: '4px 12px',
+                  borderRadius: 6, border: '1px solid #2563eb', background: 'transparent',
+                  color: '#2563eb', cursor: 'pointer',
+                }}
+              >
+                Apply
+              </button>
+            </div>
+
+            {triage.reason && (
+              <div style={{ fontSize: 12, color: th.textSub }}>{triage.reason}</div>
+            )}
+
+            {triage.suggestedAssignee && (
+              <div style={{ display: 'flex', gap: 9, alignItems: 'center', flexWrap: 'wrap', paddingTop: 2 }}>
+                <div style={{ fontSize: 12 }}>
+                  <b>{triage.suggestedAssignee.name}</b>
+                  <span style={{ color: th.textSub }}> — {triage.suggestedAssignee.basis}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAssigneeAccepted(v => !v)}
+                  style={{
+                    marginLeft: 'auto', fontSize: 12, fontWeight: 600, padding: '4px 12px',
+                    borderRadius: 6, cursor: 'pointer',
+                    border: `1px solid ${assigneeAccepted ? '#15803d' : th.cardBorder}`,
+                    background: assigneeAccepted ? '#dcfce7' : 'transparent',
+                    color: assigneeAccepted ? '#15803d' : th.text,
+                  }}
+                >
+                  {assigneeAccepted ? '✓ Will be assigned' : 'Assign to them'}
+                </button>
+              </div>
+            )}
+
+            {triage.similar.length > 0 && (
+              <details style={{ fontSize: 12, color: th.textSub }}>
+                <summary style={{ cursor: 'pointer' }}>
+                  {triage.similar.length} similar fix{triage.similar.length === 1 ? '' : 'es'} in your buildings
+                </summary>
+                <div style={{ display: 'grid', gap: 4, paddingTop: 7 }}>
+                  {triage.similar.map(s => (
+                    <div key={s.id} style={{ display: 'flex', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{s.ticket_number}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>{s.title}</span>
+                      {s.cost != null && <span>{s.cost} QAR</span>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
       </Form>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
-        <button onClick={() => { onClose(); form.resetFields(); }} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+        <button onClick={() => { onClose(); form.resetFields(); resetTriage(); }} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
         <button onClick={handleOk} disabled={loading} style={{ padding: '9px 24px', borderRadius: 8, background: '#2563eb', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
           {loading ? 'Submitting...' : '+ Submit Ticket'}
         </button>
@@ -253,7 +416,7 @@ function TicketDetailModal({
           ['Ticket #',    ticket.ticket_number],
           ['Title',       ticket.title],
           ['Category',    CATEGORY_LABELS[ticket.category] ?? ticket.category],
-          ['Space',       ticket.space?.name ?? ticket.space_id.substring(0, 8)],
+          ['Space',       ticket.space?.name ?? (ticket.space_id ? ticket.space_id.substring(0, 8) : '—')],
           ['Created by',  ticket.createdBy ? `${ticket.createdBy.first_name} ${ticket.createdBy.last_name}` : '—'],
           ['Assigned to', assignee ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email : 'Unassigned — waiting for a technician'],
           ['Reported',    formatDate(ticket.reported_at)],
