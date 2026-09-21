@@ -1,6 +1,9 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native"]
+  provider = "prisma-client-js"
+  // "native" alone builds only the host's engine — on Windows that is
+  // query_engine-windows.dll.node, which the Linux container cannot load.
+  // The debian target covers the node:20 image used by both Dockerfiles.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

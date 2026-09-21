@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:13.5
@@ -7,10 +5,17 @@ services:
     env_file:
       - .env
     volumes:
-      # Use a named volume for persistence
-      - postgres_data:/var/lib/postgresql/data   
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - '5433:5432'
+    healthcheck:
+      # The API used to start before Postgres was accepting connections and
+      # crash-loop until it caught up; depends_on alone only waits for the
+      # container to exist, not for the database to be ready.
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d lease_management']
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   adminer:
     image: adminer
@@ -27,7 +32,8 @@ services:
       dockerfile: Dockerfile.dev
     restart: always
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - '6001:6001'
     env_file:
@@ -37,8 +43,12 @@ services:
       - POSTGRES_PORT=5432
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/lease_management?schema=public
     volumes:
+      # Source is mounted for hot reload …
       - .:/app
+      # … but node_modules is not: the host's copy is built for Windows and
+      # its Prisma engine (query_engine-windows.dll.node) cannot load on Linux.
+      # This anonymous volume keeps the image's own Linux install in place.
+      - /app/node_modules
 
 volumes:
-  # Define the named volume for PostgreSQL data persistence
-  postgres_data:   
+  postgres_data:

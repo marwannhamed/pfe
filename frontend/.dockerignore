@@ -1,0 +1,19 @@
+# The image runs npm ci for a Linux install of its own.
+node_modules
+npm-debug.log
+
+dist
+coverage
+.vite
+
+# VITE_API_URL is set at build time in the Dockerfile; a local .env would
+# override it and bake localhost:6001 into the bundle.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.vscode
+.idea
+*.md

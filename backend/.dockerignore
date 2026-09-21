@@ -1,0 +1,28 @@
+# Host node_modules must never reach the image: on Windows it contains
+# query_engine-windows.dll.node, which Linux cannot load. The image installs
+# its own Linux engines instead.
+node_modules
+npm-debug.log
+
+# Build output — the image builds its own
+dist
+coverage
+.nyc_output
+
+# Secrets stay out of the image; compose passes them via env_file at runtime
+.env
+.env.*
+!.env.example
+
+# Local-only artefacts
+*.sql
+uploadedFiles/*
+generatedFiles/*
+!uploadedFiles/.gitkeep
+!generatedFiles/.gitkeep
+
+.git
+.gitignore
+.vscode
+.idea
+*.md
