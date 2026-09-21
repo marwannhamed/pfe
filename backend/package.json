@@ -27,6 +27,7 @@
     "db:studio": "npx prisma studio",
     "db:apply": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:seed:full": "ts-node prisma/seed-full.ts",
     "db:reset-minimal": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-minimal.ps1",
     "db:migrate": "prisma migrate dev",
     "db:migrate:status": "prisma migrate status",

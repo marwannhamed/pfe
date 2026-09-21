@@ -13,10 +13,14 @@ All demo passwords: **`Password123!`**
 | Role | Email |
 |------|--------|
 | Super Admin | `admin@leasemanager.com` |
-| Finance | `finance@leasemanager.com` |
-| Site Manager | `manager@leasemanager.com` |
+| Finance | `finance@msheireb.test` |
+| Site Manager | `manager@msheireb.test` |
 | Tenant Admin | `tenant.admin@acme-corp.test` |
 | Employee | `employee@acme-corp.test` |
+
+The demo dataset holds three competing property companies, so signing in as
+`manager@msheireb.test` and then `manager@west-bay.test` shows two managers
+looking at the same screens and seeing entirely separate portfolios.
 
 ## Recommended demo flow (core features)
 

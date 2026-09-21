@@ -81,9 +81,42 @@ declare intent (`CLIENT_BILLING`) rather than listing roles by hand.
 | **Frontend** | React 19 · Vite 7 · TypeScript · Ant Design 6 · TanStack Query · Zustand · Recharts · React-Leaflet |
 | **Tooling** | Docker Compose · ESLint · Prettier · Jest · Vitest · GitHub Actions |
 
-## Quick start
+## Quick start — everything in Docker
 
-**Prerequisites:** Node.js 20+, Docker Desktop.
+**Prerequisites:** Docker Desktop. Nothing else.
+
+```bash
+git clone https://github.com/marwannhamed/pfe.git
+cd pfe
+cp backend/.env.example backend/.env
+
+docker compose up -d --build
+```
+
+| | |
+|---|---|
+| App | http://localhost:5173 |
+| Swagger | http://localhost:5173/api |
+| Adminer (DB UI) | http://localhost:8081 |
+
+Four containers: PostgreSQL, the NestJS API, nginx serving the built React app,
+and Adminer. nginx proxies the API routes, so the browser talks to a single
+origin and no CORS configuration is involved. Each service waits for the one
+below it to report healthy, and the database is seeded **only when empty** — a
+restart never overwrites your data.
+
+```bash
+docker compose logs -f api     # follow the API
+docker compose down            # stop (the database volume survives)
+```
+
+`backend/docker-compose.yaml` still runs the API and database on their own for
+backend-only work. Run that **or** the root stack, not both — they bind the
+same ports.
+
+## Quick start — running locally without containers
+
+**Prerequisites:** Node.js 20+, Docker Desktop (for PostgreSQL only).
 
 ```bash
 git clone https://github.com/marwannhamed/pfe.git
@@ -122,18 +155,30 @@ and you do not need CORS configured for local work.
 
 All seeded users share the password `Password123!`.
 
+`npm run db:seed` upserts a minimal set and leaves existing rows alone.
+`npm run db:seed:full` **empties every table** and rebuilds the full demo
+dataset below — one platform owner, three property companies and six renter
+companies, with every model populated.
+
 | Email | Role | Organisation | Level |
 |---|---|---|---|
 | `admin@leasemanager.com` | `SUPER_ADMIN` | LeaseManager Platform | 1 |
-| `client@demo.test` | `CLIENT_ADMIN` | Demo Property Client | 2 |
-| `manager@leasemanager.com` | `MANAGER` | Demo Property Client | 2 |
-| `finance@leasemanager.com` | `FINANCE` | Demo Property Client | 2 |
-| `maint@leasemanager.com` | `MAINTENANCE` | Demo Property Client | 2 |
+| `admin@msheireb.test` | `CLIENT_ADMIN` | Msheireb Properties | 2 |
+| `manager@msheireb.test` | `MANAGER` | Msheireb Properties | 2 |
+| `finance@msheireb.test` | `FINANCE` | Msheireb Properties | 2 |
+| `tech@msheireb.test` | `MAINTENANCE` | Msheireb Properties | 2 |
+| `reception@msheireb.test` | `RECEPTIONIST` | Msheireb Properties | 2 |
 | `tenant.admin@acme-corp.test` | `TENANT_ADMIN` | Acme Corp | 3 |
 | `employee@acme-corp.test` | `TENANT_EMPLOYEE` | Acme Corp | 3 |
 
+The other two property companies follow the same pattern at `@west-bay.test`
+and `@lusail-hub.test`; the other five renters at `@qfintech.test`,
+`@gulfco.test`, `@dohadesign.test`, `@pearllog.test` and `@arlegal.test`.
+
 Signing in as a level-2 role and then a level-3 role is the quickest way to see the tenancy
-boundary in action — the same pages expose different data and different actions.
+boundary in action — the same pages expose different data and different actions. Comparing
+two level-2 accounts from *different* property companies shows the other boundary: each
+manager sees only the buildings, bookings, tickets and revenue of their own portfolio.
 
 ## Project structure
 
