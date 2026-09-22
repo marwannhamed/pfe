@@ -1,0 +1,52 @@
+@startuml 07-state-booking
+!include _theme.puml
+
+title Diagramme d'états — cycle de vie d'une réservation
+
+[*] --> DRAFT
+
+DRAFT : Brouillon créé
+DRAFT --> PENDING_APPROVAL : soumettre
+
+state "Instruction par la société immobilière" as INSTR {
+  PENDING_APPROVAL : En attente de décision
+  PENDING_APPROVAL --> PENDING_PHONE_CONFIRMATION : accepter\n[responsable]
+  PENDING_APPROVAL --> REFUSED : refuser\n[responsable]
+
+  PENDING_PHONE_CONFIRMATION : Appel de confirmation
+  PENDING_PHONE_CONFIRMATION --> AWAITING_PHYSICAL_VISIT : joint\n[réceptionniste]
+  PENDING_PHONE_CONFIRMATION --> NO_SHOW : injoignable\n[réceptionniste]
+
+  AWAITING_PHYSICAL_VISIT : Visite des lieux
+  AWAITING_PHYSICAL_VISIT --> DOCUMENTS_PENDING_UPLOAD : visite effectuée\n[réceptionniste]
+
+  DOCUMENTS_PENDING_UPLOAD : Pièces justificatives
+  DOCUMENTS_PENDING_UPLOAD --> CONFIRMED : dossier complet\n[responsable]
+}
+
+CONFIRMED : Réservation ferme
+CONFIRMED --> CHECKED_IN : entrée dans les lieux
+CONFIRMED --> CANCELLED : annuler
+
+CHECKED_IN : Occupation en cours
+CHECKED_IN --> COMPLETED : fin de période
+
+PENDING_APPROVAL --> CANCELLED : se désister
+
+COMPLETED --> [*]
+CANCELLED --> [*]
+REFUSED --> [*]
+NO_SHOW --> [*]
+
+note right of INSTR
+  Cette phase est propre au marché visé :
+  la location commerciale au Qatar se
+  conclut en personne. L'appel puis la
+  visite précèdent toute signature.
+end note
+
+legend bottom
+  Douze états. Le rôle habilité à déclencher chaque transition est indiqué entre crochets.
+endlegend
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml 09-deployment
+!include _theme.puml
+
+title Diagramme de déploiement — docker compose up
+
+skinparam linetype ortho
+
+node "Poste client" as CLIENT {
+  artifact "Navigateur" as BROWSER
+}
+
+node "Hôte Docker" as HOST {
+
+  node "leasemanager-web\n<<container>>" as WEB {
+    component "nginx 1.27-alpine" as NGINX
+    artifact "SPA React\n(build Vite)" as SPA
+  }
+
+  node "leasemanager-api\n<<container>>" as APINODE {
+    component "NestJS 11\nNode 20" as NEST
+    component "Prisma Client" as PRISMA
+    component "Socket.IO\n/notifications" as WSGW
+  }
+
+  node "leasemanager-postgres\n<<container>>" as PGNODE {
+    database "PostgreSQL 13.5" as PG
+  }
+
+  node "leasemanager-adminer\n<<container>>" as ADMNODE {
+    component "Adminer" as ADM
+  }
+
+  storage "postgres_data\n<<volume>>" as VOL
+}
+
+cloud "Services externes" as EXT {
+  component "Groq  (LLM)" as GROQ
+  component "Brevo  (e-mail)" as BREVO
+  component "Cloudinary  (fichiers)" as CLOUD
+  component "Typeform  (webhook)" as TYPE
+}
+
+BROWSER --> NGINX : HTTPS\n:5173
+BROWSER --> ADM : :8081
+NGINX --> SPA : sert
+NGINX --> NEST : proxy /auth /bookings /spaces …\nmême origine
+NGINX --> WSGW : upgrade /socket.io
+NEST --> PRISMA
+PRISMA --> PG : :5432
+ADM --> PG
+PG --> VOL : persiste
+
+NEST ..> GROQ : HTTPS
+NEST ..> BREVO : HTTPS
+NEST ..> CLOUD : HTTPS
+TYPE ..> NEST : webhook signé
+
+note bottom of HOST
+  Chaque service attend que le précédent se déclare <i>healthy</i> :
+  postgres (pg_isready) puis api (/health) puis web.
+  La base est alimentée uniquement si elle est vide, de sorte
+  qu'un redémarrage n'écrase jamais les données existantes.
+end note
+
+legend bottom
+  Quatre conteneurs lancés par une seule commande. nginx sert l'application et
+  relaie l'API sur la même origine : aucune requête cross-origin, donc aucune
+  configuration CORS, et aucun nom d'hôte compilé dans le bundle.
+endlegend
+
+@enduml

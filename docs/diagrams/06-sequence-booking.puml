@@ -1,0 +1,81 @@
+@startuml 06-sequence-booking
+!include _theme.puml
+
+title Diagramme de séquence — de la demande au bail signé
+
+autonumber "<b>[00]"
+
+actor "Visiteur" as G
+actor "Responsable" as MGR
+actor "Réceptionniste" as REC
+actor "Admin locataire" as TA
+box "LeaseManager" #FAFCFC
+  participant "BookingApplication\nService" as BAS
+  participant "BookingService" as BS
+  participant "LeaseContract\nService" as LCS
+  participant "BillingService" as BILL
+end box
+database "PostgreSQL" as DB
+
+== Demande publique ==
+G -> BAS : POST /booking-applications/guest
+activate BAS
+BAS -> DB : BookingApplication (PENDING)
+deactivate BAS
+
+MGR -> BAS : PATCH /booking-applications/{id}/accept
+activate BAS
+BAS -> DB : Booking\n(PENDING_PHONE_CONFIRMATION)
+deactivate BAS
+
+== Qualification en personne ==
+REC -> BS : PATCH /bookings/{id}/phone-confirmed
+activate BS
+BS -> DB : → AWAITING_PHYSICAL_VISIT
+deactivate BS
+
+REC -> BS : PATCH /bookings/{id}/mark-documents-pending
+activate BS
+BS -> DB : → DOCUMENTS_PENDING_UPLOAD
+deactivate BS
+
+TA -> BS : POST /bookings/{id}/documents
+activate BS
+alt plus de cinq pièces
+  BS --> TA : 400 Bad Request
+else
+  BS -> DB : BookingDocument
+end
+deactivate BS
+
+== Contractualisation ==
+MGR -> BS : PATCH /bookings/{id}/approve
+activate BS
+BS -> DB : → CONFIRMED
+deactivate BS
+
+MGR -> LCS : PATCH /bookings/{id}/generate-contract
+activate LCS
+LCS -> DB : LeaseContract (DRAFT)
+LCS -> DB : Space.status → OCCUPIED
+deactivate LCS
+
+TA -> LCS : PATCH /lease-contracts/{id}/sign
+activate LCS
+LCS -> DB : contrat → ACTIVE
+LCS -> BILL : première échéance
+activate BILL
+BILL -> DB : Invoice + InvoiceLine
+deactivate BILL
+deactivate LCS
+
+note over REC, DB
+  La bande centrale — appel puis visite — est ce que la
+  plupart des plateformes omettent et que ce marché exige.
+end note
+
+legend bottom
+  Vingt routes servent /bookings parce que le processus est présentiel.
+endlegend
+
+@enduml

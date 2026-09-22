@@ -1,0 +1,68 @@
+@startuml 01-use-case-global
+!include _theme.puml
+
+title Diagramme de cas d'utilisation global — LeaseManager
+
+left to right direction
+
+' PlantUML place à gauche les acteurs déclarés avant le système, et à droite
+' ceux déclarés après. Répartir la distribution des deux côtés évite une
+' colonne unique de neuf acteurs et des liens qui traversent toute la figure.
+
+' ── Acteurs externes à l'organisation propriétaire ───────────────────────────
+actor "Visiteur" as GUEST
+actor "Employé" as EMP
+actor "Admin locataire" as TAD
+
+rectangle "LeaseManager" {
+  usecase "Rechercher un espace" as UC1
+  usecase "Déposer une candidature" as UC2
+  usecase "Réserver un espace" as UC3
+  usecase "Traiter une réservation" as UC4
+  usecase "Gérer le patrimoine" as UC5
+  usecase "Gérer les baux" as UC6
+  usecase "Facturer et encaisser" as UC7
+  usecase "Traiter la maintenance" as UC8
+  usecase "Consulter les analyses" as UC9
+  usecase "Administrer la plateforme" as UC10
+}
+
+' ── Acteurs de la société immobilière et de la plateforme ────────────────────
+actor "Réceptionniste" as REC
+actor "Technicien" as TEC
+actor "Responsable" as MGR
+actor "Finance" as FIN
+actor "Admin société" as CAD
+actor "Propriétaire\nde la plateforme" as SAD
+
+' Généralisation : un admin locataire fait tout ce que fait un employé.
+EMP <|-- TAD
+MGR <|-- CAD
+
+' ── Associations, acteurs de gauche ──────────────────────────────────────────
+GUEST --> UC1
+GUEST --> UC2
+EMP   --> UC3
+EMP   --> UC8
+TAD   --> UC6
+TAD   --> UC7
+
+' ── Associations, acteurs de droite ──────────────────────────────────────────
+UC4  <-- REC
+UC8  <-- TEC
+UC4  <-- MGR
+UC5  <-- MGR
+UC6  <-- MGR
+UC9  <-- MGR
+UC7  <-- FIN
+UC9  <-- FIN
+UC10 <-- SAD
+UC9  <-- SAD
+
+legend bottom
+  Vue d'ensemble. Les cas sont détaillés dans les diagrammes 01a à 01c.
+  Les acteurs de niveau 2 et 3 ne voient que les données de leur organisation ;
+  seul le propriétaire de la plateforme lit toutes les organisations.
+endlegend
+
+@enduml

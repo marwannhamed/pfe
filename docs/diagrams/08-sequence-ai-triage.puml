@@ -1,0 +1,80 @@
+@startuml 08-sequence-ai-triage
+!include _theme.puml
+
+title Diagramme de séquence — classement assisté d'un ticket de maintenance
+
+autonumber "<b>[00]"
+
+actor "Déclarant" as U
+participant "Formulaire" as UI
+box "LeaseManager" #FAFCFC
+  participant "AiController" as CTRL
+  participant "MaintenanceTriage\nService" as T
+  participant "OpenAiService" as OAI
+end box
+participant "Groq" as LLM
+database "PostgreSQL" as DB
+
+U -> UI : saisit la panne, quitte le champ
+UI -> CTRL : POST /ai/maintenance/triage
+activate CTRL
+CTRL -> T : triage(user, { title, description })
+activate T
+
+== 1. Classement ==
+T -> OAI : chatJson(texte, énumérations autorisées)
+activate OAI
+OAI -> LLM : chat/completions
+LLM --> OAI : { category, priority, reason }
+deactivate OAI
+
+alt valeurs dans nos énumérations
+  T -> T : source = "model"
+else valeur inventée, clé absente\nou fournisseur injoignable
+  T -> T : classement par mots-clés\nsource = "keywords"
+  note right of T #F7EEDA
+    Déposer un ticket ne dépend jamais
+    de la disponibilité d'un tiers.
+  end note
+end
+
+== 2. Technicien proposé ==
+alt le demandeur peut affecter\n(SUPER_ADMIN, CLIENT_ADMIN, MANAGER)
+  T -> DB : techniciens de cette société
+  T -> DB : résolus dans la catégorie,\ntickets ouverts en cours
+  T -> T : score = expérience × 10 − charge × 6
+  T -> DB : interventions passées\nsur ces bâtiments
+  note right of T
+    Le technicien vient du SQL, pas du modèle.
+    Un modèle à qui l'on demande un nom invente
+    des personnes qui n'existent pas, et un
+    responsable doit pouvoir justifier son choix.
+  end note
+else le demandeur est locataire
+  T -> T : suggestedAssignee = null\nsimilar = []
+  note right of T
+    Sinon le locataire apprendrait qui travaille
+    pour son bailleur et ce qui est en panne
+    ailleurs dans l'immeuble.
+  end note
+end
+
+T --> CTRL : { category, priority, reason,\n  suggestedAssignee, similar, source }
+deactivate T
+CTRL --> UI : 201 Created
+deactivate CTRL
+
+UI -> U : affiche la suggestion
+alt le déclarant accepte
+  U -> UI : « Appliquer »
+  UI -> UI : renseigne catégorie et priorité
+else
+  U -> UI : saisit ses propres valeurs
+end
+
+note over U, UI
+  Une suggestion, jamais appliquée silencieusement :
+  le déclarant reste l'auteur de son ticket.
+end note
+
+@enduml

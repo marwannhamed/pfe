@@ -1,0 +1,81 @@
+@startuml 04-sequence-authorisation
+!include _theme.puml
+
+title Diagramme de séquence — autorisation d'une requête
+
+autonumber "<b>[00]"
+
+actor "Responsable\n(Msheireb)" as MGR
+participant "nginx" as NGX
+box "API NestJS" #FAFCFC
+  participant "JwtAuthGuard" as JWT
+  participant "RolesGuard" as ROLES
+  participant "ValidationPipe" as VALID
+  participant "MaintenanceController" as CTRL
+  participant "MaintenanceService" as SVC
+end box
+database "PostgreSQL" as DB
+
+MGR -> NGX : GET /maintenance\nAuthorization: Bearer <token>
+activate NGX
+NGX -> JWT : proxy même origine
+activate JWT
+
+JWT -> JWT : vérifie la signature\net décode les claims
+alt jeton invalide ou expiré
+  JWT --> MGR : 401 Unauthorized
+else jeton valide
+  JWT -> ROLES : request.user = {id, role, tenant_id}
+  deactivate JWT
+  activate ROLES
+
+  ROLES -> ROLES : lit @Roles(...) sur la route
+  note right of ROLES #F7EEDA
+    Une route sans @Roles est ouverte à
+    tout utilisateur authentifié. Ce défaut
+    permissif a rendu un module entier
+    accessible à tous les comptes.
+  end note
+
+  alt rôle non autorisé
+    ROLES --> MGR : 403 Forbidden
+  else rôle autorisé
+    ROLES -> VALID : requête admise
+    deactivate ROLES
+    activate VALID
+    VALID -> VALID : whitelist + forbidNonWhitelisted
+    note right of VALID
+      Les champs inconnus sont rejetés,
+      non ignorés : impossible de glisser
+      un role ou un tenant_id dans le corps.
+    end note
+    VALID -> CTRL : DTO validé
+    deactivate VALID
+    activate CTRL
+
+    CTRL -> SVC : findAllForUser(user, filtres)
+    note right of CTRL
+      Le contrôleur n'appelle jamais
+      la méthode non restreinte.
+    end note
+    activate SVC
+
+    SVC -> SVC : landlordTicketScope(user)
+    SVC -> DB : WHERE space.floor.building.tenant_id\n      = user.tenant_id
+    activate DB
+    DB --> SVC : 18 lignes (sur 54 au total)
+    deactivate DB
+    SVC --> CTRL : tickets du portefeuille
+    deactivate SVC
+    CTRL --> MGR : 200 OK
+    deactivate CTRL
+  end
+end
+deactivate NGX
+
+legend bottom
+  Cinq étapes traversées par chaque appel authentifié. Comprendre cette chaîne
+  suffit à comprendre la sécurité de tout le back-end.
+endlegend
+
+@enduml

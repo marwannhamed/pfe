@@ -1,0 +1,199 @@
+@startuml 02-class-diagram
+!include _theme.puml
+
+title Diagramme de classes — domaine métier
+
+skinparam linetype ortho
+
+package "Organisations et identité" {
+  class Tenant {
+    +id : UUID
+    +name : String
+    +slug : String
+    +status : TenantStatus
+    +organization_type : CLIENT | RENTER
+    +subscription_plan : String
+    +application_profile : Json
+    --
+    +isLandlord() : Boolean
+  }
+
+  class User {
+    +id : UUID
+    +tenant_id : UUID
+    +tenant_company_id : UUID
+    +role : UserRole
+    +email : String
+    +password : String <<bcrypt>>
+    +status : UserStatus
+  }
+
+  class UserSession {
+    +id : UUID
+    +refresh_token : String
+    +last_used_at : DateTime
+  }
+}
+
+package "Patrimoine immobilier" {
+  class Building {
+    +id : UUID
+    +tenant_id : UUID <<propriétaire>>
+    +name : String
+    +address : String
+    +total_area_sqm : Float
+  }
+
+  class Floor {
+    +id : UUID
+    +floor_number : Int
+    +area_sqm : Float
+  }
+
+  class Space {
+    +id : UUID
+    +name : String
+    +type : SpaceType
+    +status : SpaceStatus
+    +capacity : Int
+    +area_sqm : Float
+    +monthly_rate : Float
+    +is_published : Boolean
+    +map_lat : Float
+    +map_lng : Float
+    --
+    +isBookable() : Boolean
+  }
+
+  class SpaceFeature {
+    +name : String
+  }
+}
+
+package "Réservation et contractualisation" {
+  class BookingApplication {
+    +id : UUID
+    +applicant_type : String
+    +headcount : Int
+    +duration_months : Int
+    +status : ApplicationStatus
+  }
+
+  class Booking {
+    +id : UUID
+    +tenant_id : UUID <<locataire>>
+    +booking_number : String
+    +start_time : DateTime
+    +end_time : DateTime
+    +status : BookingStatus
+    +total_amount : Float
+  }
+
+  class BookingDocument {
+    +file_url : String
+    +document_type : String
+  }
+
+  class LeaseContract {
+    +id : UUID
+    +contract_number : String
+    +start_date : Date
+    +end_date : Date
+    +monthly_rent : Float
+    +status : ContractStatus
+  }
+}
+
+package "Facturation" {
+  class Invoice {
+    +id : UUID
+    +invoice_number : String
+    +total_amount : Float
+    +tax_rate : Float
+    +due_date : Date
+    +status : InvoiceStatus
+  }
+
+  class InvoiceLine {
+    +description : String
+    +quantity : Float
+    +unit_price : Float
+  }
+
+  class Payment {
+    +id : UUID
+    +payment_number : String
+    +amount : Float
+    +method : CASH | BANK_TRANSFER | CHECK
+    +status : PaymentStatus
+    +recorded_by_id : UUID
+  }
+
+  class PromotionCode {
+    +code : String
+    +discount : Float
+    +type : DiscountType
+  }
+}
+
+package "Exploitation" {
+  class MaintenanceTicket {
+    +id : UUID
+    +tenant_id : UUID <<locataire>>
+    +ticket_number : String
+    +category : TicketCategory
+    +priority : TicketPriority
+    +status : TicketStatus
+    +assigned_to : UUID
+    +cost : Float
+  }
+
+  class Notification {
+    +type : NotificationType
+    +title : String
+    +is_read : Boolean
+  }
+
+  class AuditLog {
+    +action : AuditAction
+    +severity : AuditSeverity
+    +ip_address : String
+  }
+}
+
+' ── Relations ────────────────────────────────────────────────────────────────
+Tenant "1" *-- "0..*" User : emploie
+User "1" *-- "0..*" UserSession : ouvre
+Tenant "1" *-- "0..*" Building : possède
+Building "1" *-- "1..*" Floor : contient
+Floor "1" *-- "1..*" Space : contient
+Space "1" *-- "0..*" SpaceFeature : décrit par
+
+Space "1" o-- "0..*" BookingApplication : sollicité par
+BookingApplication "0..1" -- "0..1" Booking : donne lieu à
+Space "1" o-- "0..*" Booking : réservé comme
+Tenant "1" o-- "0..*" Booking : détient
+User "1" o-- "0..*" Booking : effectue
+Booking "1" *-- "0..5" BookingDocument : justifié par
+
+Tenant "1" o-- "0..*" LeaseContract : signe
+LeaseContract "1" o-- "0..*" Invoice : facture
+Invoice "1" *-- "1..*" InvoiceLine : détaille
+Invoice "1" o-- "0..*" Payment : réglée par
+Booking "0..*" -- "0..1" Invoice : portée sur
+PromotionCode "0..1" -- "0..*" Invoice : remise
+
+Space "1" o-- "0..*" MaintenanceTicket : concerné par
+User "1" o-- "0..*" MaintenanceTicket : affecté à
+Tenant "1" o-- "0..*" Notification : destinataire
+Tenant "1" o-- "0..*" AuditLog : tracée par
+
+note bottom of Booking
+  <b>tenant_id</b> désigne le <b>locataire</b>.
+  La société immobilière atteint la même ligne
+  par Space → Floor → Building.tenant_id.
+  Confondre les deux est à l'origine de toutes
+  les fuites inter-organisations corrigées.
+end note
+
+@enduml

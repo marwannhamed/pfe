@@ -1,0 +1,96 @@
+@startuml 03-package-architecture
+!include _theme.puml
+
+title Architecture en couches — du navigateur à la base
+
+skinparam linetype ortho
+
+package "Client" as CL {
+  component "React 19 · Vite" as UI
+  component "TanStack Query" as TQ
+  component "Zustand\n(session par onglet)" as ZS
+  component "Socket.IO client" as WSC
+}
+
+package "Diffusion" as DIF {
+  component "nginx\nSPA + proxy API" as NGX
+}
+
+package "API — NestJS 11" as API {
+
+  package "Chaîne de sécurité" as SEC {
+    component "JwtAuthGuard" as G1
+    component "RolesGuard" as G2
+    component "ValidationPipe" as G3
+    component "ThrottlerGuard" as G4
+  }
+
+  package "Présentation" as PRES {
+    component "29 contrôleurs\n218 routes" as CTRL
+    component "NotificationsGateway" as GATE
+  }
+
+  package "Métier" as BIZ {
+    component "Services *ForUser" as SVC
+    component "AccessPolicyService" as POL
+    component "Services IA\ntriage · extraction · recherche" as AI
+  }
+
+  package "Transverse" as CROSS {
+    component "Interceptors\nresponse · performance" as INT
+    component "Tâches planifiées\n@Cron" as CRON
+    component "AuditService" as AUD
+  }
+}
+
+package "Persistance" as PERS {
+  component "Prisma ORM" as PRISMA
+  database "PostgreSQL 13\n25 tables · 35 migrations" as DB
+}
+
+package "Services externes" as EXTP {
+  component "Groq" as GROQ
+  component "Brevo" as BREVO
+  component "Cloudinary" as CLOUD
+  component "Typeform" as TYPE
+}
+
+UI --> TQ
+UI --> ZS
+UI --> NGX : HTTP
+WSC --> NGX : WebSocket
+NGX --> G1
+G1 --> G2
+G2 --> G3
+G3 --> CTRL
+G4 --> CTRL
+NGX --> GATE
+CTRL --> SVC
+GATE --> SVC
+SVC --> POL
+SVC --> AI
+POL --> PRISMA
+AI --> PRISMA
+SVC --> AUD
+CRON --> SVC
+CTRL --> INT
+PRISMA --> DB
+AI ..> GROQ
+SVC ..> BREVO
+SVC ..> CLOUD
+TYPE ..> CTRL
+
+note right of POL
+  Autorité unique du cloisonnement.
+  isCrossTenantReader() n'est vrai
+  que pour le propriétaire de la
+  plateforme ; tout le reste traduit
+  l'appelant en filtre Prisma.
+end note
+
+legend bottom
+  Chaque couche restreint ce que la suivante peut atteindre.
+  Aucune couche sous la chaîne de sécurité ne fait confiance à ce qui vient d'au-dessus.
+endlegend
+
+@enduml

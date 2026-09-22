@@ -1,0 +1,71 @@
+@startuml 05-sequence-onboarding
+!include _theme.puml
+
+title Diagramme de séquence — intégration d'une société locataire
+
+autonumber "<b>[00]"
+
+actor "Prospect" as P
+actor "Responsable" as MGR
+participant "Typeform" as TF
+box "LeaseManager" #FAFCFC
+  participant "FormService" as FORM
+  participant "TenantApplication\nService" as TAS
+  participant "AuthService" as AUTH
+end box
+database "PostgreSQL" as DB
+participant "Brevo" as BV
+
+== Création du lien de candidature ==
+MGR -> FORM : POST /forms/typeform/inquiry\n{ space_id }
+activate FORM
+FORM -> DB : TenantApplication\n(AWAITING_SUBMISSION)
+FORM --> MGR : lien porteur de inquiry_id + space_id
+deactivate FORM
+
+MGR -> P : transmet le lien
+
+== Dépôt du dossier ==
+P -> TF : renseigne le formulaire,\ndépose licence et registre
+activate TF
+TF -> FORM : POST /webhooks/typeform  <<signé>>
+deactivate TF
+activate FORM
+FORM -> DB : Tenant (PENDING)\n+ application_profile\n+ application_documents
+FORM -> DB : TenantApplication → SUBMITTED
+FORM -> BV : notifier les instructeurs
+BV --> MGR : « nouvelle candidature »
+deactivate FORM
+
+== Instruction ==
+MGR -> TAS : POST /tenant-applications/{id}/approve
+activate TAS
+TAS -> TAS : assertReviewer(user, landlord_tenant_id)
+
+alt organisation candidate absente ou déjà traitée
+  TAS --> MGR : 400 Bad Request
+else dossier recevable
+  group Transaction unique
+    TAS -> DB : Tenant : PENDING → TRIAL
+    TAS -> DB : Application → APPROVED
+    TAS -> DB : User (TENANT_ADMIN,\nmot de passe aléatoire)
+  end
+  TAS -> AUTH : requestPasswordReset(email)
+  activate AUTH
+  AUTH -> BV : courriel de réinitialisation
+  deactivate AUTH
+  BV --> P : « définissez votre mot de passe »
+  TAS --> MGR : { approved: true }
+end
+deactivate TAS
+
+note over P, DB
+  Le mot de passe généré n'est ni affiché ni transmis :
+  le nouvel administrateur définit le sien via le lien reçu.
+end note
+
+legend bottom
+  Seul chemin d'entrée d'une société locataire. Il commence hors de l'application.
+endlegend
+
+@enduml

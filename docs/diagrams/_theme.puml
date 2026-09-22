@@ -1,0 +1,197 @@
+' ─────────────────────────────────────────────────────────────────────────────
+'  LeaseManager — shared diagram theme
+'
+'  Included by every diagram so the whole set is one visual family. Restrained
+'  on purpose: these are printed in a report, not shown on a screen, so the
+'  palette is three hues carrying meaning and nothing decorative.
+'
+'      indigo  L1  the platform
+'      teal    L2  property companies, and the system itself
+'      bronze  L3  renter companies, and external services
+'
+'  Usage:  !include _theme.puml
+' ─────────────────────────────────────────────────────────────────────────────
+
+' Layout engine.
+'
+' PlantUML uses Graphviz for class, component, state, deployment and use-case
+' diagrams. Install it once (see README) and leave the line below commented —
+' Graphviz places nodes markedly better than the bundled fallback, which stacks
+' actors into a column and drags edges across the whole figure.
+'
+' No Graphviz available? Uncomment the next line: smetana is a pure-Java port
+' that ships inside plantuml.jar, so the set still renders, just less tidily.
+' !pragma layout smetana
+
+skinparam backgroundColor #FFFFFF
+skinparam dpi 200
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam defaultTextAlignment center
+skinparam wrapWidth 220
+skinparam maxMessageSize 180
+skinparam padding 3
+skinparam nodesep 42
+skinparam ranksep 52
+
+' ── palette ──────────────────────────────────────────────────────────────────
+!$ink      = "#11161D"
+!$ink2     = "#3D4A55"
+!$line     = "#9FB2B8"
+!$paper    = "#FFFFFF"
+
+!$l1       = "#2D3A8C"
+!$l1wash   = "#E6E8F6"
+!$l2       = "#0B6E74"
+!$l2wash   = "#E2F0F0"
+!$l3       = "#9A5B1E"
+!$l3wash   = "#F6EBDD"
+
+!$ok       = "#1F7A4D"
+!$okwash   = "#E2F1E8"
+!$warn     = "#9A6B00"
+!$warnwash = "#F7EEDA"
+!$crit     = "#A3342B"
+!$critwash = "#F7E5E3"
+
+' ── titles ───────────────────────────────────────────────────────────────────
+skinparam TitleFontSize 17
+skinparam TitleFontStyle bold
+skinparam TitleFontColor $ink
+
+skinparam CaptionFontSize 11
+skinparam CaptionFontColor $ink2
+
+' ── actors and use cases ─────────────────────────────────────────────────────
+skinparam actor {
+  BorderColor $l2
+  BackgroundColor $paper
+  FontColor $ink
+  FontSize 12
+}
+skinparam usecase {
+  BorderColor $l2
+  BackgroundColor $l2wash
+  FontColor $ink
+  FontSize 12
+  BorderThickness 1
+}
+
+' ── classes ──────────────────────────────────────────────────────────────────
+skinparam class {
+  BorderColor $l2
+  BackgroundColor $paper
+  HeaderBackgroundColor $l2wash
+  FontColor $ink
+  FontSize 12
+  AttributeFontSize 11
+  AttributeFontColor $ink2
+  BorderThickness 1
+  ArrowColor $ink2
+}
+skinparam stereotypeCBackgroundColor $l2wash
+
+' ── entities ─────────────────────────────────────────────────────────────────
+skinparam entity {
+  BorderColor $l1
+  BackgroundColor $l1wash
+  FontColor $ink
+  FontSize 12
+}
+
+' ── sequence ─────────────────────────────────────────────────────────────────
+skinparam sequence {
+  ArrowColor $ink2
+  ArrowFontSize 11
+  ArrowFontColor $ink2
+  LifeLineBorderColor $line
+  LifeLineBackgroundColor #F2F6F7
+  ParticipantBorderColor $l2
+  ParticipantBackgroundColor $l2wash
+  ParticipantFontColor $ink
+  ParticipantFontSize 12
+  ActorBorderColor $l2
+  ActorBackgroundColor $paper
+  ActorFontColor $ink
+  BoxBorderColor $line
+  BoxFontColor $ink2
+  GroupBorderColor $l2
+  GroupHeaderFontColor $ink
+  GroupBackgroundColor $l2wash
+  DividerBackgroundColor #EDF1F2
+  DividerBorderColor $line
+  DividerFontColor $ink2
+}
+
+' ── state ────────────────────────────────────────────────────────────────────
+skinparam state {
+  BorderColor $l2
+  BackgroundColor $l2wash
+  FontColor $ink
+  FontSize 12
+  ArrowColor $ink2
+  ArrowFontSize 11
+  ArrowFontColor $ink2
+  StartColor $ink
+  EndColor $ink
+}
+
+' ── components, nodes, packages ──────────────────────────────────────────────
+skinparam component {
+  BorderColor $l2
+  BackgroundColor $l2wash
+  FontColor $ink
+  FontSize 12
+}
+skinparam node {
+  BorderColor $l1
+  BackgroundColor #F7F9FA
+  FontColor $ink
+  FontSize 12
+}
+skinparam database {
+  BorderColor $l1
+  BackgroundColor $l1wash
+  FontColor $ink
+}
+skinparam cloud {
+  BorderColor $l3
+  BackgroundColor $l3wash
+  FontColor $ink
+}
+skinparam package {
+  BorderColor $line
+  BackgroundColor #FAFCFC
+  FontColor $ink2
+  FontSize 12
+  BorderThickness 1
+}
+skinparam rectangle {
+  BorderColor $l2
+  BackgroundColor $paper
+  FontColor $ink
+  FontSize 12
+}
+
+skinparam note {
+  BorderColor $warn
+  BackgroundColor $warnwash
+  FontColor $ink2
+  FontSize 11
+}
+
+skinparam arrow {
+  Color $ink2
+  FontColor $ink2
+  FontSize 11
+  Thickness 1
+}
+
+skinparam legend {
+  BorderColor $line
+  BackgroundColor #FAFCFC
+  FontColor $ink2
+  FontSize 11
+}

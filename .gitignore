@@ -48,3 +48,7 @@ backend/prisma/dev.db
 
 # Prisma generated artifacts (keep migrations)
 backend/prisma/*.db
+# PlantUML toolchain — render.sh downloads it on demand (22 MB)
+docs/diagrams/plantuml.jar
+# Rendered PNGs are regenerable; the SVGs are kept for the report
+docs/diagrams/out/*.png
