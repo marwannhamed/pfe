@@ -303,6 +303,36 @@ export interface Payment {
   invoice?:             Invoice;
 }
 
+/** One listing returned by the public space finder. */
+export interface SpaceMatch {
+  id:           string;
+  name:         string;
+  slug:         string;
+  type:         SpaceType;
+  capacity:     number | null;
+  area_sqm:     number | null;
+  monthly_rate: number | null;
+  currency:     string;
+  city:         string | null;
+  building:     string | null;
+  features:     string[];
+}
+
+/** Response of POST /public/space-finder. */
+export interface SpaceFinderResult {
+  reply:    string;
+  criteria: {
+    type:               SpaceType | null;
+    min_capacity:       number | null;
+    max_monthly_budget: number | null;
+    city:               string | null;
+    keywords:           string[];
+  };
+  matches: SpaceMatch[];
+  /** The visitor's limits found nothing, so the search was widened. */
+  relaxed: boolean;
+}
+
 /** Response of POST /ai/maintenance/triage. */
 export interface MaintenanceTriage {
   category: TicketCategory;

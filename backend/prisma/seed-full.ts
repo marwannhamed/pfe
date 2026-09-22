@@ -70,10 +70,26 @@ const RENTERS = [
   { name: 'Al Rayyan Legal', slug: 'al-rayyan-legal', domain: 'arlegal.test' },
 ] as const;
 
-const SPACE_TYPES = [
-  'DEDICATED_OFFICE', 'FLEXIBLE_DESK', 'HOT_DESK', 'MEETING_ROOM',
-  'CONFERENCE_ROOM', 'PHONE_BOOTH', 'EVENT_SPACE',
+/**
+ * Capacity, floor area and price follow from what a space actually is. The
+ * first version drew them independently, which produced a phone booth seating
+ * fifteen at the same rent as a conference room — nonsense on the public map,
+ * and worse in front of the space-finder assistant, which can only be as
+ * sensible as the inventory it searches.
+ *
+ * Rents are monthly QAR and sit in the range Doha grade-A asks.
+ */
+const SPACE_PROFILES = [
+  { type: 'PHONE_BOOTH',      seats: [1, 2],   area: [3, 5],     rent: [900, 1400] },
+  { type: 'HOT_DESK',         seats: [1, 1],   area: [4, 6],     rent: [1100, 1800] },
+  { type: 'FLEXIBLE_DESK',    seats: [2, 6],   area: [12, 30],   rent: [2600, 5200] },
+  { type: 'DEDICATED_OFFICE', seats: [4, 20],  area: [24, 110],  rent: [6000, 24000] },
+  { type: 'MEETING_ROOM',     seats: [6, 12],  area: [18, 36],   rent: [4200, 7500] },
+  { type: 'CONFERENCE_ROOM',  seats: [14, 30], area: [45, 95],   rent: [9000, 18000] },
+  { type: 'EVENT_SPACE',      seats: [40, 120], area: [120, 320], rent: [16000, 38000] },
 ] as const;
+
+const SPACE_TYPES = SPACE_PROFILES.map((p) => p.type);
 
 const FEATURES = [
   'Fibre internet', 'Air conditioning', 'Standing desk', 'Whiteboard',
@@ -316,9 +332,17 @@ async function main() {
         bump('floors');
 
         for (let s = 0; s < 4; s++) {
-          const type = pick(SPACE_TYPES, li + b + f + s);
+          const profile = pick(SPACE_PROFILES, li + b + f + s);
+          const type = profile.type;
           const idx = spaces.length + 1;
-          const monthly = 3000 + ((li + b + f + s) % 6) * 1500;
+          // deterministic spread inside each profile's own band
+          const band = (range: readonly [number, number], salt: number) => {
+            const [lo, hi] = range;
+            return lo + ((idx * 7 + salt * 13) % Math.max(1, hi - lo + 1));
+          };
+          const seats = band(profile.seats, 1);
+          const area = band(profile.area, 2);
+          const monthly = Math.round(band(profile.rent, 3) / 100) * 100;
           const space = await prisma.space.create({
             data: {
               floor_id: floor.id,
@@ -330,10 +354,11 @@ async function main() {
                 ['AVAILABLE', 'AVAILABLE', 'OCCUPIED', 'RESERVED', 'MAINTENANCE'],
                 idx,
               ),
-              capacity: 2 + ((idx * 3) % 20),
-              area_sqm: 18 + ((idx * 7) % 90),
-              hourly_rate: money(60 + (idx % 5) * 15),
-              daily_rate: money(350 + (idx % 5) * 60),
+              capacity: seats,
+              area_sqm: area,
+              // a day is roughly a twentieth of a month, an hour an eighth of a day
+              hourly_rate: money(Math.round(monthly / 160)),
+              daily_rate: money(Math.round(monthly / 20)),
               monthly_rate: monthly,
               currency: 'QAR',
               map_x: 40 + ((idx * 37) % 600),

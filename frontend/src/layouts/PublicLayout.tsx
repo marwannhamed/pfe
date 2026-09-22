@@ -4,6 +4,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { hasValidSession } from '../store/authStore';
 import { resolveMapPathForRole } from '../utils/mapRoutes';
+import SpaceFinderChat from '../components/SpaceFinderChat';
 
 export default function PublicLayout() {
   const navigate = useNavigate();
@@ -104,6 +105,11 @@ export default function PublicLayout() {
       <main>
         <Outlet />
       </main>
+
+      {/* Follows the visitor across every public page. Hidden once they are
+          signed in: they have the full search then, and the portal has its
+          own assistant. */}
+      {!loggedIn && <SpaceFinderChat />}
 
       {/* ── Footer ── */}
       <footer style={{ background: '#0f172a' }}>

@@ -11,6 +11,7 @@ import type {
   MaintenanceStats,
   MaintenanceTicket,
   MaintenanceTriage,
+  SpaceFinderResult,
   Notification,
   Payment,
   NotificationStats,
@@ -473,6 +474,13 @@ export const analyticsApi = {
     dedupedGet('/analytics/revenue-forecast', params),
   getPredictiveMaintenance: (params?: { tenantId?: string; siteId?: string }) =>
     dedupedGet('/analytics/predictive-maintenance', params),
+};
+
+// ─── PUBLIC space finder (no auth) ───────────────────────────────────
+export const spaceFinderApi = {
+  /** Guests use this before they have an account, so it sends no token. */
+  find: (messages: { role: string; content: string }[]) =>
+    api.post<SpaceFinderResult>('/public/space-finder', { messages }),
 };
 
 // ─── AI (OpenAI) ─────────────────────────────────────────────────────
