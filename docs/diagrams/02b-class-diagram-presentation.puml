@@ -1,0 +1,91 @@
+@startuml 02b-class-diagram-presentation
+!include _theme.puml
+
+' Variante allégée du diagramme de classes, destinée à être projetée.
+' Le diagramme complet (02-class-diagram.puml) reste la référence du rapport :
+' 17 classes réparties en cinq paquets, illisible au-delà de deux mètres.
+' Ici : les neuf classes qui portent la démonstration, en format paysage,
+' et trois attributs par classe au maximum.
+
+title Diagramme de classes — noyau métier
+
+left to right direction
+skinparam linetype ortho
+
+class Tenant {
+  +organization_type : CLIENT | RENTER
+  +status
+  --
+  +isLandlord()
+}
+
+class User {
+  +tenant_id
+  +role : 9 valeurs
+  +email
+}
+
+class Building {
+  +tenant_id <<propriétaire>>
+  +name
+}
+
+class Floor {
+  +floor_number
+}
+
+class Space {
+  +type : 7 valeurs
+  +status
+  +monthly_rate
+  +is_published
+}
+
+class Booking {
+  +tenant_id <<locataire>>
+  +status : 12 états
+  +total_amount
+}
+
+class LeaseContract {
+  +contract_number
+  +monthly_rent
+  +status
+}
+
+class Invoice {
+  +total_amount
+  +due_date
+  +status
+}
+
+class Payment {
+  +method : espèces | virement | chèque
+  +recorded_by_id
+}
+
+class MaintenanceTicket {
+  +tenant_id <<locataire>>
+  +category
+  +priority
+  +assigned_to
+}
+
+Tenant "1" *-- "0..*" User
+Tenant "1" *-- "0..*" Building
+Building "1" *-- "1..*" Floor
+Floor "1" *-- "1..*" Space
+Space "1" o-- "0..*" Booking
+Tenant "1" o-- "0..*" Booking
+Tenant "1" o-- "0..*" LeaseContract
+LeaseContract "1" o-- "0..*" Invoice
+Invoice "1" o-- "0..*" Payment
+Space "1" o-- "0..*" MaintenanceTicket
+
+note bottom of Booking
+  <b>tenant_id</b> désigne le <b>locataire</b>.
+  Le bailleur atteint la même ligne par
+  Space → Floor → Building.tenant_id.
+end note
+
+@enduml
