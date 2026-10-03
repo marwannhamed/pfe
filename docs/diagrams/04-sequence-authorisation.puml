@@ -1,13 +1,13 @@
 @startuml 04-sequence-authorisation
 !include _theme.puml
 
-title Diagramme de séquence — autorisation d'une requête
+title Sequence diagram — authorising one request
 
 autonumber "<b>[00]"
 
-actor "Responsable\n(Msheireb)" as MGR
+actor "Manager\n(Msheireb)" as MGR
 participant "nginx" as NGX
-box "API NestJS" #FAFCFC
+box "NestJS API" #FAFCFC
   participant "JwtAuthGuard" as JWT
   participant "RolesGuard" as ROLES
   participant "ValidationPipe" as VALID
@@ -18,54 +18,54 @@ database "PostgreSQL" as DB
 
 MGR -> NGX : GET /maintenance\nAuthorization: Bearer <token>
 activate NGX
-NGX -> JWT : proxy même origine
+NGX -> JWT : same-origin proxy
 activate JWT
 
-JWT -> JWT : vérifie la signature\net décode les claims
-alt jeton invalide ou expiré
+JWT -> JWT : verify signature,\ndecode claims
+alt token invalid or expired
   JWT --> MGR : 401 Unauthorized
-else jeton valide
+else token valid
   JWT -> ROLES : request.user = {id, role, tenant_id}
   deactivate JWT
   activate ROLES
 
-  ROLES -> ROLES : lit @Roles(...) sur la route
+  ROLES -> ROLES : read @Roles(...) on the route
   note right of ROLES #F7EEDA
-    Une route sans @Roles est ouverte à
-    tout utilisateur authentifié. Ce défaut
-    permissif a rendu un module entier
-    accessible à tous les comptes.
+    A route declaring no @Roles is open to
+    any authenticated user. That permissive
+    default is what left an entire module
+    reachable by every account.
   end note
 
-  alt rôle non autorisé
+  alt role not permitted
     ROLES --> MGR : 403 Forbidden
-  else rôle autorisé
-    ROLES -> VALID : requête admise
+  else role permitted
+    ROLES -> VALID : request admitted
     deactivate ROLES
     activate VALID
     VALID -> VALID : whitelist + forbidNonWhitelisted
     note right of VALID
-      Les champs inconnus sont rejetés,
-      non ignorés : impossible de glisser
-      un role ou un tenant_id dans le corps.
+      Unknown fields are rejected, not
+      ignored: a client cannot smuggle in
+      a role or a tenant_id.
     end note
-    VALID -> CTRL : DTO validé
+    VALID -> CTRL : validated DTO
     deactivate VALID
     activate CTRL
 
-    CTRL -> SVC : findAllForUser(user, filtres)
+    CTRL -> SVC : findAllForUser(user, filters)
     note right of CTRL
-      Le contrôleur n'appelle jamais
-      la méthode non restreinte.
+      The controller never calls
+      the unscoped method.
     end note
     activate SVC
 
     SVC -> SVC : landlordTicketScope(user)
     SVC -> DB : WHERE space.floor.building.tenant_id\n      = user.tenant_id
     activate DB
-    DB --> SVC : 18 lignes (sur 54 au total)
+    DB --> SVC : 18 rows (of 54 in total)
     deactivate DB
-    SVC --> CTRL : tickets du portefeuille
+    SVC --> CTRL : the caller's own tickets
     deactivate SVC
     CTRL --> MGR : 200 OK
     deactivate CTRL
@@ -74,8 +74,8 @@ end
 deactivate NGX
 
 legend bottom
-  Cinq étapes traversées par chaque appel authentifié. Comprendre cette chaîne
-  suffit à comprendre la sécurité de tout le back-end.
+  Five stages traversed by every authenticated call. Understanding this chain
+  is enough to understand the security of the whole back end.
 endlegend
 
 @enduml

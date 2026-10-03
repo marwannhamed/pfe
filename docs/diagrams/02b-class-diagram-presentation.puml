@@ -1,13 +1,13 @@
 @startuml 02b-class-diagram-presentation
 !include _theme.puml
 
-' Variante allégée du diagramme de classes, destinée à être projetée.
-' Le diagramme complet (02-class-diagram.puml) reste la référence du rapport :
-' 17 classes réparties en cinq paquets, illisible au-delà de deux mètres.
-' Ici : les neuf classes qui portent la démonstration, en format paysage,
-' et trois attributs par classe au maximum.
+' Reduced version of the class diagram, built for projection.
+' The full diagram (02-class-diagram.puml) stays the written report's reference:
+' 17 classes across five packages, unreadable beyond two metres.
+' Here: the ten classes that carry the argument, in landscape, with at most
+' three attributes each.
 
-title Diagramme de classes — noyau métier
+title Class diagram — business core
 
 left to right direction
 skinparam linetype ortho
@@ -21,12 +21,12 @@ class Tenant {
 
 class User {
   +tenant_id
-  +role : 9 valeurs
+  +role : 9 values
   +email
 }
 
 class Building {
-  +tenant_id <<propriétaire>>
+  +tenant_id <<owner>>
   +name
 }
 
@@ -35,15 +35,15 @@ class Floor {
 }
 
 class Space {
-  +type : 7 valeurs
+  +type : 7 values
   +status
   +monthly_rate
   +is_published
 }
 
 class Booking {
-  +tenant_id <<locataire>>
-  +status : 12 états
+  +tenant_id <<renter>>
+  +status : 12 states
   +total_amount
 }
 
@@ -60,12 +60,12 @@ class Invoice {
 }
 
 class Payment {
-  +method : espèces | virement | chèque
+  +method : cash | transfer | cheque
   +recorded_by_id
 }
 
 class MaintenanceTicket {
-  +tenant_id <<locataire>>
+  +tenant_id <<renter>>
   +category
   +priority
   +assigned_to
@@ -83,8 +83,8 @@ Invoice "1" o-- "0..*" Payment
 Space "1" o-- "0..*" MaintenanceTicket
 
 note bottom of Booking
-  <b>tenant_id</b> désigne le <b>locataire</b>.
-  Le bailleur atteint la même ligne par
+  <b>tenant_id</b> is the <b>renter</b>.
+  The landlord reaches the same row through
   Space → Floor → Building.tenant_id.
 end note
 

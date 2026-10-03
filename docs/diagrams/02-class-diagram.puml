@@ -1,11 +1,11 @@
 @startuml 02-class-diagram
 !include _theme.puml
 
-title Diagramme de classes — domaine métier
+title Class diagram — business domain
 
 skinparam linetype ortho
 
-package "Organisations et identité" {
+package "Organisations and identity" {
   class Tenant {
     +id : UUID
     +name : String
@@ -35,10 +35,10 @@ package "Organisations et identité" {
   }
 }
 
-package "Patrimoine immobilier" {
+package "Property portfolio" {
   class Building {
     +id : UUID
-    +tenant_id : UUID <<propriétaire>>
+    +tenant_id : UUID <<owner>>
     +name : String
     +address : String
     +total_area_sqm : Float
@@ -70,7 +70,7 @@ package "Patrimoine immobilier" {
   }
 }
 
-package "Réservation et contractualisation" {
+package "Booking and contracting" {
   class BookingApplication {
     +id : UUID
     +applicant_type : String
@@ -81,7 +81,7 @@ package "Réservation et contractualisation" {
 
   class Booking {
     +id : UUID
-    +tenant_id : UUID <<locataire>>
+    +tenant_id : UUID <<renter>>
     +booking_number : String
     +start_time : DateTime
     +end_time : DateTime
@@ -104,7 +104,7 @@ package "Réservation et contractualisation" {
   }
 }
 
-package "Facturation" {
+package "Billing" {
   class Invoice {
     +id : UUID
     +invoice_number : String
@@ -136,10 +136,10 @@ package "Facturation" {
   }
 }
 
-package "Exploitation" {
+package "Operations" {
   class MaintenanceTicket {
     +id : UUID
-    +tenant_id : UUID <<locataire>>
+    +tenant_id : UUID <<renter>>
     +ticket_number : String
     +category : TicketCategory
     +priority : TicketPriority
@@ -162,38 +162,38 @@ package "Exploitation" {
 }
 
 ' ── Relations ────────────────────────────────────────────────────────────────
-Tenant "1" *-- "0..*" User : emploie
-User "1" *-- "0..*" UserSession : ouvre
-Tenant "1" *-- "0..*" Building : possède
-Building "1" *-- "1..*" Floor : contient
-Floor "1" *-- "1..*" Space : contient
-Space "1" *-- "0..*" SpaceFeature : décrit par
+Tenant "1" *-- "0..*" User : employs
+User "1" *-- "0..*" UserSession : opens
+Tenant "1" *-- "0..*" Building : owns
+Building "1" *-- "1..*" Floor : contains
+Floor "1" *-- "1..*" Space : contains
+Space "1" *-- "0..*" SpaceFeature : described by
 
-Space "1" o-- "0..*" BookingApplication : sollicité par
-BookingApplication "0..1" -- "0..1" Booking : donne lieu à
-Space "1" o-- "0..*" Booking : réservé comme
-Tenant "1" o-- "0..*" Booking : détient
-User "1" o-- "0..*" Booking : effectue
-Booking "1" *-- "0..5" BookingDocument : justifié par
+Space "1" o-- "0..*" BookingApplication : enquired on
+BookingApplication "0..1" -- "0..1" Booking : leads to
+Space "1" o-- "0..*" Booking : booked as
+Tenant "1" o-- "0..*" Booking : held by
+User "1" o-- "0..*" Booking : made by
+Booking "1" *-- "0..5" BookingDocument : evidenced by
 
-Tenant "1" o-- "0..*" LeaseContract : signe
-LeaseContract "1" o-- "0..*" Invoice : facture
-Invoice "1" *-- "1..*" InvoiceLine : détaille
-Invoice "1" o-- "0..*" Payment : réglée par
-Booking "0..*" -- "0..1" Invoice : portée sur
-PromotionCode "0..1" -- "0..*" Invoice : remise
+Tenant "1" o-- "0..*" LeaseContract : signs
+LeaseContract "1" o-- "0..*" Invoice : bills
+Invoice "1" *-- "1..*" InvoiceLine : itemised by
+Invoice "1" o-- "0..*" Payment : settled by
+Booking "0..*" -- "0..1" Invoice : billed on
+PromotionCode "0..1" -- "0..*" Invoice : discount
 
-Space "1" o-- "0..*" MaintenanceTicket : concerné par
-User "1" o-- "0..*" MaintenanceTicket : affecté à
-Tenant "1" o-- "0..*" Notification : destinataire
-Tenant "1" o-- "0..*" AuditLog : tracée par
+Space "1" o-- "0..*" MaintenanceTicket : raises
+User "1" o-- "0..*" MaintenanceTicket : assigned to
+Tenant "1" o-- "0..*" Notification : receives
+Tenant "1" o-- "0..*" AuditLog : tracked by
 
 note bottom of Booking
-  <b>tenant_id</b> désigne le <b>locataire</b>.
-  La société immobilière atteint la même ligne
-  par Space → Floor → Building.tenant_id.
-  Confondre les deux est à l'origine de toutes
-  les fuites inter-organisations corrigées.
+  <b>tenant_id</b> is the <b>renter</b>.
+  The property company reaches the same row
+  through Space → Floor → Building.tenant_id.
+  Confusing the two is the origin of every
+  cross-tenant leak that was fixed.
 end note
 
 @enduml

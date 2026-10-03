@@ -1,37 +1,37 @@
 @startuml 07-state-booking
 !include _theme.puml
 
-title Diagramme d'états — cycle de vie d'une réservation
+title State diagram — the life of a booking
 
 [*] --> DRAFT
 
-DRAFT : Brouillon créé
-DRAFT --> PENDING_APPROVAL : soumettre
+DRAFT : Draft created
+DRAFT --> PENDING_APPROVAL : submit
 
-state "Instruction par la société immobilière" as INSTR {
-  PENDING_APPROVAL : En attente de décision
-  PENDING_APPROVAL --> PENDING_PHONE_CONFIRMATION : accepter\n[responsable]
-  PENDING_APPROVAL --> REFUSED : refuser\n[responsable]
+state "Review by the property company" as INSTR {
+  PENDING_APPROVAL : Awaiting decision
+  PENDING_APPROVAL --> PENDING_PHONE_CONFIRMATION : accept\n[manager]
+  PENDING_APPROVAL --> REFUSED : reject\n[manager]
 
-  PENDING_PHONE_CONFIRMATION : Appel de confirmation
-  PENDING_PHONE_CONFIRMATION --> AWAITING_PHYSICAL_VISIT : joint\n[réceptionniste]
-  PENDING_PHONE_CONFIRMATION --> NO_SHOW : injoignable\n[réceptionniste]
+  PENDING_PHONE_CONFIRMATION : Confirmation call
+  PENDING_PHONE_CONFIRMATION --> AWAITING_PHYSICAL_VISIT : reached\n[receptionist]
+  PENDING_PHONE_CONFIRMATION --> NO_SHOW : unreachable\n[receptionist]
 
-  AWAITING_PHYSICAL_VISIT : Visite des lieux
-  AWAITING_PHYSICAL_VISIT --> DOCUMENTS_PENDING_UPLOAD : visite effectuée\n[réceptionniste]
+  AWAITING_PHYSICAL_VISIT : Site visit
+  AWAITING_PHYSICAL_VISIT --> DOCUMENTS_PENDING_UPLOAD : visit done\n[receptionist]
 
-  DOCUMENTS_PENDING_UPLOAD : Pièces justificatives
-  DOCUMENTS_PENDING_UPLOAD --> CONFIRMED : dossier complet\n[responsable]
+  DOCUMENTS_PENDING_UPLOAD : Supporting documents
+  DOCUMENTS_PENDING_UPLOAD --> CONFIRMED : file complete\n[manager]
 }
 
-CONFIRMED : Réservation ferme
-CONFIRMED --> CHECKED_IN : entrée dans les lieux
-CONFIRMED --> CANCELLED : annuler
+CONFIRMED : Firm booking
+CONFIRMED --> CHECKED_IN : moved in
+CONFIRMED --> CANCELLED : cancel
 
-CHECKED_IN : Occupation en cours
-CHECKED_IN --> COMPLETED : fin de période
+CHECKED_IN : Occupancy under way
+CHECKED_IN --> COMPLETED : term ended
 
-PENDING_APPROVAL --> CANCELLED : se désister
+PENDING_APPROVAL --> CANCELLED : withdraw
 
 COMPLETED --> [*]
 CANCELLED --> [*]
@@ -39,14 +39,14 @@ REFUSED --> [*]
 NO_SHOW --> [*]
 
 note right of INSTR
-  Cette phase est propre au marché visé :
-  la location commerciale au Qatar se
-  conclut en personne. L'appel puis la
-  visite précèdent toute signature.
+  This phase is specific to the target
+  market: commercial leasing in Qatar is
+  concluded in person. The call and then
+  the visit precede any signature.
 end note
 
 legend bottom
-  Douze états. Le rôle habilité à déclencher chaque transition est indiqué entre crochets.
+  Twelve states. The role entitled to trigger each transition is shown in brackets.
 endlegend
 
 @enduml
