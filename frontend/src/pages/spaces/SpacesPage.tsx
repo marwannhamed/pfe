@@ -17,6 +17,7 @@ import SpaceLocationFields from '../../components/spaces/SpaceLocationFields';
 import SpaceMediaFields, { type SpaceMediaValues } from '../../components/spaces/SpaceMediaFields';
 import PageShell from '../../components/ui/PageShell';
 import { asApiError } from '../../utils/errors';
+import { currencySymbol } from '../../constants/qatar';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_LABEL: Record<SpaceStatus, string> = {
@@ -56,7 +57,7 @@ const TYPE_ICON: Record<SpaceType, string> = {
 };
 
 function formatPrice(space: Space): string {
-  const sym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const sym = currencySymbol(space.currency);
   if (space.price_per_month) return `${sym}${parseFloat(space.price_per_month).toLocaleString()}/mo`;
   if (space.price_per_day)   return `${sym}${parseFloat(space.price_per_day).toLocaleString()}/day`;
   if (space.price_per_hour)  return `${sym}${parseFloat(space.price_per_hour).toLocaleString()}/hr`;

@@ -8,6 +8,7 @@ import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { errorMessage } from '../../utils/errors';
 import type { RevenueForecast, Tenant } from '../../types';
+import { currencySymbol, formatMoney } from '../../constants/qatar';
 
 const { Title, Paragraph } = Typography;
 
@@ -66,7 +67,7 @@ export default function RevenueForecastPage() {
             <Statistic
               title="Active MRR (current)"
               value={data?.summary?.activeMonthlyRecurring ?? 0}
-              prefix="$"
+              prefix={currencySymbol()}
               loading={loading}
             />
           </Card>
@@ -114,8 +115,8 @@ export default function RevenueForecastPage() {
           pagination={false}
           columns={[
             { title: 'Month', dataIndex: 'month' },
-            { title: 'Active MRR', dataIndex: 'activeMrr', render: (v: number) => `$${v.toLocaleString()}` },
-            { title: 'Expiring MRR', dataIndex: 'expiringMrr', render: (v: number) => `$${v.toLocaleString()}` },
+            { title: 'Active MRR', dataIndex: 'activeMrr', render: (v: number) => formatMoney(v) },
+            { title: 'Expiring MRR', dataIndex: 'expiringMrr', render: (v: number) => formatMoney(v) },
           ]}
         />
       </Card>
@@ -129,7 +130,7 @@ export default function RevenueForecastPage() {
           columns={[
             { title: 'Contract', dataIndex: 'contract_number' },
             { title: 'End', dataIndex: 'end_date', render: (d: string) => new Date(d).toLocaleDateString() },
-            { title: 'Monthly rent', dataIndex: 'monthly_rent', render: (v: number) => `$${v}` },
+            { title: 'Monthly rent', dataIndex: 'monthly_rent', render: (v: number) => formatMoney(v) },
             { title: 'Status', dataIndex: 'status' },
           ]}
         />

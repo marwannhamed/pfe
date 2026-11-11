@@ -83,7 +83,8 @@ export default function GuestMapPage() {
   const [selected, setSelected] = useState<MapSpace | null>(null);
   const [typeFilter, setTypeFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-  const [searchQ, setSearchQ] = useState('');
+  // The home page search hands its text over as ?q=
+  const [searchQ, setSearchQ] = useState(() => searchParams.get('q') ?? '');
   const [minPrice, setMinPrice] = useState('');
   const [minCapacity, setMinCapacity] = useState('');
   const [mediaTab, setMediaTab] = useState<'photo' | 'tour'>('photo');

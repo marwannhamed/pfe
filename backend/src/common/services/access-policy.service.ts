@@ -212,12 +212,13 @@ export class AccessPolicyService {
       ...(status && { status: status as any }),
     };
     if (this.isCrossTenantReader(user.role)) return base;
+    // A renter owns no buildings, so this used to also require the building
+    // to belong to the renter's own organisation — which never matches, and
+    // left the portal's Floor Map and New Booking with no spaces at all.
+    // Portal users book what is available, the same rule bookable buildings
+    // and floors already follow above.
     if (this.isPortalBooker(user.role)) {
-      return {
-        ...base,
-        status: SPACE_STATUS.AVAILABLE,
-        floor: { building: { tenant_id: user.tenant_id } },
-      };
+      return { ...base, status: SPACE_STATUS.AVAILABLE };
     }
     if (
       this.isClientOperator(user.role) ||

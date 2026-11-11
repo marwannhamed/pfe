@@ -13,7 +13,7 @@ import {
   WarningOutlined, CheckCircleOutlined, ClockCircleOutlined,
   LoadingOutlined, UserOutlined,
 } from '@ant-design/icons';
-import { maintenanceApi, userApi } from '../../api/services';
+import { maintenanceApi } from '../../api/services';
 
 function getAssignee(ticket: MaintenanceTicket | null | undefined) {
   return ticket?.assignedTo ?? null;
@@ -24,7 +24,8 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
-import type { ChartTooltipProps, MaintenanceTicket, User } from '../../types';
+import type { ChartTooltipProps, MaintenanceTicket } from '../../types';
+import { bucketByMonth, isEmptySeries } from '../../utils/months';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -35,9 +36,6 @@ function toArray<T>(raw: unknown): T[] {
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
   return EMPTY_LIST as unknown as T[];
-}
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 function daysSince(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -162,11 +160,9 @@ export default function MaintenanceDashboard() {
 
   const { data: ticketsRaw, isLoading: l1 } = useQuery({ ...opts('md-tickets'), queryFn: () => maintenanceApi.getAll().then(r => r.data) });
   const { isLoading: l2 } = useQuery({ ...opts('md-stats'), queryFn: () => maintenanceApi.getStats().then(r => r.data) });
-  const { data: usersRaw }                   = useQuery({ ...opts('md-users'),   queryFn: () => userApi.getAll().then(r => r.data) });
 
   const isLoading = l1 || l2;
   const tickets   = toArray<MaintenanceTicket>(ticketsRaw);
-  const users     = toArray<User>(usersRaw);
 
   const acceptMut  = useMutation({ mutationFn: (id: string) => maintenanceApi.accept(id),  onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket accepted!'); } });
   const startMut   = useMutation({ mutationFn: (id: string) => maintenanceApi.start(id),   onSuccess: () => { qc.invalidateQueries({ queryKey: ['md-tickets'] }); message.success('Ticket started!');  } });
@@ -212,23 +208,24 @@ export default function MaintenanceDashboard() {
       .sort((a, b) => b.value - a.value).slice(0, 8);
   }, [tickets]);
 
-  const trend = useMemo(() => {
-    const b: Record<string, { Created: number; Resolved: number }> = {};
-    tickets.forEach(t => {
-      const k = fmtMonth(t.created_at);
-      if (!b[k]) b[k] = { Created: 0, Resolved: 0 };
-      b[k].Created++;
-      if (['RESOLVED','CLOSED'].includes(t.status)) b[k].Resolved++;
-    });
-    return Object.entries(b).slice(-6).map(([date, v]) => ({ date, ...v }));
-  }, [tickets]);
+  const trend = useMemo(() => bucketByMonth(
+    tickets, 6, t => t.created_at,
+    () => ({ Created: 0, Resolved: 0 }),
+    (v, t) => {
+      v.Created++;
+      if (['RESOLVED','CLOSED'].includes(t.status)) v.Resolved++;
+    },
+  ), [tickets]);
 
+  // Names come with each ticket. This used to look them up in GET /users,
+  // which technicians may not call: three 403s on every visit, and every bar
+  // labelled "Unknown".
   const workload = useMemo(() => {
     const w: Record<string, { name: string; Open: number; InProgress: number; Resolved: number }> = {};
     tickets.forEach(t => {
       if (!t.assigned_to) return;
       if (!w[t.assigned_to]) {
-        const u = users.find(u => u.id === t.assigned_to);
+        const u = t.assignedTo;
         w[t.assigned_to] = { name: u ? `${u.first_name} ${u.last_name}` : 'Unknown', Open: 0, InProgress: 0, Resolved: 0 };
       }
       if (t.status === 'OPEN' || t.status === 'ASSIGNED') w[t.assigned_to].Open++;
@@ -236,7 +233,7 @@ export default function MaintenanceDashboard() {
       else if (['RESOLVED','CLOSED'].includes(t.status)) w[t.assigned_to].Resolved++;
     });
     return Object.values(w).sort((a, b) => (b.Open + b.InProgress) - (a.Open + a.InProgress)).slice(0, 6);
-  }, [tickets, users]);
+  }, [tickets]);
 
   const activeTickets = tickets
     .filter(t => !['CLOSED','CANCELLED'].includes(t.status))
@@ -364,7 +361,7 @@ export default function MaintenanceDashboard() {
             </div>
             <button onClick={() => navigate('/admin/maintenance')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View all →</button>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : trend.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(trend) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 28 }}>📈</div><div style={{ fontSize: 12 }}>No ticket data yet</div>
             </div>

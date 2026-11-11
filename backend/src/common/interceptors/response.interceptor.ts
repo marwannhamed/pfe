@@ -24,6 +24,51 @@ export interface ApiResponse<T = any> {
   };
 }
 
+/** Columns of a user row that must never leave the server. */
+const USER_SECRET_FIELDS = [
+  'password',
+  'refreshToken',
+  'session_refresh_token',
+] as const;
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => {
+  if (v === null || typeof v !== 'object') return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+};
+
+/**
+ * Services include related users with `user: true`, `assignee: true` and the
+ * like, which returns the whole row — password hash and refresh tokens
+ * included. GET /maintenance alone handed every caller, renters included,
+ * the hash and tokens of every reporter and technician. Rather than trust
+ * each include, any object shaped like a user row (it has both `email` and
+ * `password`) is copied without those columns on the way out.
+ *
+ * Copies instead of mutating, so cached service results are left intact. An
+ * object reached twice (shared or circular) maps to the same copy.
+ */
+export function stripUserSecrets<V>(
+  value: V,
+  copies = new WeakMap<object, unknown>(),
+): V {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUserSecrets(item, copies)) as V;
+  }
+  if (!isPlainObject(value)) return value;
+  const existing = copies.get(value);
+  if (existing) return existing as V;
+  const out: Record<string, unknown> = {};
+  copies.set(value, out);
+  const isUserRow = 'email' in value && 'password' in value;
+  for (const [key, child] of Object.entries(value)) {
+    if (isUserRow && (USER_SECRET_FIELDS as readonly string[]).includes(key))
+      continue;
+    out[key] = stripUserSecrets(child, copies);
+  }
+  return out as V;
+}
+
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<
   T,
@@ -84,7 +129,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<
           success: true,
           statusCode: context.switchToHttp().getResponse().statusCode,
           message,
-          data: responseData,
+          data: stripUserSecrets(responseData),
           timestamp: new Date().toISOString(),
           path: request.url,
           correlationId,

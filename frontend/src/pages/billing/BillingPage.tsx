@@ -17,7 +17,7 @@ import { billingApi, contractApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { InvoiceDownloadButton, InvoicePreviewModal } from '../../components/InvoicePDF';
 import type { ApiError, Invoice, InvoiceStatus, LeaseContract, Payment } from '../../types';
-import { currencySymbol, DEFAULT_CURRENCY } from '../../constants/qatar';
+import { CURRENCY_OPTIONS, currencySymbol, DEFAULT_CURRENCY } from '../../constants/qatar';
 import { asApiError, errorMessage } from '../../utils/errors';
 
 // --- Helpers ------------------------------------------------------------------
@@ -56,7 +56,7 @@ function formatDate(d: string) {
 }
 function formatAmt(amount: string | number, currency = DEFAULT_CURRENCY) {
   const sym = currencySymbol(currency);
-  return `${sym}${parseFloat(String(amount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym}${parseFloat(String(amount)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function isOverdue(dueDate: string) {
   return new Date(dueDate) < new Date();
@@ -189,12 +189,12 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
           {/* Contract */}
           <div style={{ border: '2px solid #2563eb', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>📄 Source Contract</div>
-            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? 'USD'} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
+            <Select value={form.contract_id || undefined} onChange={handleContractChange} placeholder="Select active contract..." style={{ width: '100%' }} options={contracts.map((c) => ({ value: c.id, label: `${c.contract_number} · ${c.tenant?.name ?? 'Tenant'} · ${c.status} · ${c.currency ?? DEFAULT_CURRENCY} ${parseFloat(String(c.monthly_rent ?? 0)).toLocaleString()}/mo` }))} />
             {errors.contract_id && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.contract_id}</div>}
             {selectedContract && (
               <div style={{ marginTop: 10, background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#1d4ed8', display: 'flex', gap: 16 }}>
-                <span>?? {formatDate(selectedContract.start_date)} ? {formatDate(selectedContract.end_date)}</span>
-                <span>?? {selectedContract.currency} {parseFloat(selectedContract.monthly_rent).toLocaleString()}/mo</span>
+                <span>📅 {formatDate(selectedContract.start_date)} → {formatDate(selectedContract.end_date)}</span>
+                <span>💰 {selectedContract.currency} {parseFloat(selectedContract.monthly_rent).toLocaleString()}/mo</span>
               </div>
             )}
           </div>
@@ -209,7 +209,7 @@ function GenerateInvoiceModal({ onClose, tenantId, canManage }: {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
             <div><label style={LABEL}>Amount <span style={{ color: '#ef4444' }}>*</span></label><input style={{ ...INPUT, borderColor: errors.amount ? '#ef4444' : '#e5e7eb', fontWeight: 700, fontSize: 15 }} type="number" min="0" step="0.01" placeholder="0.00" value={form.amount} onChange={e => setF('amount', e.target.value)} />{errors.amount && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.amount}</div>}</div>
             <div><label style={LABEL}>Tax %</label><input style={INPUT} type="number" min="0" step="0.01" placeholder="0" value={form.tax_rate} onChange={e => setF('tax_rate', e.target.value)} /><div style={{ fontSize: 10, color: th.textMuted, marginTop: 3 }}>Qatar: 0% (no VAT on leasing)</div></div>
-            <div><label style={LABEL}>Currency</label><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={['QAR','USD','EUR','GBP','AED'].map(c => ({ value: c, label: c }))} /></div>
+            <div><label style={LABEL}>Currency</label><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={CURRENCY_OPTIONS.map(c => ({ value: c, label: c }))} /></div>
           </div>
           {/* Description */}
           <div><label style={LABEL}>Description</label><input style={INPUT} type="text" placeholder="e.g. Monthly rent — April 2026" value={form.description} onChange={e => setF('description', e.target.value)} /></div>
@@ -535,7 +535,7 @@ function EditInvoiceModal({ invoice, onClose }: { invoice: Invoice; onClose: () 
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label style={LABEL}>Amount *</label><input type="number" step="0.01" min="0" style={{ ...INPUT, borderColor: errors.total_amount ? '#ef4444' : '#e5e7eb' }} value={form.total_amount} onChange={e => setF('total_amount', e.target.value)} />{errors.total_amount && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.total_amount}</div>}</div>
-            <div><label style={LABEL}>Currency</label><select style={INPUT} value={form.currency} onChange={e => setF('currency', e.target.value)}>{['USD','EUR','GBP','AED','TND'].map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label style={LABEL}>Currency</label><select style={INPUT} value={form.currency} onChange={e => setF('currency', e.target.value)}>{CURRENCY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           </div>
           <div><label style={LABEL}>Status</label><select style={INPUT} value={form.status} onChange={e => setF('status', e.target.value)}>{Object.entries(INVOICE_STATUS_META).map(([v, m]) => <option key={v} value={v}>{m.label}</option>)}</select></div>
         </div>
@@ -627,7 +627,7 @@ function InvoiceDetailModal({ invoice, onClose, canManage, onPay, onSubmitPay, o
             )}
             {/* -- PDF Preview button — all roles -- */}
             <button onClick={() => { onClose(); onPreview(invoice); }} style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              ?? View PDF
+              📄 View PDF
             </button>
             <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 8, background: th.cardBg, border: `1px solid ${th.cardBorder}`, fontSize: 13, cursor: 'pointer', color: th.text }}>Close</button>
           </div>
@@ -991,7 +991,7 @@ export default function BillingPage() {
                                 <div style={{ fontSize: 12, color: th.textSub }}>{pay.invoice?.invoice_number ?? pay.invoice_id?.substring(0, 12)}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 26, height: 26, borderRadius: 6, background: mm.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><PaymentMethodIcon method={payMethod(pay)} size={13} /></div><span style={{ fontSize: 12 }}>{mm.label}</span></div>
                                 <div style={{ fontSize: 12 }}>{formatDate(pay.payment_date)}</div>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: pay.status === 'REFUNDED' ? '#94a3b8' : '#0f172a', textDecoration: pay.status === 'REFUNDED' ? 'line-through' : 'none' }}>{formatAmt(pay.amount, pay.currency ?? 'USD')}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: pay.status === 'REFUNDED' ? '#94a3b8' : '#0f172a', textDecoration: pay.status === 'REFUNDED' ? 'line-through' : 'none' }}>{formatAmt(pay.amount, pay.currency ?? DEFAULT_CURRENCY)}</div>
                                 <span style={{ background: pay.status === 'COMPLETED' ? '#dcfce7' : pay.status === 'REFUNDED' ? '#f1f5f9' : '#fef3c7', color: pay.status === 'COMPLETED' ? '#15803d' : pay.status === 'REFUNDED' ? '#475569' : '#92400e', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{pay.status}</span>
                                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                   {payMethod(pay) === 'CHECK' && pay.cheque_document_url && (
@@ -1018,7 +1018,7 @@ export default function BillingPage() {
                       ))}
                       <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
                         <span>Showing {filteredPay.length} of {payments.length} payments{tenantPayFilt ? ` · ${tenants.find(t => t.id === tenantPayFilt)?.name ?? 'tenant'}` : ''}</span>
-                        <span>Total collected: <strong style={{ color: th.text }}>${totalCollected.toLocaleString()}</strong></span>
+                        <span>Total collected: <strong style={{ color: th.text }}>{formatAmt(totalCollected)}</strong></span>
                       </div>
                     </>
                   )}

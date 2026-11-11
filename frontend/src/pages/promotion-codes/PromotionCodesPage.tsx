@@ -16,6 +16,7 @@ import { promotionCodeApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 import type { PromotionCode, PromotionCodeStats } from '../../types';
+import { currencySymbol, formatMoney } from '../../constants/qatar';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -116,7 +117,7 @@ export default function PromotionCodesPage() {
     if (record.type === 'PERCENTAGE') {
       return `${record.discount}%`;
     } else {
-      return `$${record.discount}`;
+      return formatMoney(record.discount);
     }
   };
 
@@ -464,9 +465,9 @@ export default function PromotionCodesPage() {
                   placeholder="0"
                   min={0}
                   style={{ width: '100%' }}
-                  formatter={(value) => `$ ${value || 0}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  formatter={(value) => `${currencySymbol()}${value || 0}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={(value) => {
-                    const parsed = value?.replace(/\$\s?|(,*)/g, '');
+                    const parsed = value?.replace(/[^\d.]/g, '');
                     const num = parsed ? Math.max(0, Number(parsed)) : 0;
                     return num;
                   }}

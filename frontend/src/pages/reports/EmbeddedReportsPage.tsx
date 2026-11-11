@@ -28,9 +28,13 @@ export default function EmbeddedReportsPage() {
   const role = user?.role ?? '';
   const isSuper = role === 'SUPER_ADMIN';
   const isFinance = role === 'FINANCE';
-  const isViewer = isFinance || role === 'MANAGER';
-  const canPickTenant = isSuper || isFinance || role === 'MANAGER';
+  // Embeds belong to the viewer's own organisation. Finance and managers used
+  // to get an organisation picker that preselected a renter (Acme), whose
+  // record they may not read, so the page opened on "Failed to load tenant".
+  // Only the platform owner configures other organisations.
+  const canPickTenant = isSuper;
   const defaultTenant = user?.tenant_id ?? '';
+  const [orgName, setOrgName] = useState<string>();
 
   useEffect(() => {
     if (canPickTenant) {
@@ -62,6 +66,7 @@ export default function EmbeddedReportsPage() {
 
   const canEdit =
     role === 'SUPER_ADMIN' ||
+    role === 'CLIENT_ADMIN' ||
     role === 'MANAGER' ||
     role === 'TENANT_ADMIN';
 
@@ -73,6 +78,7 @@ export default function EmbeddedReportsPage() {
       const t = res.data as { reporting_embeds?: Embeds | null; name?: string };
       const re = (t?.reporting_embeds ?? null) as Embeds | null;
       setEmbeds(re);
+      setOrgName(t?.name);
       if (canEdit) {
         form.setFieldsValue({
           powerBiTitle: re?.powerBi?.title,
@@ -121,7 +127,7 @@ export default function EmbeddedReportsPage() {
     }
   };
 
-  const selectedTenantName = tenants.find((t) => t.id === tenantId)?.name;
+  const selectedTenantName = tenants.find((t) => t.id === tenantId)?.name ?? orgName;
 
   return (
     <PageShell>
@@ -157,9 +163,15 @@ export default function EmbeddedReportsPage() {
         />
       )}
 
+      {!canPickTenant && !canEdit && orgName && (
+        <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+          Dashboards for <Text strong>{orgName}</Text> (read-only).
+        </Paragraph>
+      )}
+
       {canPickTenant && (
         <Card style={{ marginBottom: 16 }}>
-          <Text strong>{isFinance ? 'Organization' : 'Tenant'}</Text>
+          <Text strong>Organization</Text>
           <Select
             style={{ display: 'block', marginTop: 8, maxWidth: 400 }}
             placeholder="Select organization"
@@ -168,11 +180,6 @@ export default function EmbeddedReportsPage() {
             loading={loading && tenants.length === 0}
             options={tenants.map((t) => ({ value: t.id, label: t.name }))}
           />
-          {isViewer && !canEdit && selectedTenantName && (
-            <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-              Viewing dashboards for <Text strong>{selectedTenantName}</Text> (read-only).
-            </Paragraph>
-          )}
         </Card>
       )}
 
@@ -243,8 +250,8 @@ export default function EmbeddedReportsPage() {
           </Paragraph>
           {isFinance && (
             <Space wrap>
-              <Link to="/admin/embedded-reports">
-                <Button icon={<BarChartOutlined />}>Financial reports</Button>
+              <Link to="/admin/billing">
+                <Button icon={<BarChartOutlined />}>Billing &amp; payments</Button>
               </Link>
               <Link to="/admin/revenue-forecast">
                 <Button icon={<LineChartOutlined />}>Revenue forecast</Button>

@@ -4,6 +4,7 @@ import { Cache } from '../common/decorators/cache.decorator';
 import { AccessPolicyService } from '../common/services/access-policy.service';
 import type { AuthUser } from '../auth/types/auth-user';
 import { USER_ROLE } from '../constants/enums';
+import { bookableHoursBetween } from '../utils/working-hours';
 
 @Injectable()
 export class AnalyticsService {
@@ -163,7 +164,7 @@ export class AnalyticsService {
     to: Date,
     tenantId?: string,
   ) {
-    const scope = this.tenantFilter(user, tenantId);
+    const scope = this.invoiceTenantFilter(user, tenantId);
     const invoices = await this.prisma.invoice.findMany({
       where: {
         ...scope,
@@ -198,7 +199,7 @@ export class AnalyticsService {
     to: Date,
     tenantId?: string,
   ) {
-    const scope = this.tenantFilter(user, tenantId);
+    const scope = this.bookingTenantFilter(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
         ...scope,
@@ -251,7 +252,7 @@ export class AnalyticsService {
     to: Date,
     tenantId?: string,
   ) {
-    const scope = this.tenantFilter(user, tenantId);
+    const scope = this.bookingTenantFilter(user, tenantId);
     const statuses = [
       'CONFIRMED',
       'PENDING_APPROVAL',
@@ -325,7 +326,7 @@ export class AnalyticsService {
     to: Date,
     tenantId?: string,
   ) {
-    const scope = this.tenantFilter(user, tenantId);
+    const scope = this.ticketTenantFilter(user, tenantId);
     const tickets = await this.prisma.maintenanceTicket.findMany({
       where: {
         ...scope,
@@ -373,7 +374,7 @@ export class AnalyticsService {
 
   // ─── Top spaces ───────────────────────────────────────────────────────────
   async getTopSpaces(user: AuthUser, from: Date, to: Date, tenantId?: string) {
-    const scope = this.tenantFilter(user, tenantId);
+    const scope = this.bookingTenantFilter(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
         ...scope,
@@ -414,7 +415,7 @@ export class AnalyticsService {
 
   // ─── Revenue by tenant ────────────────────────────────────────────────────
   async getRevenueByTenant(user: AuthUser, from: Date, to: Date) {
-    const scope = this.tenantFilter(user);
+    const scope = this.invoiceTenantFilter(user);
     const invoices = await this.prisma.invoice.findMany({
       where: { ...scope, status: 'PAID', created_at: { gte: from, lte: to } },
       include: { tenant: { select: { name: true } } },
@@ -495,6 +496,34 @@ export class AnalyticsService {
     };
   }
 
+  /**
+   * A lease belongs to the renter that signed it; the property company hosts
+   * it through the space it covers — the path LeaseContractService uses for
+   * the contracts list (contract -> invoices -> bookings -> space -> building).
+   */
+  private contractTenantFilter(user: AuthUser, tenantId?: string) {
+    const scope = this.tenantFilter(user, tenantId);
+    if (!scope.tenant_id) return {};
+    return {
+      OR: [
+        { tenant_id: scope.tenant_id },
+        {
+          invoices: {
+            some: {
+              bookings: {
+                some: {
+                  space: {
+                    floor: { building: { tenant_id: scope.tenant_id } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }
+
   private ticketTenantFilter(user: AuthUser, tenantId?: string) {
     const scope = this.tenantFilter(user, tenantId);
     if (!scope.tenant_id) return {};
@@ -535,7 +564,14 @@ export class AnalyticsService {
     });
   }
 
-  /** Desk / room utilization from bookings vs capacity over a window (heatmap input). */
+  /**
+   * Share of the bookable hours (08:00–22:00 Doha time) each space was booked
+   * over a window — the heatmap input.
+   *
+   * This used to divide booked room-hours by round-the-clock seat-hours
+   * (period x capacity): two different units, so every meeting room and event
+   * hall read about 0% however busy it was. Both sides now count the same hours.
+   */
   async getOccupancyHeatmap(
     user: AuthUser,
     buildingId: string,
@@ -543,8 +579,7 @@ export class AnalyticsService {
     to: Date,
   ) {
     await this.access.assertBuildingReadable(user, buildingId);
-    const periodMs = Math.max(1, to.getTime() - from.getTime());
-    const periodHours = periodMs / 3600000;
+    const periodHours = bookableHoursBetween(from, to);
 
     const spaces = await this.prisma.space.findMany({
       where: { floor: { building_id: buildingId } },
@@ -579,28 +614,19 @@ export class AnalyticsService {
       select: { space_id: true, start_time: true, end_time: true },
     });
 
-    const overlapHours = (
-      aStart: Date,
-      aEnd: Date,
-      bStart: Date,
-      bEnd: Date,
-    ) => {
-      const s = Math.max(aStart.getTime(), bStart.getTime());
-      const e = Math.min(aEnd.getTime(), bEnd.getTime());
-      return Math.max(0, e - s) / 3600000;
-    };
-
     const bookedBySpace: Record<string, number> = {};
     for (const b of bookings) {
-      const h = overlapHours(b.start_time, b.end_time, from, to);
-      bookedBySpace[b.space_id] = (bookedBySpace[b.space_id] ?? 0) + h;
+      const start = b.start_time > from ? b.start_time : from;
+      const end = b.end_time < to ? b.end_time : to;
+      bookedBySpace[b.space_id] =
+        (bookedBySpace[b.space_id] ?? 0) + bookableHoursBetween(start, end);
     }
 
     const desks = spaces.map((space) => {
       const cap = Math.max(space.capacity ?? 1, 1);
-      const potential = periodHours * cap;
-      const booked = bookedBySpace[space.id] ?? 0;
-      const utilization = potential > 0 ? Math.min(1, booked / potential) : 0;
+      const potential = periodHours;
+      const booked = Math.min(bookedBySpace[space.id] ?? 0, potential);
+      const utilization = potential > 0 ? booked / potential : 0;
       return {
         spaceId: space.id,
         name: space.name,
@@ -633,7 +659,7 @@ export class AnalyticsService {
     tenantIdParam?: string,
     horizonMonths = 12,
   ) {
-    const filter = this.tenantFilter(user, tenantIdParam);
+    const filter = this.contractTenantFilter(user, tenantIdParam);
     const now = new Date();
     const horizonEnd = new Date(now);
     horizonEnd.setMonth(
@@ -745,7 +771,7 @@ export class AnalyticsService {
     tenantIdParam?: string,
     buildingId?: string,
   ) {
-    const filter = this.tenantFilter(user, tenantIdParam);
+    const filter = this.ticketTenantFilter(user, tenantIdParam);
     if (buildingId) await this.access.assertBuildingReadable(user, buildingId);
 
     const since = new Date();

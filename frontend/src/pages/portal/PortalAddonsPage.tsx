@@ -12,6 +12,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import type { AddOnService, Booking } from '../../types';
+import { formatMoney } from '../../constants/qatar';
 
 type TabKey = 'catalog' | 'bookings';
 
@@ -85,12 +86,12 @@ export default function PortalAddonsPage() {
     {
       title: 'Unit price',
       key: 'unit_price',
-      render: (_: unknown, r: AddOnRow) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => formatMoney(r.unit_price, null, 2),
     },
     {
       title: 'Line total',
       key: 'line_total',
-      render: (_: unknown, r: AddOnRow) => `$${Number(r.line_total ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => formatMoney(r.line_total, null, 2),
     },
   ];
 
@@ -140,7 +141,7 @@ export default function PortalAddonsPage() {
                   </div>
                   <div style={{ fontSize: 13, color: th.textSub, flex: 1 }}>{svc.description || 'No description'}</div>
                   <div style={{ marginTop: 14, fontSize: 20, fontWeight: 800, color: '#2563eb' }}>
-                    ${Number(svc.price ?? 0).toFixed(2)}
+                    {formatMoney(svc.price, svc.currency, 2)}
                     <span style={{ fontSize: 12, fontWeight: 400, color: th.textMuted, marginLeft: 6 }}>
                       / {String(svc.billing_cycle ?? 'unit').toLowerCase().replace('_', ' ')}
                     </span>
@@ -160,7 +161,7 @@ export default function PortalAddonsPage() {
               showIcon
               style={{ marginBottom: 16 }}
               title={`${myBookingAddons.length} add-on(s) on your bookings`}
-              description={`Add-on total: $${totalAddonsCost.toFixed(2)} — combined with space rental on your billing invoice.`}
+              description={`Add-on total: ${formatMoney(totalAddonsCost, null, 2)} — combined with space rental on your billing invoice.`}
             />
           )}
           <div style={{ ...card, padding: 8 }}>

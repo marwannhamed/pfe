@@ -22,6 +22,7 @@ import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import { addonLineTotal, addonUnitPriceForLease } from '../../utils/addonPricing';
 import { asApiError } from '../../utils/errors';
+import { CURRENCY_OPTIONS, currencySymbol, DEFAULT_CURRENCY, formatMoney } from '../../constants/qatar';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<BookingStatus, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
@@ -105,7 +106,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [selectedFloorId,    setSelectedFloorId]    = useState('');
   const [selectedSpaceId,    setSelectedSpaceId]    = useState('');
-  const [form, setForm] = useState({ start_date: '', start_time: '09:00', end_date: '', end_time: '10:00', attendee_count: '1', currency: 'USD' });
+  const [form, setForm] = useState({ start_date: '', start_time: '09:00', end_date: '', end_time: '10:00', attendee_count: '1', currency: DEFAULT_CURRENCY });
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const setF = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => { const n = { ...e }; delete n[k]; return n; }); };
@@ -218,9 +219,9 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
             {selectedSpace && (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 16, fontSize: 12, color: '#1d4ed8', flexWrap: 'wrap' }}>
                 <span>🏢 {selectedSpace.name}</span><span>👥 Cap: {selectedSpace.capacity}</span>
-                {selectedSpace.price_per_hour  && <span>?? ${parseFloat(selectedSpace.price_per_hour)}/hr</span>}
-                {selectedSpace.price_per_day   && <span>?? ${parseFloat(selectedSpace.price_per_day)}/day</span>}
-                {selectedSpace.price_per_month && <span>?? ${parseFloat(selectedSpace.price_per_month)}/mo</span>}
+                {selectedSpace.price_per_hour  && <span>💰 {currencySymbol(selectedSpace.currency)}{parseFloat(selectedSpace.price_per_hour)}/hr</span>}
+                {selectedSpace.price_per_day   && <span>💰 {currencySymbol(selectedSpace.currency)}{parseFloat(selectedSpace.price_per_day)}/day</span>}
+                {selectedSpace.price_per_month && <span>💰 {currencySymbol(selectedSpace.currency)}{parseFloat(selectedSpace.price_per_month)}/mo</span>}
               </div>
             )}
           </div>
@@ -242,7 +243,7 @@ function NewBookingModal({ onClose, tenantId, userId, portalSubmit }: { onClose:
                   <span style={{ fontWeight: 700, color: autoPrice > 0 ? th.text : th.textMuted }}>{autoPrice > 0 ? `${form.currency} ${autoPrice.toFixed(2)}` : '—'}</span>
                 </div>
               </Field>
-              <Field label="Currency"><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={['USD','EUR','GBP','AED','TND'].map(c => ({ value: c, label: c }))} /></Field>
+              <Field label="Currency"><Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }} options={CURRENCY_OPTIONS.map(c => ({ value: c, label: c }))} /></Field>
             </div>
           </div>
           <div style={{ background: th.tableHead, border: `1px solid ${th.cardBorder}`, borderRadius: 12, padding: '16px 18px' }}>
@@ -333,7 +334,7 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
               <div style={{ fontSize: 12, color: th.textSub }}>{booking.space?.type?.replace(/_/g,' ') ?? 'Office Space'}</div>
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: th.text }}>${parseFloat(booking.total_price).toLocaleString()}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: th.text }}>{formatMoney(booking.total_price, booking.currency)}</div>
               <div style={{ fontSize: 11, color: th.textSub }}>{booking.currency}</div>
             </div>
           </div>
@@ -348,10 +349,10 @@ function BookingDetailModal({ booking, onClose, canManage, userId, onCreateContr
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button onClick={() => { onClose(); onCreateContract(booking); }} style={{ padding: '8px 16px', borderRadius: 8, background: th.cardBg, border: 'none', color: '#1d4ed8', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  ?? Contract
+                  📋 Contract
                 </button>
                 <button onClick={() => { onClose(); onRecordPayment(booking); }} style={{ padding: '8px 16px', borderRadius: 8, background: th.cardBg, border: 'none', color: '#15803d', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  ?? Payment
+                  💳 Payment
                 </button>
               </div>
             </div>
@@ -817,7 +818,7 @@ export default function BookingsPage() {
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <span style={{ background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-block', marginBottom: 4 }}>{sm.label}</span>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: th.text }}>${parseFloat(b.total_price).toLocaleString()}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: th.text }}>{formatMoney(b.total_price, b.currency)}</div>
                       </div>
                       {isWorkflowStaff && b.status === 'AWAITING_PHYSICAL_VISIT' && (
                         <button onClick={e => { e.stopPropagation(); visitCompleteMut.mutate(b.id); }} disabled={visitCompleteMut.isPending} style={{ padding: '6px 12px', borderRadius: 7, background: '#059669', border: 'none', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>

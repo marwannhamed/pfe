@@ -157,23 +157,30 @@ All seeded users share the password `Password123!`.
 
 `npm run db:seed` upserts a minimal set and leaves existing rows alone.
 `npm run db:seed:full` **empties every table** and rebuilds the full demo
-dataset below — one platform owner, three property companies and six renter
-companies, with every model populated.
+dataset: one platform owner, three property companies with seven buildings and
+123 spaces in Doha and Lusail, and 36 renter organisations — trading tenants,
+applicants in the reception pipeline and prospects awaiting review — with six
+months of bookings, invoices, payments and tickets leading up to the day it
+runs. Dates are placed relative to the clock, so run it again on the day of a
+demo.
 
-| Email | Role | Organisation | Level |
-|---|---|---|---|
-| `admin@leasemanager.com` | `SUPER_ADMIN` | LeaseManager Platform | 1 |
-| `admin@msheireb.test` | `CLIENT_ADMIN` | Msheireb Properties | 2 |
-| `manager@msheireb.test` | `MANAGER` | Msheireb Properties | 2 |
-| `finance@msheireb.test` | `FINANCE` | Msheireb Properties | 2 |
-| `tech@msheireb.test` | `MAINTENANCE` | Msheireb Properties | 2 |
-| `reception@msheireb.test` | `RECEPTIONIST` | Msheireb Properties | 2 |
-| `tenant.admin@acme-corp.test` | `TENANT_ADMIN` | Acme Corp | 3 |
-| `employee@acme-corp.test` | `TENANT_EMPLOYEE` | Acme Corp | 3 |
+| Email | Name | Role | Organisation | Level |
+|---|---|---|---|---|
+| `admin@leasemanager.com` | Youssef Mansour | `SUPER_ADMIN` | LeaseManager Platform | 1 |
+| `admin@msheireb.test` | Khalid Al-Mansouri | `CLIENT_ADMIN` | Msheireb Properties | 2 |
+| `manager@msheireb.test` | Fatima Al-Kuwari | `MANAGER` | Msheireb Properties | 2 |
+| `finance@msheireb.test` | Omar Haddad | `FINANCE` | Msheireb Properties | 2 |
+| `tech@msheireb.test` | Rajesh Nair | `MAINTENANCE` | Msheireb Properties | 2 |
+| `reception@msheireb.test` | Maria Santos | `RECEPTIONIST` | Msheireb Properties | 2 |
+| `tenant.admin@acme-corp.test` | Noor Al-Hajri | `TENANT_ADMIN` | Acme Corp | 3 |
+| `employee@acme-corp.test` | Karim Saad | `TENANT_EMPLOYEE` | Acme Corp | 3 |
 
 The other two property companies follow the same pattern at `@west-bay.test`
-and `@lusail-hub.test`; the other five renters at `@qfintech.test`,
-`@gulfco.test`, `@dohadesign.test`, `@pearllog.test` and `@arlegal.test`.
+and `@lusail-hub.test` (Msheireb also has `leasing@`, `tech2@`, `tech3@` and
+`reception2@`). Every trading renter has `tenant.admin@` and `employee@`
+accounts — among them `@qfintech.test`, `@gulfco.test`, `@dohadesign.test`,
+`@pearllog.test`, `@arlegal.test`, `@sidralabs.test`, `@oryxsoft.test` and
+`@dhowcapital.test`; the seed prints the full list when it finishes.
 
 Signing in as a level-2 role and then a level-3 role is the quickest way to see the tenancy
 boundary in action — the same pages expose different data and different actions. Comparing

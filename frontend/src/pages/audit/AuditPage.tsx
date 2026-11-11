@@ -7,6 +7,7 @@ import { auditApi } from '../../api/services';
 import type { AuditLog, AuditAction, AuditSeverity } from '../../types';
 import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
+import { humanize } from '../../utils/labels';
 
 const ACTION_META: Record<AuditAction, { label: string; color: string; bg: string }> = {
   CREATE:  { label: 'Create',  color: '#059669', bg: '#f0fdf4' },
@@ -40,11 +41,14 @@ export function AuditPage() {
     queryFn:  () => auditApi.getAll({ ...(action && { action }), ...(severity && { severity }) }).then(r => r.data),
   });
 
+  // resource_type and resource_id may be null (see AuditLog); calling
+  // .toLowerCase() on them crashed the page as soon as anyone typed a search.
+  const actorName = (l: AuditLog) => l.user ? `${l.user.first_name ?? ''} ${l.user.last_name ?? ''}`.trim() || l.user.email : '';
   const filtered = (logs as AuditLog[]).filter(l => {
     if (!q) return true;
-    return l.resource_type.toLowerCase().includes(q.toLowerCase()) ||
-           l.resource_id.toLowerCase().includes(q.toLowerCase()) ||
-           (l.user_id ?? '').toLowerCase().includes(q.toLowerCase());
+    const needle = q.toLowerCase();
+    return [l.resource_type, l.resource_id, l.user_id, actorName(l), l.user?.email, l.tenant?.name]
+      .some((v) => (v ?? '').toLowerCase().includes(needle));
   });
 
   return (
@@ -73,7 +77,7 @@ export function AuditPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Input prefix={<SearchOutlined style={{ color: th.textMuted }} />} placeholder="Search by resource or user..." value={q} onChange={e => setQ(e.target.value)} style={{ width: 240, borderRadius: 8 }} />
+        <Input prefix={<SearchOutlined style={{ color: th.textMuted }} />} placeholder="Search by resource, person or organisation..." value={q} onChange={e => setQ(e.target.value)} style={{ width: 240, borderRadius: 8 }} />
         <Select value={action || 'all'} onChange={v => setAction(v === 'all' ? '' : v)} style={{ width: 150 }} options={[{ value: 'all', label: 'All Actions' }, ...Object.entries(ACTION_META).map(([v, m]) => ({ value: v, label: m.label }))]} />
         <Select value={severity || 'all'} onChange={v => setSeverity(v === 'all' ? '' : v)} style={{ width: 150 }} options={[{ value: 'all', label: 'All Severity' }, ...Object.entries(SEVERITY_META).map(([v, m]) => ({ value: v, label: m.label }))]} />
         <div style={{ marginLeft: 'auto', fontSize: 13, color: th.textSub }}><strong style={{ color: th.text }}>{filtered.length}</strong> logs</div>
@@ -91,7 +95,9 @@ export function AuditPage() {
             <span>Timestamp</span><span>Action</span><span>Resource</span><span>User</span><span>Severity</span><span>IP</span>
           </div>
           {filtered.map((log: AuditLog, i: number) => {
-            const am = ACTION_META[log.action]       ?? { label: log.action,    color: '#475569', bg: '#f1f5f9' };
+            // actions outside the map (LOGIN_FAILED, PASSWORD_RESET…) read as words, failures in red
+            const failed = /FAILED|DENIED/.test(log.action);
+            const am = ACTION_META[log.action]       ?? { label: humanize(log.action), color: failed ? '#dc2626' : '#475569', bg: failed ? '#fef2f2' : '#f1f5f9' };
             const sm = SEVERITY_META[log.severity]   ?? { label: log.severity,  color: '#475569', bg: '#f1f5f9' };
             return (
               <div key={log.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.5fr 1.5fr 0.8fr 0.8fr', padding: '12px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f8fafc' : 'none', alignItems: 'center', transition: 'background 0.1s' }}
@@ -101,10 +107,14 @@ export function AuditPage() {
                 <div style={{ fontSize: 12, color: '#374151' }}>{formatDateTime(log.created_at)}</div>
                 <span style={{ background: am.bg, color: am.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-block' }}>{am.label}</span>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{log.resource_type ?? '—'}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{log.resource_type ? humanize(log.resource_type) : '—'}</div>
                   <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>{log.resource_id ? log.resource_id.substring(0, 12) + '...' : '—'}</div>
                 </div>
-                <div style={{ fontSize: 11, color: th.textSub, fontFamily: 'monospace' }}>{log.user_id ? log.user_id.substring(0, 12) + '...' : 'System'}</div>
+                {/* who acted, not a truncated id */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.user ? actorName(log) : log.user_id ? log.user_id.substring(0, 12) + '...' : 'System'}</div>
+                  {log.user && <div style={{ fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[log.user.email, log.tenant?.name].filter(Boolean).join(' · ')}</div>}
+                </div>
                 <span style={{ background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{sm.label}</span>
                 <div style={{ fontSize: 11, color: '#94a3b8' }}>{log.ip_address ?? '—'}</div>
               </div>

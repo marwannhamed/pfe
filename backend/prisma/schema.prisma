@@ -266,6 +266,8 @@ model Booking {
   status           String              @default("DRAFT")
   total_amount     Float               @default(0)
   total_price      Float?
+  /// People expected in the space — entered on every booking form.
+  attendee_count   Int                 @default(1)
   notes            String?
   created_at       DateTime            @default(now())
   updated_at       DateTime            @updatedAt

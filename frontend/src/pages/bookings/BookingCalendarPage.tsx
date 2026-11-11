@@ -13,7 +13,7 @@ import { bookingApi, spaceApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
-import { isQatarWeekend } from '../../constants/qatar';
+import { currencySymbol, formatMoney, isQatarWeekend } from '../../constants/qatar';
 import type { ApiError, Booking, Space } from '../../types';
 import { asApiError } from '../../utils/errors';
 
@@ -146,7 +146,7 @@ function QuickBookModal({ date, spaceId, spaces, onClose, tenantId, userId }: {
     });
   };
 
-  const currSym = selectedSpace?.currency === 'EUR' ? '€' : selectedSpace?.currency === 'GBP' ? '£' : '$';
+  const currSym = currencySymbol(selectedSpace?.currency);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -316,7 +316,7 @@ function BookingDetailModal({ booking, onClose }: { booking: Booking; onClose: (
               { label: '📅 End',        value: `${end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${fmtTime(end)}` },
               { label: '⏱ Duration',   value: hours < 24 ? `${hours.toFixed(1)} hours` : `${(hours/24).toFixed(1)} days` },
               { label: '👥 Attendees',  value: `${booking.attendee_count ?? '—'} people` },
-              { label: '💰 Price',      value: `$${parseFloat(booking.total_price || '0').toLocaleString()}` },
+              { label: '💰 Price',      value: formatMoney(booking.total_price, booking.currency) },
               ...(booking.tenant?.name ? [{ label: '🏢 Tenant', value: booking.tenant.name }] : []),
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${th.cardBorder}`, fontSize: 13 }}>

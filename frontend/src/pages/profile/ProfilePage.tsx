@@ -44,7 +44,9 @@ const ROLE_META: Record<string, { label: string; bg: string; color: string; icon
   FINANCE:      { label: 'Finance',      bg: '#f0fdf4', color: '#15803d', icon: '💰' },
   MAINTENANCE:  { label: 'Maintenance',  bg: '#fef3c7', color: '#92400e', icon: '🔧' },
   TENANT_ADMIN: { label: 'Tenant Admin', bg: '#ede9fe', color: '#6d28d9', icon: '🏢' },
-  EMPLOYEE:     { label: 'TENANT_EMPLOYEE',     bg: '#f1f5f9', color: '#475569', icon: '👤' },
+  CLIENT_ADMIN: { label: 'Client Admin', bg: '#fee2e2', color: '#b91c1c', icon: '🏛️' },
+  TENANT_EMPLOYEE: { label: 'Employee',  bg: '#f1f5f9', color: '#475569', icon: '👤' },
+  EMPLOYEE:     { label: 'Employee',     bg: '#f1f5f9', color: '#475569', icon: '👤' },
   RECEPTIONIST: { label: 'Reception',    bg: '#e0f2fe', color: '#0369a1', icon: '📞' },
 };
 
@@ -154,9 +156,13 @@ export default function ProfilePage() {
   const [pwSuccess, setPwSuccess] = useState(false);
 
   // ── Queries ─────────────────────────────────────────────────────────────────
-  const { data: bookingsRaw }  = useQuery({ queryKey: ['profile-bookings',  userId],   queryFn: () => bookingApi.getAll(isTenant ? { tenantId } : {}).then(r => r.data),          enabled: !!userId });
-  const { data: contractsRaw } = useQuery({ queryKey: ['profile-contracts', tenantId], queryFn: () => contractApi.getAll(tenantId ? { tenantId } : {}).then(r => r.data),          enabled: !!userId });
-  const { data: invoicesRaw }  = useQuery({ queryKey: ['profile-invoices',  tenantId], queryFn: () => billingApi.getInvoices(tenantId ? { tenantId } : {}).then(r => r.data),       enabled: !!userId });
+  // Contracts and invoices are closed to technicians and reception; asking
+  // anyway left two refused requests behind every visit to this page.
+  const seesBilling = ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER', 'FINANCE', 'TENANT_ADMIN', 'TENANT_EMPLOYEE'].includes(user?.role ?? '');
+  // "My Bookings" means the bookings this person made, not every booking in reach.
+  const { data: bookingsRaw }  = useQuery({ queryKey: ['profile-bookings',  userId],   queryFn: () => bookingApi.getAll({ createdBy: userId }).then(r => r.data),                   enabled: !!userId });
+  const { data: contractsRaw } = useQuery({ queryKey: ['profile-contracts', tenantId], queryFn: () => contractApi.getAll(tenantId ? { tenantId } : {}).then(r => r.data),          enabled: !!userId && seesBilling });
+  const { data: invoicesRaw }  = useQuery({ queryKey: ['profile-invoices',  tenantId], queryFn: () => billingApi.getInvoices(tenantId ? { tenantId } : {}).then(r => r.data),       enabled: !!userId && seesBilling });
   const { data: notifsRaw }    = useQuery({ queryKey: ['profile-notifs',    userId],   queryFn: () => notificationApi.getAll({ userId }).then(r => r.data),                         enabled: !!userId });
 
   const bookings  = toArray<Booking>(bookingsRaw);
@@ -310,10 +316,10 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Activity Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${seesBilling ? 4 : 2},1fr)`, gap: 14, marginBottom: 20 }}>
         <StatCard icon={<CalendarOutlined />}    label="My Bookings"       value={bookings.length}                                   color="#2563eb" bg="#eff6ff" />
-        <StatCard icon={<FileTextOutlined />}    label="Contracts"         value={contracts.filter(c => c.status === 'ACTIVE').length} color="#059669" bg="#f0fdf4" />
-        <StatCard icon={<CreditCardOutlined />}  label="Invoices"          value={invoices.length}                                   color="#7c3aed" bg="#f5f3ff" />
+        {seesBilling && <StatCard icon={<FileTextOutlined />}    label="Contracts"         value={contracts.filter(c => c.status === 'ACTIVE').length} color="#059669" bg="#f0fdf4" />}
+        {seesBilling && <StatCard icon={<CreditCardOutlined />}  label="Invoices"          value={invoices.length}                                   color="#7c3aed" bg="#f5f3ff" />}
         <StatCard icon={<BellOutlined />}        label="Unread Notifs"     value={unreadNotifs}                                      color={unreadNotifs > 0 ? '#dc2626' : '#94a3b8'} bg={unreadNotifs > 0 ? '#fef2f2' : '#f8fafc'} />
       </div>
 

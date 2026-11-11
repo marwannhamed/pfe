@@ -8,6 +8,7 @@ import { analyticsApi, siteApi } from '../../api/services';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { errorMessage } from '../../utils/errors';
+import { humanize } from '../../utils/labels';
 
 const { Title, Paragraph, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -69,7 +70,7 @@ export default function OccupancyHeatmapPage() {
 
   const columns = [
     { title: 'Space', dataIndex: 'name', key: 'name' },
-    { title: 'Type', dataIndex: 'type', key: 'type', width: 140 },
+    { title: 'Type', dataIndex: 'type', key: 'type', width: 160, render: (t: string) => humanize(t) },
     {
       title: 'Utilization',
       dataIndex: 'utilization',
@@ -120,8 +121,8 @@ export default function OccupancyHeatmapPage() {
             Occupancy heatmap
           </Title>
           <Paragraph type="secondary" style={{ marginBottom: 0, maxWidth: 760 }}>
-            Uses confirmed bookings vs seat capacity over the selected window. Low utilization highlights
-            underused desks or rooms; combine with floor map positions for spatial heat (map fields optional).
+            The share of bookable hours (08:00–22:00) each space was booked over the selected window. Low
+            utilization highlights underused desks and rooms; leased offices read close to 100%.
           </Paragraph>
         </div>
       </Space>

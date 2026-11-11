@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
+import { DEFAULT_CURRENCY } from '../constants/qatar';
 
 export type ExportFormat = 'xlsx' | 'csv';
 
@@ -35,6 +36,20 @@ export class ExportService {
       );
     }
     return user.tenant_id;
+  }
+
+  /**
+   * Bookings, invoices, payments and tickets carry the renter's tenant_id. A
+   * property company reaches its rows through the buildings it owns, so
+   * filtering on tenant_id alone exported empty files for every landlord role
+   * — the same path AnalyticsService and BillingService use.
+   */
+  private inBuildingsOf(tenantId: string) {
+    return { space: { floor: { building: { tenant_id: tenantId } } } };
+  }
+
+  private heldOrHosted(tenantId: string, hosted: object) {
+    return { OR: [{ tenant_id: tenantId }, hosted] };
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -164,7 +179,7 @@ export class ExportService {
     const scoped = this.scopeFor(user, tenantId);
     const bookings = await this.prisma.booking.findMany({
       where: {
-        ...(scoped && { tenant_id: scoped }),
+        ...(scoped && this.heldOrHosted(scoped, this.inBuildingsOf(scoped))),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -197,9 +212,9 @@ export class ExportService {
       (b as any).status.replace(/_/g, ' '),
       this.fmtDateTime((b as any).start_time),
       this.fmtDateTime((b as any).end_time),
-      '', // attendee_count removed
+      (b as any).attendee_count ?? 1,
       Number((b as any).total_amount ?? 0).toFixed(2),
-      (b as any).currency ?? 'USD',
+      (b as any).currency ?? DEFAULT_CURRENCY,
       this.fmtDate((b as any).created_at),
     ]);
 
@@ -225,7 +240,10 @@ export class ExportService {
     const scoped = this.scopeFor(user, tenantId);
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        ...(scoped && { tenant_id: scoped }),
+        ...(scoped &&
+          this.heldOrHosted(scoped, {
+            bookings: { some: this.inBuildingsOf(scoped) },
+          })),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -261,7 +279,7 @@ export class ExportService {
         Number((inv as any).subtotal ?? 0).toFixed(2),
         Number((inv as any).tax_amount ?? 0).toFixed(2),
         Number(inv.total_amount ?? 0).toFixed(2),
-        inv.currency ?? 'USD',
+        inv.currency ?? DEFAULT_CURRENCY,
         this.fmtDate((inv as any).issued_at),
         this.fmtDate((inv as any).due_date),
         paidAmount.toFixed(2),
@@ -291,7 +309,10 @@ export class ExportService {
     const scoped = this.scopeFor(user, tenantId);
     const payments = await this.prisma.payment.findMany({
       where: {
-        ...(scoped && { tenant_id: scoped }),
+        ...(scoped &&
+          this.heldOrHosted(scoped, {
+            invoice: { bookings: { some: this.inBuildingsOf(scoped) } },
+          })),
         ...(from && to && { created_at: { gte: from, lte: to } }),
       },
       include: {
@@ -318,7 +339,7 @@ export class ExportService {
       (p as any).invoice?.invoice_number ?? '',
       (p as any).tenant?.name ?? '',
       Number(p.amount).toFixed(2),
-      p.currency ?? 'USD',
+      p.currency ?? DEFAULT_CURRENCY,
       (p as any).method?.replace(/_/g, ' ') ?? 'N/A',
       p.status,
       this.fmtDate(p.paid_at),
@@ -447,7 +468,7 @@ export class ExportService {
       (s as any).price_per_month
         ? Number((s as any).price_per_month).toFixed(2)
         : '',
-      s.currency ?? 'USD',
+      s.currency ?? DEFAULT_CURRENCY,
       s._count.bookings,
       this.fmtDate(s.created_at),
     ]);
@@ -475,12 +496,7 @@ export class ExportService {
     const tickets = await (this.prisma as any).maintenanceTicket.findMany({
       where: {
         ...(from && to && { created_at: { gte: from, lte: to } }),
-        ...(scoped && {
-          OR: [
-            { user: { tenant_id: scoped } },
-            { createdBy: { tenant_id: scoped } },
-          ],
-        }),
+        ...(scoped && this.heldOrHosted(scoped, this.inBuildingsOf(scoped))),
       },
       include: {
         space: { select: { name: true } },

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { SPACE_STATUS } from '../constants/enums';
+import { DEFAULT_CURRENCY } from '../constants/qatar';
 import {
   MarketplaceAdaptersService,
   MarketplaceListingPayload,
@@ -79,7 +80,7 @@ export class MarketplaceSyncService {
         hourly: space.hourly_rate,
         daily: space.daily_rate,
         monthly: space.monthly_rate,
-        currency: space.currency ?? 'USD',
+        currency: space.currency ?? DEFAULT_CURRENCY,
       },
       amenities: space.features.map((f) => f.name),
       capacity: space.capacity,

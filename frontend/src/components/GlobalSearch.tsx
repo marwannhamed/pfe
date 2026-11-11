@@ -12,6 +12,7 @@ import {
 } from '../api/services';
 import { useAuthStore } from '../store/authStore';
 import type { Booking, Invoice, LeaseContract, MaintenanceTicket, Space, Tenant } from '../types';
+import { formatMoney } from '../constants/qatar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -96,15 +97,35 @@ export default function GlobalSearch() {
   const wrapRef  = useRef<HTMLDivElement>(null);
   const listRef  = useRef<HTMLDivElement>(null);
 
-  const isBackOffice  = ['SUPER_ADMIN','MANAGER','FINANCE','MAINTENANCE'].includes(user?.role ?? '');
-  const isSuperAdmin  = user?.role === 'SUPER_ADMIN';
-  const isSiteManager = user?.role === 'MANAGER';
-  const isFinance     = user?.role === 'FINANCE';
-  const tenantId      = user?.tenant_id ?? '';
-  const basePath      = isBackOffice ? '/admin' : '/portal';
+  const role     = user?.role ?? '';
+  const isPortal = role === 'TENANT_ADMIN' || role === 'TENANT_EMPLOYEE';
+  const basePath = isPortal ? '/portal' : '/admin';
 
-  const canSeeAll     = isSuperAdmin || isSiteManager;
-  const canSeeBilling = isSuperAdmin || isFinance || isSiteManager;
+  // Who may open each result's page — the RoleRoute lists in App.tsx. Client
+  // admins and reception used to get /portal links, and every role was offered
+  // pages it may not open (Billing to the owner, Tenants to managers…), each a
+  // bounce back to its home page. Searching a list whose page the role cannot
+  // open also asked the API for data it refuses (contracts and invoices for
+  // technicians and reception).
+  const PAGE_ROLES: Record<string, string[]> = {
+    '/admin/bookings':     ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER', 'RECEPTIONIST'],
+    '/admin/contracts':    ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER'],
+    '/admin/billing':      ['CLIENT_ADMIN', 'FINANCE', 'MANAGER'],
+    '/admin/maintenance':  ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER', 'MAINTENANCE'],
+    '/admin/tenants':      ['SUPER_ADMIN'],
+    '/admin/spaces':       ['SUPER_ADMIN', 'CLIENT_ADMIN', 'MANAGER'],
+    '/portal/bookings':    ['TENANT_ADMIN', 'TENANT_EMPLOYEE'],
+    '/portal/contracts':   ['TENANT_ADMIN'],
+    '/portal/billing':     ['TENANT_ADMIN'],
+    '/portal/maintenance': ['TENANT_ADMIN', 'TENANT_EMPLOYEE'],
+  };
+  const canOpen = (page: string) => (PAGE_ROLES[page] ?? []).includes(role);
+  const searchBookings    = canOpen(`${basePath}/bookings`);
+  const searchContracts   = canOpen(`${basePath}/contracts`);
+  const searchInvoices    = canOpen(`${basePath}/billing`);
+  const searchMaintenance = canOpen(`${basePath}/maintenance`);
+  const searchTenants     = canOpen('/admin/tenants');
+  const searchSpaces      = !isPortal && canOpen('/admin/spaces');
 
   // ── Ctrl+K / Cmd+K shortcut ───────────────────────────────────────────────
   useEffect(() => {
@@ -134,41 +155,39 @@ export default function GlobalSearch() {
   const enabled = open && query.trim().length >= 2;
 
   // ── Queries (fire in parallel) ────────────────────────────────────────────
+  // The server already scopes every list to the caller, and matching happens
+  // below, in the browser. Keys used to include the typed text with no cache,
+  // so every keystroke downloaded up to six full lists again.
+  const listOpts = { staleTime: 60_000 };
   const { data: bookingsRaw,    isFetching: fb } = useQuery({
-    queryKey: ['gs-bookings',    query],
-    queryFn:  () => bookingApi.getAll(canSeeAll ? {} : { tenantId }).then(r => r.data),
-    enabled:  enabled,
-    staleTime: 0,
+    ...listOpts, queryKey: ['gs-bookings', role],
+    queryFn:  () => bookingApi.getAll().then(r => r.data),
+    enabled:  enabled && searchBookings,
   });
   const { data: contractsRaw,   isFetching: fc } = useQuery({
-    queryKey: ['gs-contracts',   query],
-    queryFn:  () => contractApi.getAll(canSeeAll ? {} : { tenantId }).then(r => r.data),
-    enabled:  enabled,
-    staleTime: 0,
+    ...listOpts, queryKey: ['gs-contracts', role],
+    queryFn:  () => contractApi.getAll().then(r => r.data),
+    enabled:  enabled && searchContracts,
   });
   const { data: tenantsRaw,     isFetching: ft } = useQuery({
-    queryKey: ['gs-tenants',     query],
+    ...listOpts, queryKey: ['gs-tenants', role],
     queryFn:  () => tenantApi.getAll().then(r => r.data),
-    enabled:  enabled && (isSuperAdmin || isFinance),
-    staleTime: 0,
+    enabled:  enabled && searchTenants,
   });
   const { data: invoicesRaw,    isFetching: fi } = useQuery({
-    queryKey: ['gs-invoices',    query],
-    queryFn:  () => billingApi.getInvoices(canSeeBilling ? {} : { tenantId }).then(r => r.data),
-    enabled:  enabled && (canSeeBilling || !!tenantId),
-    staleTime: 0,
+    ...listOpts, queryKey: ['gs-invoices', role],
+    queryFn:  () => billingApi.getInvoices().then(r => r.data),
+    enabled:  enabled && searchInvoices,
   });
   const { data: spacesRaw,      isFetching: fs } = useQuery({
-    queryKey: ['gs-spaces',      query],
+    ...listOpts, queryKey: ['gs-spaces', role],
     queryFn:  () => spaceApi.getAll(),
-    enabled:  enabled && isBackOffice,
-    staleTime: 0,
+    enabled:  enabled && searchSpaces,
   });
   const { data: maintenanceRaw, isFetching: fm } = useQuery({
-    queryKey: ['gs-maintenance',  query],
+    ...listOpts, queryKey: ['gs-maintenance', role],
     queryFn:  () => maintenanceApi.getAll().then(r => r.data),
-    enabled:  enabled && isBackOffice,
-    staleTime: 0,
+    enabled:  enabled && searchMaintenance,
   });
 
   const isFetching = fb || fc || ft || fi || fs || fm;
@@ -187,7 +206,7 @@ export default function GlobalSearch() {
       subtitle: `${b.space?.name ?? 'Space'} · ${new Date(b.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       badge:    STATUS_COLORS[b.status] ? { label: b.status.replace(/_/g,' '), ...STATUS_COLORS[b.status] } : undefined,
       path:     `${basePath}/bookings`,
-      meta:     `$${parseFloat(b.total_price || '0').toLocaleString()}`,
+      meta:     formatMoney(b.total_price, b.currency),
     }));
 
   toArray<LeaseContract>(contractsRaw)
@@ -228,7 +247,7 @@ export default function GlobalSearch() {
       subtitle: `${i.tenant?.name ?? ''} · ${i.type?.replace(/_/g,' ').toLowerCase()}`,
       badge:    STATUS_COLORS[i.status] ? { label: i.status, ...STATUS_COLORS[i.status] } : undefined,
       path:     `${basePath}/billing`,
-      meta:     `$${parseFloat(i.total_amount || '0').toLocaleString()}`,
+      meta:     formatMoney(i.total_amount, i.currency),
     }));
 
   toArray<Space>(spacesRaw)
@@ -240,8 +259,8 @@ export default function GlobalSearch() {
       title:    s.name,
       subtitle: `${s.type?.replace(/_/g,' ')} · Cap: ${s.capacity}`,
       badge:    STATUS_COLORS[s.status] ? { label: s.status, ...STATUS_COLORS[s.status] } : undefined,
-      path:     `${basePath}/spaces/${s.id}`,
-      meta:     s.price_per_month ? `$${parseFloat(s.price_per_month).toLocaleString()}/mo` : undefined,
+      path:     `/admin/spaces/${s.id}`,
+      meta:     s.price_per_month ? `${formatMoney(s.price_per_month, s.currency)}/mo` : undefined,
     }));
 
   toArray<MaintenanceTicket>(maintenanceRaw)
@@ -280,12 +299,12 @@ export default function GlobalSearch() {
 
   // Quick access shortcuts
   const quickLinks = [
-    { label: 'Bookings',     path: `${basePath}/bookings`,     icon: '📅', show: true },
-    { label: 'Contracts',    path: `${basePath}/contracts`,    icon: '📋', show: true },
-    { label: 'Billing',      path: `${basePath}/billing`,      icon: '🧾', show: canSeeBilling || !!tenantId },
-    { label: 'Maintenance',  path: `${basePath}/maintenance`,  icon: '🔧', show: true },
-    { label: 'Tenants',      path: '/admin/tenants',           icon: '🏢', show: canSeeAll },
-    { label: 'Spaces',       path: `${basePath}/spaces`,       icon: '🏠', show: isBackOffice },
+    { label: 'Bookings',     path: `${basePath}/bookings`,     icon: '📅', show: searchBookings },
+    { label: 'Contracts',    path: `${basePath}/contracts`,    icon: '📋', show: searchContracts },
+    { label: 'Billing',      path: `${basePath}/billing`,      icon: '🧾', show: searchInvoices },
+    { label: 'Maintenance',  path: `${basePath}/maintenance`,  icon: '🔧', show: searchMaintenance },
+    { label: 'Tenants',      path: '/admin/tenants',           icon: '🏢', show: searchTenants },
+    { label: 'Spaces',       path: '/admin/spaces',            icon: '🏠', show: searchSpaces },
   ].filter(l => l.show);
 
   return (

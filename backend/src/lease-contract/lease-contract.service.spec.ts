@@ -278,3 +278,22 @@ describe('LeaseContractService — a landlord reaches leases through the buildin
     ).rejects.toThrow(ForbiddenException);
   });
 });
+
+describe('LeaseContractService — expiry', () => {
+  // Nothing set EXPIRED before: the daily job now does, for active and
+  // renewed leases whose end date has passed.
+  it('marks active and renewed leases past their end date EXPIRED', async () => {
+    const { prisma, service } = makeService();
+    (prisma.leaseContract as any).updateMany = jest
+      .fn()
+      .mockResolvedValue({ count: 2 });
+
+    const count = await service.markExpiredContracts();
+
+    expect(count).toBe(2);
+    const arg = (prisma.leaseContract as any).updateMany.mock.calls[0][0];
+    expect(arg.where.status).toEqual({ in: ['ACTIVE', 'RENEWED'] });
+    expect(arg.where.end_date.lt).toBeInstanceOf(Date);
+    expect(arg.data).toEqual({ status: 'EXPIRED' });
+  });
+});

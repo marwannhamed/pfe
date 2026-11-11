@@ -11,6 +11,9 @@ import { PerformanceService } from '../performance/performance.service';
 import { ConfigurationService } from '../config/configuration.service';
 import * as os from 'os';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { USER_ROLE } from '../constants/enums';
 
 @ApiTags('Health & Monitoring')
 @Controller('health')
@@ -36,7 +39,8 @@ export class HealthController {
 
   @Get('detailed')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN)
   @ApiOperation({ summary: 'Detailed health check with system info' })
   @ApiResponse({ status: 200, description: 'Detailed health information' })
   async detailedHealth() {
@@ -92,7 +96,8 @@ export class HealthController {
 
   @Get('metrics')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get application metrics' })
   @ApiResponse({ status: 200, description: 'Application metrics' })
   async metrics() {
@@ -124,7 +129,8 @@ export class HealthController {
 
   @Get('performance-report')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get detailed performance report' })
   @ApiResponse({ status: 200, description: 'Performance report' })
   async performanceReport() {

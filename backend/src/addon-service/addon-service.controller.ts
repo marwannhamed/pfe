@@ -245,9 +245,21 @@ export class AddonServiceController {
   }
 
   @Get(':id/usage-stats')
+  @Roles(
+    USER_ROLE.SUPER_ADMIN,
+    USER_ROLE.CLIENT_ADMIN,
+    USER_ROLE.MANAGER,
+    USER_ROLE.FINANCE,
+  )
   @ApiOperation({ summary: 'Get usage statistics for addon service' })
   @ApiParam({ name: 'id' })
-  async getUsageStats(@Param('id', ParseUUIDPipe) id: string) {
+  async getUsageStats(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    // These are revenue figures: only the company selling the add-on (and the
+    // platform owner) may read them, never a competitor or a renter.
+    await this.assertOwned(user, id);
     const stats = await this.addonServiceService.getUsageStats(id);
     return new ResponseDto('Usage statistics retrieved successfully', stats);
   }

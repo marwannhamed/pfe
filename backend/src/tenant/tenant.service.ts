@@ -400,8 +400,11 @@ export class TenantService {
     dto: UpdateReportingEmbedsDto,
   ) {
     await this.findOneForUser(user, tenantId);
+    // CLIENT_ADMIN is the organisation's own administrator; the controller
+    // admits the role but this check used to refuse it.
     if (
       user.role !== USER_ROLE.SUPER_ADMIN &&
+      user.role !== USER_ROLE.CLIENT_ADMIN &&
       user.role !== USER_ROLE.MANAGER &&
       user.role !== USER_ROLE.TENANT_ADMIN
     ) {

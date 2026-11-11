@@ -20,7 +20,10 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
+import { formatMoney, formatMoneyCompact } from '../../constants/qatar';
+import { bucketByMonth, isEmptySeries } from '../../utils/months';
 import type { ChartTooltipProps, Invoice, LeaseContract, Payment, Tenant } from '../../types';
+import { humanize } from '../../utils/labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -32,14 +35,7 @@ function toArray<T>(raw: unknown): T[] {
   if (Array.isArray(nested)) return nested as T[];
   return EMPTY_LIST as unknown as T[];
 }
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-}
-function fmtAmt(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
+const fmtAmt = (n: number) => formatMoneyCompact(n);
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -53,7 +49,7 @@ function ChartTip({ active, payload, label, isCurrency = false }: ChartTooltipPr
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
-          <strong>{isCurrency ? `$${Number(p.value).toLocaleString()}` : p.value}</strong>
+          <strong>{isCurrency ? formatMoney(p.value) : p.value}</strong>
         </div>
       ))}
     </div>
@@ -157,24 +153,20 @@ export default function FinanceDashboard() {
   const activeContracts   = contracts.filter(c => c.status === 'ACTIVE');
   const monthlyRecurring  = activeContracts.reduce((s, c) => s + parseFloat(c.monthly_rent || '0'), 0);
 
-  const revenueTrend = useMemo(() => {
-    const buckets: Record<string, { Revenue: number; Refunds: number }> = {};
-    payments.forEach(p => {
-      const k = fmtMonth(p.payment_date || p.created_at);
-      if (!buckets[k]) buckets[k] = { Revenue: 0, Refunds: 0 };
-      if (p.status === 'COMPLETED') buckets[k].Revenue  += parseFloat(p.amount || '0');
-      if (p.status === 'REFUNDED')  buckets[k].Refunds  += parseFloat(p.amount || '0');
-    });
-    return Object.entries(buckets)
-      .slice(-revenueRange)
-      .map(([date, v]) => ({ date, Revenue: Math.round(v.Revenue), Refunds: Math.round(v.Refunds) }));
-  }, [payments, revenueRange]);
+  const revenueTrend = useMemo(() => bucketByMonth(
+    payments, revenueRange, p => p.payment_date || p.created_at,
+    () => ({ Revenue: 0, Refunds: 0 }),
+    (v, p) => {
+      if (p.status === 'COMPLETED') v.Revenue += parseFloat(p.amount || '0');
+      if (p.status === 'REFUNDED')  v.Refunds += parseFloat(p.amount || '0');
+    },
+  ).map(m => ({ ...m, Revenue: Math.round(m.Revenue), Refunds: Math.round(m.Refunds) })), [payments, revenueRange]);
 
   const invoiceStatusChart = useMemo(() => {
     const counts: Record<string, number> = {};
     invoices.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
     return Object.entries(counts)
-      .map(([name, value]) => ({ name, value, color: INV_STATUS_COLORS[name] ?? '#94a3b8' }))
+      .map(([status, value]) => ({ name: humanize(status), value, color: INV_STATUS_COLORS[status] ?? '#94a3b8' }))
       .sort((a, b) => b.value - a.value);
   }, [invoices]);
 
@@ -208,14 +200,11 @@ export default function FinanceDashboard() {
       .slice(0, 5);
   }, [completedPays, tenants]);
 
-  const mrrTrend = useMemo(() => {
-    const months: Record<string, number> = {};
-    invoices.filter(i => i.status === 'PAID' && i.type === 'MONTHLY_RENT').forEach(inv => {
-      const k = fmtMonth(inv.issue_date || inv.created_at);
-      months[k] = (months[k] || 0) + parseFloat(inv.total_amount || '0');
-    });
-    return Object.entries(months).slice(-6).map(([date, MRR]) => ({ date, MRR: Math.round(MRR) }));
-  }, [invoices]);
+  const mrrTrend = useMemo(() => bucketByMonth(
+    invoices.filter(i => i.status === 'PAID' && i.type === 'MONTHLY_RENT'), 6, inv => inv.issue_date || inv.created_at,
+    () => ({ MRR: 0 }),
+    (v, inv) => { v.MRR += parseFloat(inv.total_amount || '0'); },
+  ).map(m => ({ ...m, MRR: Math.round(m.MRR) })), [invoices]);
 
   const recentPayments = [...completedPays]
     .sort((a, b) => new Date(b.payment_date || b.created_at).getTime() - new Date(a.payment_date || a.created_at).getTime())
@@ -296,7 +285,7 @@ export default function FinanceDashboard() {
               {overdueInvoices.length} overdue invoice{overdueInvoices.length > 1 ? 's' : ''}
             </span>
             <span style={{ color: '#dc2626', fontSize: 13, marginLeft: 8 }}>
-              Total: ${overdueInvoices.reduce((s, i) => s + parseFloat(i.total_amount || '0'), 0).toLocaleString()} outstanding
+              Total: {formatMoney(overdueInvoices.reduce((s, i) => s + parseFloat(i.total_amount || '0'), 0))} outstanding
             </span>
           </div>
           <ArrowRightOutlined style={{ color: '#dc2626' }} />
@@ -305,17 +294,17 @@ export default function FinanceDashboard() {
 
       {/* KPI Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 16 }}>
-        <KpiCard label="Total Collected"  value={`$${Math.round(totalCollected).toLocaleString()}`} sub={`${completedPays.length} payments`}           color="#059669" bg="#f0fdf4" icon={<CheckCircleOutlined />}  path="/admin/billing"  loading={isLoading} />
-        <KpiCard label="Pending Revenue"  value={`$${Math.round(totalPending).toLocaleString()}`}   sub={`${pendingInvoices.length} open invoices`}     color="#d97706" bg="#fffbeb" icon={<ClockCircleOutlined />}  path="/admin/billing"  loading={isLoading} />
-        <KpiCard label="Overdue Amount"   value={`$${Math.round(totalOverdue).toLocaleString()}`}   sub={`${overdueInvoices.length} overdue invoices`}  color="#dc2626" bg="#fef2f2" icon={<WarningOutlined />}      path="/admin/billing"  loading={isLoading} />
+        <KpiCard label="Total Collected"  value={formatMoney(totalCollected)} sub={`${completedPays.length} payments`}           color="#059669" bg="#f0fdf4" icon={<CheckCircleOutlined />}  path="/admin/billing"  loading={isLoading} />
+        <KpiCard label="Pending Revenue"  value={formatMoney(totalPending)}   sub={`${pendingInvoices.length} open invoices`}     color="#d97706" bg="#fffbeb" icon={<ClockCircleOutlined />}  path="/admin/billing"  loading={isLoading} />
+        <KpiCard label="Overdue Amount"   value={formatMoney(totalOverdue)}   sub={`${overdueInvoices.length} overdue invoices`}  color="#dc2626" bg="#fef2f2" icon={<WarningOutlined />}      path="/admin/billing"  loading={isLoading} />
         <KpiCard label="Collection Rate"  value={`${collectionRate}%`}                              sub={`${paidInvoices.length} paid of ${invoices.length}`} color={collectionRate >= 80 ? '#059669' : '#d97706'} bg={collectionRate >= 80 ? '#f0fdf4' : '#fffbeb'} icon={<CreditCardOutlined />} loading={isLoading} />
       </div>
 
       {/* KPI Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-        <KpiCard label="Monthly Recurring" value={`$${Math.round(monthlyRecurring).toLocaleString()}`} sub={`${activeContracts.length} active contracts`}  color="#7c3aed" bg="#f5f3ff" icon={<FileTextOutlined />} path="/admin/contracts" loading={isLoading} />
-        <KpiCard label="Total Invoiced"    value={`$${Math.round(totalInvoiced).toLocaleString()}`}    sub="All time invoiced"                              color="#2563eb" bg="#eff6ff" icon={<FileTextOutlined />} path="/admin/billing"   loading={isLoading} />
-        <KpiCard label="Total Refunded"    value={`$${Math.round(totalRefunded).toLocaleString()}`}    sub={`${refundedPays.length} refunds`}               color="#94a3b8" bg="#f1f5f9" icon={<CreditCardOutlined />} loading={isLoading} />
+        <KpiCard label="Monthly Recurring" value={formatMoney(monthlyRecurring)} sub={`${activeContracts.length} active contracts`}  color="#7c3aed" bg="#f5f3ff" icon={<FileTextOutlined />} path="/admin/contracts" loading={isLoading} />
+        <KpiCard label="Total Invoiced"    value={formatMoney(totalInvoiced)}    sub="All time invoiced"                              color="#2563eb" bg="#eff6ff" icon={<FileTextOutlined />} path="/admin/billing"   loading={isLoading} />
+        <KpiCard label="Total Refunded"    value={formatMoney(totalRefunded)}    sub={`${refundedPays.length} refunds`}               color="#94a3b8" bg="#f1f5f9" icon={<CreditCardOutlined />} loading={isLoading} />
         <KpiCard label="Active Tenants"    value={tenants.filter(tn => tn.status === 'ACTIVE').length} sub={`${tenants.length} total registered`}           color="#0891b2" bg="#f0f9ff" icon="🏢" loading={isLoading} />
       </div>
 
@@ -371,7 +360,7 @@ export default function FinanceDashboard() {
               ))}
             </div>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : revenueTrend.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(revenueTrend) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 28 }}>💰</div><div style={{ fontSize: 12 }}>No payment data yet</div>
             </div>
@@ -390,7 +379,7 @@ export default function FinanceDashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.divider} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: t.textMuted }} />
-                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={48} />
+                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={92} />
                 <Tooltip content={<ChartTip isCurrency />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Area type="monotone" dataKey="Revenue" name="Revenue" stroke="#059669" strokeWidth={2.5} fill="url(#revGrad)" dot={{ r: 3, fill: '#059669' }} />
@@ -408,11 +397,11 @@ export default function FinanceDashboard() {
               <div style={{ fontSize: 12, color: t.textSub }}>From paid monthly rent invoices</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#7c3aed' }}>${Math.round(monthlyRecurring).toLocaleString()}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#7c3aed' }}>{formatMoney(monthlyRecurring)}</div>
               <div style={{ fontSize: 11, color: t.textSub }}>current MRR</div>
             </div>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : mrrTrend.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(mrrTrend) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 28 }}>📈</div><div style={{ fontSize: 12 }}>No rent invoice data yet</div>
             </div>
@@ -421,7 +410,7 @@ export default function FinanceDashboard() {
               <LineChart data={mrrTrend} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.divider} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: t.textMuted }} />
-                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={48} />
+                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={92} />
                 <Tooltip content={<ChartTip isCurrency />} />
                 <Line type="monotone" dataKey="MRR" name="MRR" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4, fill: '#7c3aed' }} activeDot={{ r: 6 }} />
               </LineChart>
@@ -490,7 +479,7 @@ export default function FinanceDashboard() {
                         <span style={{ fontSize: 12, fontWeight: 600, color: t.textSub }}>{pm.label}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: t.text }}>${pm.amount.toLocaleString()}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: t.text }}>{formatMoney(pm.amount)}</span>
                         <span style={{ fontSize: 10, color: t.textMuted, marginLeft: 6 }}>{pct}%</span>
                       </div>
                     </div>
@@ -527,7 +516,7 @@ export default function FinanceDashboard() {
                         </div>
                         <span style={{ fontSize: 12, fontWeight: 600, color: t.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>{tn.name}</span>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: t.text }}>${tn.total.toLocaleString()}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: t.text }}>{formatMoney(tn.total)}</span>
                     </div>
                     <div style={{ height: 5, background: t.divider, borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: RANK_COLORS[i], borderRadius: 3 }} />
@@ -567,7 +556,7 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: t.textMuted }}>{mm.label} · {formatDate(p.payment_date || p.created_at)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>${parseFloat(p.amount || '0').toLocaleString()}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>{formatMoney(p.amount, p.currency)}</div>
                     <div style={{ fontSize: 10, color: t.textMuted }}>{p.currency}</div>
                   </div>
                 </div>
@@ -605,7 +594,7 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: t.textMuted }}>{inv.tenant?.name ?? 'Tenant'} · Due {formatDate(inv.due_date)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>${parseFloat(inv.total_amount || '0').toLocaleString()}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>{formatMoney(inv.total_amount, inv.currency)}</div>
                     <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>{daysLate}d overdue</div>
                   </div>
                 </div>

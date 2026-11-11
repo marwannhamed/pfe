@@ -14,6 +14,7 @@ import type { ApiError, Space, SpaceFeature, SpaceStatus, SpaceType } from '../.
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { asApiError } from '../../utils/errors';
+import { currencySymbol, DEFAULT_CURRENCY } from '../../constants/qatar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<SpaceStatus, { label: string; bg: string; color: string }> = {
@@ -91,8 +92,8 @@ function InlineBookingPanel({ space, tenantId, userId, onClose, onSuccess }: {
   };
 
   const autoPrice = calcPrice(space, form.start_date, form.start_time, form.end_date, form.end_time);
-  const currency  = space.currency ?? 'USD';
-  const currSym   = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+  const currency  = space.currency ?? DEFAULT_CURRENCY;
+  const currSym   = currencySymbol(currency);
   const duration  = getDuration(form.start_date, form.start_time, form.end_date, form.end_time);
 
   const mutation = useMutation({
@@ -341,7 +342,7 @@ export default function SpaceDetailPage() {
   const sm                = STATUS_META[space.status as SpaceStatus] ?? STATUS_META.AVAILABLE;
   const tm                = TYPE_META[space.type as SpaceType]       ?? TYPE_META.DEDICATED_OFFICE;
   const allFeatures       = space.features ?? [];
-  const currSym           = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const currSym           = currencySymbol(space.currency);
   const canBook           = space.status === 'AVAILABLE' && isAuthenticated;
 
   return (

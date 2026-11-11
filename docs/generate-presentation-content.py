@@ -473,7 +473,7 @@ st += [Paragraph("Browser \u2192 nginx \u2500\u252c\u2192 React SPA (built)<br/>
        Spacer(1, 4),
        P("<b>Four containers \u00b7 one origin \u00b7 no CORS \u00b7 no hostname compiled "
          "into the bundle \u00b7 one command to start</b>"),
-       P("Image: <font name='Mono'>docs/diagrams/09-deployment.png</font>"),
+       P("Image: <font name='Mono'>docs/diagrams/out/dep-01-architecture-deployment.png</font>"),
        box("Say this",
            "The point to land is <i>one command</i>. A jury hears \u201cit runs on my "
            "machine\u201d often; a reproducible stack is worth saying out loud.")]
@@ -645,7 +645,7 @@ st += part("7", "Design", "3 slides \u00b7 two diagrams, no more")
 
 st += sl("Slide 7.1", "Use case diagram")
 st += [box("Image to insert",
-           "<font name='Mono'>docs/diagrams/01-use-case-global.png</font> \u2014 portrait "
+           "<font name='Mono'>docs/diagrams/out/uc-01-complete.png</font> \u2014 portrait "
            "format. On a 16:9 slide, centre it under the title and leave the sides empty. "
            "Do not stretch it to fill the width.", ACC, WASH),
        Spacer(1, 4),
@@ -661,7 +661,7 @@ st += [box("Image to insert",
 
 st += sl("Slide 7.2", "Class diagram")
 st += [box("Image to insert",
-           "<font name='Mono'>docs/diagrams/02b-class-diagram-presentation.png</font> "
+           "<font name='Mono'>docs/diagrams/out/class-01-overview.png</font> "
            "\u2014 the <b>landscape, reduced</b> version, built for projection: 10 "
            "classes, 3 attributes each. The full diagram "
            "(<font name='Mono'>02-class-diagram.png</font>, 17 classes) is unreadable on "
@@ -689,8 +689,8 @@ st += [tab([["File", "What it shows", "Choose it if"],
              "The panel is business-minded \u2014 this is the full operational journey"]],
            [50 * mm, (CW - 50 * mm) / 2, (CW - 50 * mm) / 2], fs=8.2),
        Spacer(1, 4),
-       P("All nine diagrams are in <font name='Mono'>docs/diagrams/</font>, as PNG and as "
-         "editable source."),
+       P("All the diagrams are in <font name='Mono'>docs/diagrams/</font>: PlantUML source, and "
+         "PNG, PDF and SVG renders in <font name='Mono'>out/</font>."),
        box("Say this",
            "Do not project more than two diagrams in the whole talk. A jury disengages in "
            "front of a run of dense schematics, and one diagram explained well is worth "

@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AccessPolicyService } from './access-policy.service';
-import { USER_ROLE } from '../../constants/enums';
+import { SPACE_STATUS, USER_ROLE } from '../../constants/enums';
 import type { AuthUser } from '../../auth/types/auth-user';
 
 const userWith = (role: string, tenantId = 'tenant-a'): AuthUser => ({
@@ -177,5 +177,41 @@ describe('AccessPolicyService.assertSpaceMutable', () => {
         'space-1',
       ),
     ).rejects.toThrow(ForbiddenException);
+  });
+});
+
+describe('AccessPolicyService.spaceWhereForList — portal users', () => {
+  const service = new AccessPolicyService(prismaWith({}) as any);
+
+  it('lists available spaces in any building, not only the renter’s own', () => {
+    // A renter owns no buildings. Requiring the building to belong to the
+    // renter's organisation matched nothing, so the portal's Floor Map and
+    // New Booking pages had no spaces to offer.
+    for (const role of [USER_ROLE.TENANT_ADMIN, USER_ROLE.TENANT_EMPLOYEE]) {
+      const where = service.spaceWhereForList(userWith(role, 'renter-x'));
+      expect(where).toEqual({ status: SPACE_STATUS.AVAILABLE });
+    }
+  });
+
+  it('keeps a floor filter and never lets a portal user list taken spaces', () => {
+    const where = service.spaceWhereForList(
+      userWith(USER_ROLE.TENANT_EMPLOYEE, 'renter-x'),
+      'floor-1',
+      undefined,
+      'OCCUPIED',
+    );
+    expect(where).toEqual({
+      floor_id: 'floor-1',
+      status: SPACE_STATUS.AVAILABLE,
+    });
+  });
+
+  it('still confines landlord staff to their own buildings', () => {
+    const where = service.spaceWhereForList(
+      userWith(USER_ROLE.MANAGER, 'tenant-a'),
+    );
+    expect(where).toEqual({
+      floor: { building: { tenant_id: 'tenant-a' } },
+    });
   });
 });

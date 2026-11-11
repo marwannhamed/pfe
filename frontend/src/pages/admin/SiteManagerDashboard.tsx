@@ -26,6 +26,8 @@ import PageHeader from '../../components/ui/PageHeader';
 import ClientOnboardingChecklist from '../../components/ClientOnboardingChecklist';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
 import { isClientTeamRole } from '../../constants/team';
+import { formatMoney } from '../../constants/qatar';
+import { bucketByMonth, isEmptySeries } from '../../utils/months';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -36,9 +38,6 @@ function toArray<T>(raw: unknown): T[] {
   const nested = (raw as { data?: unknown }).data;
   if (Array.isArray(nested)) return nested as T[];
   return EMPTY_LIST as unknown as T[];
-}
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 function fmtTime(d: string) {
   return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -53,7 +52,7 @@ function ChartTip({ active, payload, label, isCurrency }: ChartTooltipProps & { 
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
-          <strong>{isCurrency ? `$${Number(p.value).toLocaleString()}` : p.value}</strong>
+          <strong>{isCurrency ? formatMoney(p.value) : p.value}</strong>
         </div>
       ))}
     </div>
@@ -149,17 +148,15 @@ export default function SiteManagerDashboard() {
     { name: 'Maintenance', value: inMaint,   color: '#ef4444' },
   ].filter(s => s.value > 0);
 
-  const bookingTrend = useMemo(() => {
-    const b: Record<string, { Confirmed: number; Pending: number; Cancelled: number }> = {};
-    bookings.forEach(bk => {
-      const k = fmtMonth(bk.created_at);
-      if (!b[k]) b[k] = { Confirmed: 0, Pending: 0, Cancelled: 0 };
-      if (['CONFIRMED','CHECKED_IN','COMPLETED'].includes(bk.status)) b[k].Confirmed++;
-      else if (bk.status === 'PENDING_APPROVAL') b[k].Pending++;
-      else if (bk.status === 'CANCELLED') b[k].Cancelled++;
-    });
-    return Object.entries(b).slice(-6).map(([date, v]) => ({ date, ...v }));
-  }, [bookings]);
+  const bookingTrend = useMemo(() => bucketByMonth(
+    bookings, 6, bk => bk.created_at,
+    () => ({ Confirmed: 0, Pending: 0, Cancelled: 0 }),
+    (v, bk) => {
+      if (['CONFIRMED','CHECKED_IN','COMPLETED'].includes(bk.status)) v.Confirmed++;
+      else if (bk.status === 'PENDING_APPROVAL') v.Pending++;
+      else if (bk.status === 'CANCELLED') v.Cancelled++;
+    },
+  ), [bookings]);
 
   const mxByCategory = useMemo(() => {
     const c: Record<string, number> = {};
@@ -175,9 +172,16 @@ export default function SiteManagerDashboard() {
       return { name: s.name.length > 12 ? s.name.slice(0, 12) + '…' : s.name, Occupancy: rate, total: ss.length };
     }), [sites, spaces]);
 
+  // Sunday to Saturday — the working week in Qatar starts on Sunday
   const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const thisWeekBookings = bookings.filter(b => new Date(b.start_datetime) >= weekStart);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const thisWeekBookings = bookings.filter(b => {
+    const start = new Date(b.start_datetime);
+    return start >= weekStart && start < weekEnd;
+  });
 
   const recentBookings = [...bookings]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -284,7 +288,7 @@ export default function SiteManagerDashboard() {
             </div>
             <button onClick={() => navigate('/admin/bookings')} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View all →</button>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : bookingTrend.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(bookingTrend) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 28 }}>📅</div><div style={{ fontSize: 12 }}>No booking data yet</div>
             </div>
@@ -437,7 +441,7 @@ export default function SiteManagerDashboard() {
                     <span style={{ background: bs.bg, color: bs.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, display: 'inline-block', marginBottom: 3 }}>
                       {b.status.replace(/_/g,' ')}
                     </span>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>${parseFloat(b.total_price || '0').toLocaleString()}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>{formatMoney(b.total_price, b.currency)}</div>
                   </div>
                 </div>
               );
@@ -509,7 +513,7 @@ export default function SiteManagerDashboard() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, color: t.text, marginBottom: 2 }}>{site.name}</div>
                     <div style={{ fontSize: 11, color: t.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <EnvironmentOutlined style={{ fontSize: 10 }} />{site.city}, {site.country}
+                      <EnvironmentOutlined style={{ fontSize: 10 }} />{site.address || [site.city, site.country].filter(Boolean).join(', ')}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 80 }}>

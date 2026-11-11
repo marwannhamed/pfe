@@ -10,6 +10,7 @@ import SpaceMediaFields, { type SpaceMediaValues } from '../../components/spaces
 import SpaceAddonPicker, { type SelectedAddon } from '../../components/spaces/SpaceAddonPicker';
 import { validatePublishLocation } from '../../utils/spacePublish';
 import { errorMessage } from '../../utils/errors';
+import { CURRENCY_OPTIONS } from '../../constants/qatar';
 
 const SPACE_TYPES = [
   { value: 'DEDICATED_OFFICE', label: '🏢 Dedicated Office' },
@@ -20,7 +21,7 @@ const SPACE_TYPES = [
   { value: 'PHONE_BOOTH',      label: '📞 Phone Booth'      },
   { value: 'EVENT_SPACE',      label: '🎪 Event Space'      },
 ];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED'];
+const CURRENCIES = CURRENCY_OPTIONS;
 
 const OVERLAY: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 };
 const MODAL: React.CSSProperties   = { background: '#fff', borderRadius: 16, width: '100%', maxWidth: 660, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' };

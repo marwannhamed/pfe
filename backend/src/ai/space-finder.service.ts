@@ -40,9 +40,42 @@ export type SpaceCriteria = {
   type: string | null;
   min_capacity: number | null;
   max_monthly_budget: number | null;
-  city: string | null;
+  /** Any place the visitor named: a city, a district such as Msheireb or West Bay, or a building. */
+  area: string | null;
   keywords: string[];
 };
+
+/**
+ * Places a visitor may name, most specific first. Used when the model gives no
+ * area (or is not configured), so "an office in Msheireb" still narrows the
+ * search.
+ */
+const KNOWN_AREAS = [
+  'Msheireb',
+  'West Bay',
+  'Al Dafna',
+  'Dafna',
+  'Corniche',
+  'Lusail',
+  'Fox Hills',
+  'Marina',
+  'The Pearl',
+  'Al Sadd',
+  'Education City',
+  'QSTP',
+  'Doha',
+];
+
+/** The first known place named in the visitor's latest message, if any. */
+export function areaIn(messages: { role: string; content: string }[]): string | null {
+  const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+  const hit = KNOWN_AREAS.find((a) => new RegExp(`\\b${a.replace(/ /g, '\\s+')}\\b`, 'i').test(last));
+  return hit ?? null;
+}
+
+/** "Msheireb Downtown, Doha" -> "Msheireb Downtown": addresses never carry the whole phrase. */
+const cleanArea = (v: unknown): string | null =>
+  typeof v === 'string' && v.trim() ? v.split(',')[0].trim().slice(0, 60) || null : null;
 
 export type SpaceFinderResult = {
   reply: string;
@@ -78,20 +111,35 @@ export class SpaceFinderService {
   ): Promise<SpaceFinderResult> {
     const criteria = await this.readCriteria(messages);
 
-    let matches = await this.search(criteria);
+    let found = await this.search(criteria);
     let relaxed = false;
+    // whether the listings really are in the place the visitor named
+    let areaKept = !!criteria.area;
 
     // Something to look at beats "no results" for a visitor who is browsing.
-    if (matches.length === 0) {
-      matches = await this.search({
+    if (found.length === 0) {
+      found = await this.search({
         ...criteria,
         max_monthly_budget: null,
         min_capacity: null,
       });
-      relaxed = matches.length > 0;
+      relaxed = found.length > 0;
+    }
+    // Nothing free in the place they named: show what is free elsewhere.
+    if (found.length === 0 && criteria.area) {
+      found = await this.search({
+        ...criteria,
+        max_monthly_budget: null,
+        min_capacity: null,
+        area: null,
+      });
+      relaxed = found.length > 0;
+      areaKept = false;
     }
 
-    const reply = await this.writeReply(messages, criteria, matches, relaxed);
+    const matches = found.map((f) => f.match);
+    const places = new Map(found.map((f) => [f.match.id, f.place]));
+    const reply = await this.writeReply(messages, criteria, matches, relaxed, areaKept, places);
     return { reply, criteria, matches, relaxed };
   }
 
@@ -104,7 +152,7 @@ export class SpaceFinderService {
       type: null,
       min_capacity: null,
       max_monthly_budget: null,
-      city: null,
+      area: areaIn(messages),
       keywords: [],
     };
     if (!this.openAi.isConfigured()) return empty;
@@ -114,7 +162,7 @@ Reply with ONLY a JSON object, no prose and no code fences:
 {"type": <one of ${TYPES.join(' | ')} or null>,
  "min_capacity": <number of people, or null>,
  "max_monthly_budget": <number in QAR per month, or null>,
- "city": <city name, or null>,
+ "area": <the place they named: a city, district or building such as "Msheireb", "West Bay" or "Lusail"; or null>,
  "keywords": [<up to 4 single words describing wants such as "parking", "metro", "quiet">]}
 
 Guidance:
@@ -129,6 +177,7 @@ Guidance:
       system,
     );
     if (!parsed) return empty;
+    const said = parsed as Partial<SpaceCriteria> & { city?: unknown };
 
     const num = (v: unknown) =>
       typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
@@ -142,10 +191,8 @@ Guidance:
       type,
       min_capacity: num(parsed.min_capacity),
       max_monthly_budget: num(parsed.max_monthly_budget),
-      city:
-        typeof parsed.city === 'string' && parsed.city.trim()
-          ? parsed.city.trim().slice(0, 60)
-          : null,
+      // older prompts answered with "city"; the visitor's own words are the fallback
+      area: cleanArea(said.area) ?? cleanArea(said.city) ?? empty.area,
       keywords: Array.isArray(parsed.keywords)
         ? parsed.keywords
             .filter((k): k is string => typeof k === 'string')
@@ -167,7 +214,7 @@ Guidance:
         ...(c.max_monthly_budget && {
           monthly_rate: { lte: c.max_monthly_budget },
         }),
-        ...(c.city && { city: { contains: c.city, mode: 'insensitive' } }),
+        ...(c.area && this.areaWhere(c.area)),
       },
       select: {
         id: true,
@@ -179,27 +226,51 @@ Guidance:
         monthly_rate: true,
         currency: true,
         city: true,
+        address: true,
         features: { select: { name: true } },
-        floor: { select: { building: { select: { name: true } } } },
+        floor: { select: { building: { select: { name: true, address: true } } } },
       },
       // cheapest that clears the requirement — what a visitor on a budget wants
       orderBy: [{ monthly_rate: 'asc' }, { capacity: 'asc' }],
       take: 6,
     });
 
+    // The widget gets the same shape as before; the address only goes to the
+    // reply, so the model knows Sikkat Al Wadi is in Msheireb.
     return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      slug: r.slug,
-      type: r.type,
-      capacity: r.capacity,
-      area_sqm: r.area_sqm,
-      monthly_rate: r.monthly_rate,
-      currency: r.currency,
-      city: r.city,
-      building: r.floor?.building?.name ?? null,
-      features: r.features.map((f) => f.name),
+      match: {
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        type: r.type,
+        capacity: r.capacity,
+        area_sqm: r.area_sqm,
+        monthly_rate: r.monthly_rate,
+        currency: r.currency,
+        city: r.city,
+        building: r.floor?.building?.name ?? null,
+        features: r.features.map((f) => f.name),
+      },
+      place: r.address ?? r.floor?.building?.address ?? null,
     }));
+  }
+
+  /**
+   * A space's city is "Doha" or "Lusail"; districts and buildings live in its
+   * address and its building. Matching the city alone found nothing for
+   * "an office in Msheireb".
+   */
+  private areaWhere(area: string) {
+    const term = { contains: area, mode: 'insensitive' as const };
+    return {
+      OR: [
+        { city: term },
+        { address: term },
+        { name: term },
+        { floor: { building: { name: term } } },
+        { floor: { building: { address: term } } },
+      ],
+    };
   }
 
   // ─── 3. say something useful about them ───────────────────────────────────
@@ -209,6 +280,8 @@ Guidance:
     criteria: SpaceCriteria,
     matches: SpaceFinderResult['matches'],
     relaxed: boolean,
+    areaKept = false,
+    places: Map<string, string | null> = new Map(),
   ): Promise<string> {
     if (matches.length === 0) {
       return "I could not find anything available that matches. Tell me roughly how many people you need space for and your monthly budget, and I'll look again.";
@@ -222,7 +295,7 @@ Guidance:
     const listings = matches
       .map(
         (m, i) =>
-          `${i + 1}. ${m.name} — ${m.type.replace(/_/g, ' ').toLowerCase()}, seats ${m.capacity ?? '?'}, ${m.area_sqm ?? '?'} sqm, ${m.monthly_rate ?? '?'} ${m.currency}/month, ${m.building ?? 'building'} in ${m.city ?? 'Doha'}${m.features.length ? `, features: ${m.features.join(', ')}` : ''}`,
+          `${i + 1}. ${m.name} — ${m.type.replace(/_/g, ' ').toLowerCase()}, seats ${m.capacity ?? '?'}, ${m.area_sqm ?? '?'} sqm, ${m.monthly_rate ?? '?'} ${m.currency}/month, ${m.building ?? 'building'}, ${places.get(m.id) ?? m.city ?? 'Doha'}${m.features.length ? `, features: ${m.features.join(', ')}` : ''}`,
       )
       .join('\n');
 
@@ -234,6 +307,8 @@ Rules:
 - Do not repeat the whole list — it is shown beside your message. Point out what stands out.
 - Prices are monthly QAR.
 ${relaxed ? '- Nothing matched their exact limits, so say gently that you widened the search.' : ''}
+${criteria.area && areaKept ? `- Every listing below is in or near ${criteria.area}, the place they asked about.` : ''}
+${criteria.area && !areaKept ? `- Nothing is free in ${criteria.area} right now, so these are elsewhere: say so plainly.` : ''}
 - If something important is still unknown (headcount, budget, area), end by asking for that one thing.
 
 Listings:

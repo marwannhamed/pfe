@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
+import { currencySymbol, DEFAULT_CURRENCY } from '../constants/qatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface InvoicePDFProps {
@@ -32,10 +33,10 @@ function formatDate(d?: string | null) {
   if (Number.isNaN(parsed.getTime())) return '—';
   return parsed.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
-function formatAmt(amount: string | number | null | undefined, currency = 'USD') {
-  const sym = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+function formatAmt(amount: string | number | null | undefined, currency = DEFAULT_CURRENCY) {
+  const sym = currencySymbol(currency);
   const n = parseFloat(String(amount ?? 0));
-  return `${sym}${(Number.isNaN(n) ? 0 : n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym}${(Number.isNaN(n) ? 0 : n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function labelFromCode(value?: string | null, fallback = '—') {
   if (!value || typeof value !== 'string') return fallback;
@@ -141,7 +142,7 @@ const S = StyleSheet.create({
 function InvoicePDFDocument({ invoice }: InvoicePDFProps) {
   const status = invoice.status ?? 'DRAFT';
   const invType = invoice.type ?? 'LEASE';
-  const currency = invoice.currency ?? 'USD';
+  const currency = invoice.currency ?? DEFAULT_CURRENCY;
   const totalAmount = parseFloat(String(invoice.total_amount ?? 0)) || 0;
   const payments = invoice.payments ?? [];
   const lineItems = (invoice.lines ?? []).filter((l) => l?.description);

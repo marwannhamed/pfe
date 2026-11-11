@@ -14,6 +14,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { formatUserName } from '../../utils/user';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { formatMoney } from '../../constants/qatar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_META: Record<TenantStatus, { label: string; bg: string; color: string }> = {
@@ -196,8 +197,8 @@ export default function TenantDetailPage() {
             { label: 'Team Members',  value: users.length,           sub: `${tenant.max_users} max`,     color: '#2563eb', bg: '#eff6ff' },
             { label: 'Contracts',     value: contracts.length,       sub: `${contracts.filter((c: LeaseContract) => c.status === 'ACTIVE').length} active`, color: '#059669', bg: '#f0fdf4' },
             { label: 'Invoices',      value: invoices.length,        sub: `${invoices.filter((i: Invoice) => i.status === 'OVERDUE').length} overdue`,       color: '#d97706', bg: '#fffbeb' },
-            { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, sub: 'Paid invoices',  color: '#7c3aed', bg: '#f5f3ff' },
-            { label: 'Overdue',       value: `$${overdueAmount.toLocaleString()}`, sub: 'Needs attention', color: '#dc2626', bg: '#fef2f2' },
+            { label: 'Total Revenue', value: formatMoney(totalRevenue), sub: 'Paid invoices',  color: '#7c3aed', bg: '#f5f3ff' },
+            { label: 'Overdue',       value: formatMoney(overdueAmount), sub: 'Needs attention', color: '#dc2626', bg: '#fef2f2' },
           ].map(k => (
             <div key={k.label} style={{ border: `1px solid ${th.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
               <p style={{ margin: '0 0 3px', fontSize: 11, color: th.textSub }}>{k.label}</p>
@@ -332,8 +333,8 @@ export default function TenantDetailPage() {
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>${parseFloat(c.monthly_rent).toLocaleString()}/mo</div>
-                              <div style={{ fontSize: 11, color: '#94a3b8' }}>Deposit: ${parseFloat(c.deposit_amount).toLocaleString()}</div>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{formatMoney(c.monthly_rent, c.currency)}/mo</div>
+                              <div style={{ fontSize: 11, color: '#94a3b8' }}>Deposit: {Number(c.deposit_amount) > 0 ? formatMoney(c.deposit_amount, c.currency) : '—'}</div>
                             </div>
                             <span style={{ background: cs.bg, color: cs.color, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{c.status}</span>
                           </div>
@@ -369,7 +370,7 @@ export default function TenantDetailPage() {
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>${parseFloat(inv.total_amount).toLocaleString()}</div>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{formatMoney(inv.total_amount, inv.currency)}</div>
                               <div style={{ fontSize: 11, color: '#94a3b8' }}>{inv.currency}</div>
                             </div>
                             <span style={{ background: is.bg, color: is.color, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{inv.status}</span>
@@ -405,7 +406,7 @@ export default function TenantDetailPage() {
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>${parseFloat(booking.total_price).toLocaleString()}</div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{formatMoney(booking.total_price, booking.currency)}</div>
                           </div>
                           <span style={{ background: '#ede9fe', color: '#6d28d9', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{booking.status.replace(/_/g, ' ')}</span>
                         </div>

@@ -15,6 +15,7 @@ import type { AuthUser } from '../auth/types/auth-user';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from '../mail/mail.service';
 import { EmailSequenceService } from '../email-sequence/email-sequence.service';
+import { DEFAULT_CURRENCY } from '../constants/qatar';
 
 // ─── Only include relations that exist in the Prisma schema ──────────────────
 const CONTRACT_INCLUDE = {
@@ -72,7 +73,8 @@ export class LeaseContractService {
       // The frontend ContractDetailModal accesses these; return safe defaults
       // so parseFloat() and other operations never blow up.
       deposit_amount: '0',
-      currency: 'USD',
+      // contracts carry no currency column; rent is billed in QAR
+      currency: DEFAULT_CURRENCY,
       payment_due_day: 1,
       auto_renew: false,
       signed_at: null,
@@ -442,6 +444,19 @@ export class LeaseContractService {
       orderBy: { end_date: 'asc' },
     });
     return contracts.map((c) => this.mapContractForFrontend(c));
+  }
+
+  // ─── MARK EXPIRED (cron) ──────────────────────────────────────────────────
+  /** Active or renewed leases whose end date has passed become EXPIRED. */
+  async markExpiredContracts(): Promise<number> {
+    const { count } = await this.prisma.leaseContract.updateMany({
+      where: {
+        status: { in: [CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.RENEWED] },
+        end_date: { lt: new Date() },
+      },
+      data: { status: CONTRACT_STATUS.EXPIRED },
+    });
+    return count;
   }
 
   // ─── SEND EXPIRY REMINDERS (cron) ─────────────────────────────────────────

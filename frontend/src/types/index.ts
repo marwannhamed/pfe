@@ -100,6 +100,8 @@ export interface Site {
   name:            string;
   slug?:           string;
   code:            string;
+  /** Sites are buildings; buildings carry a street address but no city or country. */
+  address?:        string | null;
   city:            string;
   country:         string;
   timezone:        string;
@@ -325,7 +327,8 @@ export interface SpaceFinderResult {
     type:               SpaceType | null;
     min_capacity:       number | null;
     max_monthly_budget: number | null;
-    city:               string | null;
+    /** A city, district or building the visitor named. */
+    area:               string | null;
     keywords:           string[];
   };
   matches: SpaceMatch[];
@@ -412,6 +415,7 @@ export interface AuditLog {
   severity:      AuditSeverity;
   created_at:    string;
   user?:         User;
+  tenant?:       Pick<Tenant, 'id' | 'name'>;
 }
 
 // ─── Auth DTOs ────────────────────────────────────────────────────────────────

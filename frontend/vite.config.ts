@@ -16,6 +16,12 @@ export default defineConfig({
         target: API_TARGET,
         changeOrigin: true,
         ws: true,
+        // /spaces and /spaces/:id are also public pages: a browser page load
+        // (Accept: text/html) gets the app, as in frontend/nginx.conf.
+        bypass: (req) =>
+          /^\/spaces(\/|$)/.test(req.url ?? '') && req.headers.accept?.includes('text/html')
+            ? '/index.html'
+            : undefined,
       },
       '/socket.io': {
         target: API_TARGET,

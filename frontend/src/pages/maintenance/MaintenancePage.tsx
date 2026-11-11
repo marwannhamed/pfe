@@ -14,6 +14,7 @@ import type { MaintenanceTicket, MaintenanceTriage, TicketStatus, TicketPriority
 import UserAvatar from '../../components/UserAvatar';
 import { formatUserName } from '../../utils/user';
 import { asApiError } from '../../utils/errors';
+import { formatMoney } from '../../constants/qatar';
 
 // --- Helpers ------------------------------------------------------------------
 const STATUS_META: Record<TicketStatus, { label: string; bg: string; color: string }> = {
@@ -339,7 +340,9 @@ function TicketDetailModal({
   const { data: maintenanceUsers = [] } = useQuery({
     queryKey: ['users-maintenance'],
     queryFn:  () => userApi.getAll().then(r => r.data.filter((u) => u.role === 'MAINTENANCE')),
-    enabled:  !!ticket && canManage,
+    // Only for the assign dropdown, which technicians never see — and they may
+    // not list staff, so for them this was two refused requests per ticket.
+    enabled:  !!ticket && canManage && !isMaintenance,
   });
 
   const onActionError = (e: unknown) => {
@@ -421,7 +424,7 @@ function TicketDetailModal({
           ['Assigned to', assignee ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || assignee.email : 'Unassigned — waiting for a technician'],
           ['Reported',    formatDate(ticket.reported_at)],
           ['Resolved',    ticket.resolved_at ? formatDate(ticket.resolved_at) : '—'],
-          ['Cost',        ticket.cost ? `$${parseFloat(ticket.cost).toLocaleString()}` : '—'],
+          ['Cost',        ticket.cost ? formatMoney(ticket.cost) : '—'],
         ].map(([k, v]) => (
           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${th.divider}`, fontSize: 13 }}>
             <span style={{ color: th.textSub }}>{k}</span>

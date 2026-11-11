@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { USER_ROLE } from '../constants/enums';
 import type { AuthUser } from '../auth/types/auth-user';
@@ -243,5 +247,76 @@ describe('BookingService.findAllForUser — who may list what', () => {
       tenant_id: 'tenant-a',
       user_id: 'user-TENANT_EMPLOYEE',
     });
+  });
+});
+
+describe('BookingService.create — head count', () => {
+  it('refuses more people than the space holds, before writing anything', async () => {
+    const { prisma, service } = makeService();
+    const create = jest.fn();
+    Object.assign(prisma, {
+      space: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'space-1',
+          name: 'Majlis Room',
+          capacity: 6,
+        }),
+      },
+    });
+    Object.assign(prisma.booking, { create });
+    const employee = userWith(USER_ROLE.TENANT_EMPLOYEE, 'renter-x');
+
+    await expect(
+      service.create(
+        {
+          tenant_id: 'renter-x',
+          created_by_user_id: employee.id,
+          space_id: 'space-1',
+          start_datetime: '2026-10-14T09:00:00.000Z',
+          end_datetime: '2026-10-14T10:00:00.000Z',
+          total_price: 200,
+          attendee_count: 9,
+        } as any,
+        employee,
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookingService — a booking that has ended cannot be cancelled', () => {
+  it.each(['CANCELLED', 'COMPLETED', 'REFUSED', 'NO_SHOW'])(
+    'refuses to cancel a %s booking',
+    async (status) => {
+      const { prisma, service } = makeService();
+      prisma.booking.findUnique.mockResolvedValue({ ...booking, status });
+
+      await expect(
+        service.cancel(
+          userWith(USER_ROLE.MANAGER),
+          'booking-1',
+          'no longer needed',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.booking.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('cancels a live booking', async () => {
+    const { prisma, service } = makeService();
+    prisma.booking.findUnique.mockResolvedValue({
+      ...booking,
+      status: 'CONFIRMED',
+      tenant: { name: 'Acme' },
+      space: { name: 'Room 1' },
+    });
+
+    await service.cancel(userWith(USER_ROLE.MANAGER), 'booking-1', '');
+
+    expect(prisma.booking.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'CANCELLED' }),
+      }),
+    );
   });
 });

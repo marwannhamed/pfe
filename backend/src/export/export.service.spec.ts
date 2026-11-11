@@ -24,6 +24,15 @@ function makeService() {
 }
 
 const whereOf = (fn: jest.Mock) => fn.mock.calls[0][0]?.where;
+const nthWhere = (fn: jest.Mock, n: number) => fn.mock.calls[n][0]?.where;
+
+// What an organisation holds, or what sits in its buildings.
+const inBuildingsOf = (t: string) => ({
+  space: { floor: { building: { tenant_id: t } } },
+});
+const heldOrHosted = (t: string, hosted: object) => ({
+  OR: [{ tenant_id: t }, hosted],
+});
 
 describe('ExportService — exports cannot leave the caller’s organisation', () => {
   // tenantId arrived as an optional query filter, so omitting it exported
@@ -33,9 +42,9 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
 
     await service.exportBookings(userWith(USER_ROLE.MANAGER), 'csv');
 
-    expect(whereOf(prisma.booking.findMany)).toMatchObject({
-      tenant_id: 'tenant-a',
-    });
+    expect(whereOf(prisma.booking.findMany)).toMatchObject(
+      heldOrHosted('tenant-a', inBuildingsOf('tenant-a')),
+    );
   });
 
   it('scopes invoice and payment exports the same way', async () => {
@@ -45,12 +54,15 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
     await service.exportInvoices(finance, 'csv');
     await service.exportPayments(finance, 'csv');
 
-    expect(whereOf(prisma.invoice.findMany)).toMatchObject({
-      tenant_id: 'tenant-c',
-    });
-    expect(whereOf(prisma.payment.findMany)).toMatchObject({
-      tenant_id: 'tenant-c',
-    });
+    // one shared mock: call 0 is the invoice query, call 1 the payment query
+    expect(nthWhere(prisma.invoice.findMany, 0)).toMatchObject(
+      heldOrHosted('tenant-c', { bookings: { some: inBuildingsOf('tenant-c') } }),
+    );
+    expect(nthWhere(prisma.payment.findMany, 1)).toMatchObject(
+      heldOrHosted('tenant-c', {
+        invoice: { bookings: { some: inBuildingsOf('tenant-c') } },
+      }),
+    );
   });
 
   it('refuses an explicit request for another organisation', async () => {
@@ -76,6 +88,7 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
     );
 
     expect(whereOf(prisma.booking.findMany)).not.toHaveProperty('tenant_id');
+    expect(whereOf(prisma.booking.findMany)).not.toHaveProperty('OR');
   });
 
   it('narrows the platform owner to one organisation when asked', async () => {
@@ -89,9 +102,9 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
       'tenant-b',
     );
 
-    expect(whereOf(prisma.booking.findMany)).toMatchObject({
-      tenant_id: 'tenant-b',
-    });
+    expect(whereOf(prisma.booking.findMany)).toMatchObject(
+      heldOrHosted('tenant-b', inBuildingsOf('tenant-b')),
+    );
   });
 
   it('limits an organisation export to the caller’s own record', async () => {
@@ -113,7 +126,7 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
     });
   });
 
-  it('scopes a maintenance export through the reporter and creator', async () => {
+  it('scopes a maintenance export to the organisation’s tickets and buildings', async () => {
     const { prisma, service } = makeService();
 
     await service.exportMaintenance(
@@ -121,11 +134,10 @@ describe('ExportService — exports cannot leave the caller’s organisation', (
       'csv',
     );
 
-    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
-      OR: [
-        { user: { tenant_id: 'tenant-a' } },
-        { createdBy: { tenant_id: 'tenant-a' } },
-      ],
-    });
+    // Renter-raised tickets carry the renter's tenant_id; a landlord reaches
+    // them through its buildings, as on the maintenance list.
+    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject(
+      heldOrHosted('tenant-a', inBuildingsOf('tenant-a')),
+    );
   });
 });

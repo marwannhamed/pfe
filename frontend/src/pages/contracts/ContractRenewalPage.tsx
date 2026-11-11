@@ -10,6 +10,7 @@ import {
 import { contractApi } from '../../api/services';
 import type { ApiError, LeaseContract } from '../../types';
 import { asApiError } from '../../utils/errors';
+import { formatMoney } from '../../constants/qatar';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ function RenewModal({ contract, onClose }: { contract: LeaseContract; onClose: (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 2 }}>{contract.tenant?.name ?? 'Tenant'}</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Monthly rent: <strong>${parseFloat(contract.monthly_rent || '0').toLocaleString()}</strong> {contract.currency}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>Monthly rent: <strong>{formatMoney(contract.monthly_rent, contract.currency)}</strong></div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ background: urgency.bg, color: urgency.color, border: `1px solid ${urgency.border}`, fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -290,7 +291,7 @@ function RenewalCard({ contract, onRenew, onView }: { contract: LeaseContract; o
           {/* Details row */}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#64748b', marginBottom: 12 }}>
             <span>📅 Ends <strong style={{ color: urgency.color }}>{formatDate(contract.end_date)}</strong></span>
-            <span>💰 <strong style={{ color: '#0f172a' }}>${rent.toLocaleString()}</strong>/mo</span>
+            <span>💰 <strong style={{ color: '#0f172a' }}>{formatMoney(rent, contract.currency)}</strong>/mo</span>
             <span>📄 {contract.status}</span>
           </div>
 
@@ -402,7 +403,7 @@ export default function ContractRenewalPage() {
             { label: 'Critical (7d)', value: crit7,      color: '#dc2626', bg: '#fff5f5', icon: '🚨', filter: 30    as const },
             { label: 'Expiring 30d',  value: in30,       color: '#d97706', bg: '#fffbeb', icon: '⚠️', filter: 30    as const },
             { label: 'Expiring 60d',  value: in60,       color: '#92400e', bg: '#fefce8', icon: '⏳', filter: 60    as const },
-            { label: 'Revenue at Risk',value: `$${Math.round(totalRevAtRisk / 1000)}k/mo`, color: '#7c3aed', bg: '#f5f3ff', icon: '💰', filter: 'all' as const },
+            { label: 'Revenue at Risk',value: `${formatMoney(Math.round(totalRevAtRisk / 1000))}k/mo`, color: '#7c3aed', bg: '#f5f3ff', icon: '💰', filter: 'all' as const },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 11, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.12s', border: `1px solid ${s.color}22` }}
               onClick={() => setDaysFilter(s.filter)}

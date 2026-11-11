@@ -1,0 +1,16 @@
+{
+  "name": "leasemanager-demo-video",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Records the LeaseManager product demo video with a scripted browser.",
+  "scripts": {
+    "runner": "node runner.mjs",
+    "probe": "node record.mjs --probe",
+    "record": "node record.mjs"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright-core": "^1.55.0"
+  }
+}

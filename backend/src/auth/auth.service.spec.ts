@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthService', () => {
   it('generates access and refresh tokens', async () => {
@@ -36,7 +36,7 @@ describe('AuthService', () => {
     });
   });
 
-  it('throws NotFoundException when login user does not exist', async () => {
+  it('answers an unknown email exactly like a wrong password (401, no enumeration)', async () => {
     const prisma = {
       user: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -54,7 +54,7 @@ describe('AuthService', () => {
 
     await expect(
       service.login('missing@example.com', 'password'),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toThrow(new UnauthorizedException('Invalid email or password'));
   });
 
   it('throws UnauthorizedException when refresh token is invalid', async () => {

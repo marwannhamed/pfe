@@ -1,0 +1,227 @@
+@startuml seq-02c-booking-reception-intake
+' ============================================================================
+'  LeaseManager — common style header (identical at the top of every diagram)
+'  Arial, navy ink, one light fill per element family, no shadows.
+'  Edit here, then run tools/render.py: it stamps this block on every file.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam defaultFontColor #1B2631
+skinparam defaultTextAlignment center
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam TitleFontSize 18
+skinparam TitleFontStyle bold
+skinparam TitleFontColor #1F3A5F
+skinparam TitleBorderThickness 0
+skinparam ArrowColor #3E5470
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #2C3E50
+skinparam ArrowFontStyle plain
+skinparam stereotypeFontSize 11
+skinparam stereotypeFontColor #4A6382
+' --- notes and legends -------------------------------------------------------
+skinparam NoteBackgroundColor #FFF9E3
+skinparam NoteBorderColor #C9A63C
+skinparam NoteFontSize 12
+skinparam NoteFontColor #3D3420
+skinparam LegendBackgroundColor #FFF9E3
+skinparam LegendBorderColor #C9A63C
+skinparam LegendFontSize 12
+skinparam LegendFontColor #3D3420
+' --- use case diagrams ---------------------------------------------------------
+skinparam ActorBorderColor #1F3A5F
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorFontStyle bold
+skinparam ActorFontSize 13
+skinparam ActorBorderThickness 1.6
+skinparam UsecaseBorderColor #2E5C8A
+skinparam UsecaseBackgroundColor #EAF2FB
+skinparam UsecaseBorderThickness 1.3
+skinparam UsecaseFontColor #1B2631
+skinparam RectangleBorderColor #1F3A5F
+skinparam RectangleBorderThickness 1.8
+skinparam RectangleBackgroundColor #FBFCFE
+skinparam RectangleFontColor #1F3A5F
+skinparam RectangleFontStyle bold
+skinparam RectangleFontSize 15
+skinparam PackageBorderColor #8FA7C2
+skinparam PackageBackgroundColor #F2F6FB
+skinparam PackageFontColor #1F3A5F
+skinparam PackageFontStyle bold
+skinparam PackageFontSize 13
+skinparam PackageBorderThickness 1.2
+' --- class diagrams ------------------------------------------------------------
+skinparam ClassBorderColor #2E5C8A
+skinparam ClassBorderThickness 1.3
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #DCE8F5
+skinparam ClassFontStyle bold
+skinparam ClassFontColor #1F3A5F
+skinparam ClassFontSize 13
+skinparam ClassAttributeFontSize 12
+skinparam ClassAttributeFontColor #1B2631
+skinparam ClassStereotypeFontColor #4A6382
+skinparam ClassBorderColor<<enumeration>> #B07D1A
+skinparam ClassHeaderBackgroundColor<<enumeration>> #FBEBC8
+skinparam ClassFontColor<<enumeration>> #5C3F00
+skinparam ClassStereotypeFontColor<<enumeration>> #8A6416
+skinparam ClassBorderColor<<service>> #3B7A50
+skinparam ClassHeaderBackgroundColor<<service>> #DDEFE2
+skinparam ClassFontColor<<service>> #1E4A2C
+skinparam ClassStereotypeFontColor<<service>> #3B7A50
+skinparam ClassBorderColor<<repository>> #6B4E9B
+skinparam ClassHeaderBackgroundColor<<repository>> #ECE5F6
+skinparam ClassFontColor<<repository>> #3E2A63
+skinparam ClassStereotypeFontColor<<repository>> #6B4E9B
+skinparam ClassBorderColor<<external>> #7A7F87
+skinparam ClassHeaderBackgroundColor<<external>> #EEF0F2
+skinparam ClassFontColor<<external>> #3B4048
+' --- sequence diagrams ---------------------------------------------------------
+skinparam SequenceMessageAlign left
+skinparam SequenceArrowThickness 1.3
+skinparam SequenceTitleFontSize 18
+skinparam SequenceParticipantBorderColor #2E5C8A
+skinparam SequenceParticipantBackgroundColor #DCE8F5
+skinparam SequenceParticipantFontStyle bold
+skinparam SequenceParticipantFontColor #1F3A5F
+skinparam SequenceParticipantBorderThickness 1.3
+skinparam SequenceStereotypeFontStyle italic
+skinparam SequenceStereotypeFontColor #4A6382
+skinparam SequenceStereotypeFontSize 11
+skinparam SequenceMessageFontColor #1B2631
+skinparam SequenceActorBorderColor #1F3A5F
+skinparam SequenceActorBackgroundColor #FFFFFF
+skinparam SequenceActorFontStyle bold
+skinparam SequenceLifeLineBorderColor #8FA7C2
+skinparam SequenceLifeLineBackgroundColor #EAF2FB
+skinparam SequenceGroupBorderColor #4A6382
+skinparam SequenceGroupBorderThickness 1.2
+skinparam SequenceGroupBackgroundColor #E4ECF5
+skinparam SequenceGroupHeaderFontColor #1F3A5F
+skinparam SequenceGroupFontStyle bold
+skinparam SequenceBoxBorderColor #B8C7D9
+skinparam SequenceBoxFontColor #1F3A5F
+skinparam SequenceBoxFontStyle bold
+skinparam SequenceDividerBorderColor #4A6382
+skinparam SequenceDividerBackgroundColor #EEF3F9
+skinparam SequenceReferenceBorderColor #4A6382
+skinparam SequenceReferenceHeaderBackgroundColor #E4ECF5
+skinparam BoundaryBorderColor #1F3A5F
+skinparam BoundaryFontStyle bold
+skinparam BoundaryFontColor #1F3A5F
+skinparam BoundaryBackgroundColor #DCE8F5
+skinparam ControlBorderColor #1F3A5F
+skinparam ControlFontStyle bold
+skinparam ControlFontColor #1F3A5F
+skinparam ControlBackgroundColor #DCE8F5
+skinparam EntityBorderColor #1F3A5F
+skinparam EntityFontStyle bold
+skinparam EntityBackgroundColor #DCE8F5
+skinparam DatabaseBorderColor #6B4E9B
+skinparam DatabaseFontColor #3E2A63
+skinparam DatabaseBackgroundColor #ECE5F6
+skinparam CollectionsBorderColor #2E5C8A
+skinparam CollectionsBackgroundColor #DCE8F5
+' --- activity and state diagrams -----------------------------------------------
+skinparam ActivityBorderColor #2E5C8A
+skinparam ActivityBackgroundColor #EAF2FB
+skinparam ActivityBorderThickness 1.3
+skinparam ActivityFontColor #1B2631
+skinparam ActivityDiamondBorderColor #B07D1A
+skinparam ActivityDiamondBackgroundColor #FBEBC8
+skinparam ActivityDiamondFontColor #3D3420
+skinparam ActivityStartColor #1F3A5F
+skinparam ActivityEndColor #1F3A5F
+skinparam ActivityBarColor #1F3A5F
+skinparam SwimlaneBorderColor #8FA7C2
+skinparam SwimlaneBorderThickness 1.4
+skinparam SwimlaneTitleFontColor #1F3A5F
+skinparam SwimlaneTitleFontStyle bold
+skinparam SwimlaneTitleFontSize 14
+skinparam StateBorderColor #2E5C8A
+skinparam StateBackgroundColor #EAF2FB
+skinparam StateBorderThickness 1.3
+skinparam StateFontStyle bold
+skinparam StateFontColor #1F3A5F
+skinparam StateAttributeFontColor #1B2631
+skinparam StateAttributeFontStyle plain
+skinparam StateAttributeFontSize 12
+skinparam StateStartColor #1F3A5F
+skinparam StateEndColor #1F3A5F
+' --- deployment and component diagrams -----------------------------------------
+skinparam NodeBorderColor #1F3A5F
+skinparam NodeBackgroundColor #F2F6FB
+skinparam NodeFontColor #1F3A5F
+skinparam NodeBorderThickness 1.4
+skinparam ComponentBorderColor #2E5C8A
+skinparam ComponentBackgroundColor #DCE8F5
+skinparam ArtifactBorderColor #2E5C8A
+skinparam ArtifactBackgroundColor #FFFFFF
+skinparam CloudBorderColor #7A7F87
+skinparam CloudBackgroundColor #F3F4F6
+skinparam StorageBorderColor #6B4E9B
+skinparam StorageBackgroundColor #ECE5F6
+skinparam FolderBorderColor #2E5C8A
+skinparam FolderBackgroundColor #EEF4FB
+skinparam FolderBorderThickness 1.3
+skinparam FolderFontColor #1B2631
+skinparam FrameBorderColor #8FA7C2
+skinparam FrameBackgroundColor #FBFCFE
+' ======================== end of style header =========================
+
+hide footbox
+autonumber "<b>0"
+skinparam ParticipantPadding 4
+skinparam BoxPadding 4
+skinparam maxMessageSize 220
+skinparam responseMessageBelowArrow true
+
+title Sequence diagram — booking application (3/4): phone call and site visit
+
+actor "Receptionist" as R
+box "Front end · React" #F3F7FC
+boundary "BookingDetailPage" as UI
+end box
+box "Back end · NestJS" #F3F8F4
+control "BookingController" as C
+participant "BookingService" as S <<service>>
+participant "MailService" as MS <<service>>
+participant "PrismaService" as PR <<repository>>
+end box
+box "Data" #F7F4FB
+database "**PostgreSQL**" as DB
+end box
+
+R -> UI : result of the phone call
+alt the applicant is reached
+  UI -> C : PATCH /bookings/:id/phone-confirmed
+  C -> S : confirmPhoneCall(user, id)
+  S -> PR : booking.update(AWAITING_PHYSICAL_VISIT)
+  PR -> DB : UPDATE bookings
+  S ->> MS : sendPhysicalVisitInstructions()
+else the applicant cannot be reached
+  UI -> C : PATCH /bookings/:id/phone-unreachable
+  C -> S : markPhoneUnreachable(user, id, reason)
+  S -> PR : $transaction: space.update(AVAILABLE), booking.update(REFUSED)
+  PR -> DB : UPDATE, COMMIT
+  S ->> MS : sendBookingCancelled()
+end
+S --> C : booking
+C --> UI : 200 OK
+R -> UI : Visit complete
+UI -> C : PATCH /bookings/:id/mark-documents-pending
+C -> S : markDocumentsPending(user, id)
+break status is not AWAITING_PHYSICAL_VISIT
+  S --> C : BadRequestException
+  C --> UI : 400
+end
+S -> PR : booking.update(DOCUMENTS_PENDING_UPLOAD)
+PR -> DB : UPDATE bookings
+S --> C : booking
+C --> UI : 200 OK
+@enduml

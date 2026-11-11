@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import type { AddOnService, ApiError, Booking } from '../../types';
+import { DEFAULT_CURRENCY, formatMoney } from '../../constants/qatar';
 
 const { TextArea } = Input;
 
@@ -156,7 +157,7 @@ export default function AddonServicesPage() {
       description: values.description,
       category: values.category,
       price: Number(values.price),
-      currency: 'USD',
+      currency: DEFAULT_CURRENCY,
       billing_cycle: values.billing_cycle,
       is_recurring: values.billing_cycle !== 'HOURLY' && values.billing_cycle !== 'DAILY',
       is_active: values.is_active ?? true,
@@ -212,14 +213,14 @@ export default function AddonServicesPage() {
       title: 'Unit price',
       key: 'unit_price',
       align: 'right' as const,
-      render: (_: unknown, r: AddOnRow) => `$${Number(r.unit_price ?? 0).toFixed(2)}`,
+      render: (_: unknown, r: AddOnRow) => formatMoney(r.unit_price, null, 2),
     },
     {
       title: 'Total',
       key: 'line_total',
       align: 'right' as const,
       render: (_: unknown, r: AddOnRow) => (
-        <span style={{ fontWeight: 700, color: th.text }}>${Number(r.line_total ?? 0).toFixed(2)}</span>
+        <span style={{ fontWeight: 700, color: th.text }}>{formatMoney(r.line_total, null, 2)}</span>
       ),
     },
   ];
@@ -290,7 +291,7 @@ export default function AddonServicesPage() {
             { label: 'Published', value: stats.active, color: '#15803d' },
             { label: 'Unpublished', value: stats.inactive, color: '#b45309' },
             { label: 'Total catalog', value: stats.total, color: th.text },
-            { label: 'Add-on revenue', value: `$${bookingRevenue.toLocaleString()}`, color: '#2563eb' },
+            { label: 'Add-on revenue', value: formatMoney(bookingRevenue), color: '#2563eb' },
           ].map((stat) => (
             <div key={stat.label} style={{ background: th.tableHead, borderRadius: 10, padding: '12px 16px', border: `1px solid ${th.cardBorder}` }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
@@ -344,7 +345,7 @@ export default function AddonServicesPage() {
                       {svc.description || 'No description'}
                     </p>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#2563eb', marginBottom: 14 }}>
-                      ${Number(svc.price ?? 0).toFixed(2)}
+                      {formatMoney(svc.price, svc.currency, 2)}
                       <span style={{ fontSize: 12, fontWeight: 400, color: th.textMuted, marginLeft: 6 }}>
                         {cycleLabel(svc.billing_cycle)}
                       </span>
@@ -430,7 +431,7 @@ export default function AddonServicesPage() {
           <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Description is required' }]}>
             <TextArea rows={3} placeholder="What is included in this service?" />
           </Form.Item>
-          <Form.Item name="price" label="Price (USD)" rules={[{ required: true, message: 'Price is required' }]}>
+          <Form.Item name="price" label={`Price (${DEFAULT_CURRENCY})`} rules={[{ required: true, message: 'Price is required' }]}>
             <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="0.00" />
           </Form.Item>
           <Form.Item name="is_active" label="Publish immediately" valuePropName="checked">

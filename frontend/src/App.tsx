@@ -119,6 +119,10 @@ const queryClient = new QueryClient({
             axiosErr.message?.includes('Network Error'));
         // Retry up to 3 times when the backend is restarting
         if (isNetwork && failureCount < 3) return true;
+        // A 4xx answer will not change on a second try; retrying only doubled
+        // every refused request in the console.
+        const status = (axiosErr.response as { status?: number } | undefined)?.status;
+        if (status && status >= 400 && status < 500) return false;
         return failureCount < 1;
       },
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),

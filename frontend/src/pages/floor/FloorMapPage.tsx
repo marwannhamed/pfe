@@ -14,6 +14,7 @@ import { api } from '../../api/client';
 import type { ApiError } from '../../types';
 import { asApiError } from '../../utils/errors';
 import type { Building, Floor } from '../../types';
+import { currencySymbol } from '../../constants/qatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface MapSpace {
@@ -66,7 +67,7 @@ function BookPanel({ space, tenantId, userId, onClose, onSuccess }: {
   const [endTime,   setEndTime]   = useState('10:00');
   const [attendees, setAttendees] = useState('1');
 
-  const currSym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const currSym = currencySymbol(space.currency);
 
   const calcPrice = () => {
     if (!startDate || !endDate) return 0;
@@ -192,7 +193,7 @@ function BookPanel({ space, tenantId, userId, onClose, onSuccess }: {
 // ─── Space Tooltip ────────────────────────────────────────────────────────────
 function SpaceTooltip({ space }: { space: MapSpace }) {
   const sc = STATUS[space.status as keyof typeof STATUS] ?? STATUS.AVAILABLE;
-  const currSym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+  const currSym = currencySymbol(space.currency);
   return (
     <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px', minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', pointerEvents: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -533,7 +534,7 @@ export default function FloorMapPage() {
                   const h    = space.map_h ?? 80;
                   const sc   = STATUS[space.status as keyof typeof STATUS] ?? STATUS.AVAILABLE;
                   const isDraggingThis = dragging?.id === space.id;
-                  const currSym = space.currency === 'EUR' ? '€' : space.currency === 'GBP' ? '£' : '$';
+                  const currSym = currencySymbol(space.currency);
                   const canBook = space.status === 'AVAILABLE' && isTenant;
 
                   return (

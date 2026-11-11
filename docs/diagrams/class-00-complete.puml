@@ -1,0 +1,853 @@
+@startuml class-00-complete
+' ============================================================================
+'  LeaseManager — common style header (identical at the top of every diagram)
+'  Arial, navy ink, one light fill per element family, no shadows.
+'  Edit here, then run tools/render.py: it stamps this block on every file.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam defaultFontColor #1B2631
+skinparam defaultTextAlignment center
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam TitleFontSize 18
+skinparam TitleFontStyle bold
+skinparam TitleFontColor #1F3A5F
+skinparam TitleBorderThickness 0
+skinparam ArrowColor #3E5470
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #2C3E50
+skinparam ArrowFontStyle plain
+skinparam stereotypeFontSize 11
+skinparam stereotypeFontColor #4A6382
+' --- notes and legends -------------------------------------------------------
+skinparam NoteBackgroundColor #FFF9E3
+skinparam NoteBorderColor #C9A63C
+skinparam NoteFontSize 12
+skinparam NoteFontColor #3D3420
+skinparam LegendBackgroundColor #FFF9E3
+skinparam LegendBorderColor #C9A63C
+skinparam LegendFontSize 12
+skinparam LegendFontColor #3D3420
+' --- use case diagrams ---------------------------------------------------------
+skinparam ActorBorderColor #1F3A5F
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorFontStyle bold
+skinparam ActorFontSize 13
+skinparam ActorBorderThickness 1.6
+skinparam UsecaseBorderColor #2E5C8A
+skinparam UsecaseBackgroundColor #EAF2FB
+skinparam UsecaseBorderThickness 1.3
+skinparam UsecaseFontColor #1B2631
+skinparam RectangleBorderColor #1F3A5F
+skinparam RectangleBorderThickness 1.8
+skinparam RectangleBackgroundColor #FBFCFE
+skinparam RectangleFontColor #1F3A5F
+skinparam RectangleFontStyle bold
+skinparam RectangleFontSize 15
+skinparam PackageBorderColor #8FA7C2
+skinparam PackageBackgroundColor #F2F6FB
+skinparam PackageFontColor #1F3A5F
+skinparam PackageFontStyle bold
+skinparam PackageFontSize 13
+skinparam PackageBorderThickness 1.2
+' --- class diagrams ------------------------------------------------------------
+skinparam ClassBorderColor #2E5C8A
+skinparam ClassBorderThickness 1.3
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #DCE8F5
+skinparam ClassFontStyle bold
+skinparam ClassFontColor #1F3A5F
+skinparam ClassFontSize 13
+skinparam ClassAttributeFontSize 12
+skinparam ClassAttributeFontColor #1B2631
+skinparam ClassStereotypeFontColor #4A6382
+skinparam ClassBorderColor<<enumeration>> #B07D1A
+skinparam ClassHeaderBackgroundColor<<enumeration>> #FBEBC8
+skinparam ClassFontColor<<enumeration>> #5C3F00
+skinparam ClassStereotypeFontColor<<enumeration>> #8A6416
+skinparam ClassBorderColor<<service>> #3B7A50
+skinparam ClassHeaderBackgroundColor<<service>> #DDEFE2
+skinparam ClassFontColor<<service>> #1E4A2C
+skinparam ClassStereotypeFontColor<<service>> #3B7A50
+skinparam ClassBorderColor<<repository>> #6B4E9B
+skinparam ClassHeaderBackgroundColor<<repository>> #ECE5F6
+skinparam ClassFontColor<<repository>> #3E2A63
+skinparam ClassStereotypeFontColor<<repository>> #6B4E9B
+skinparam ClassBorderColor<<external>> #7A7F87
+skinparam ClassHeaderBackgroundColor<<external>> #EEF0F2
+skinparam ClassFontColor<<external>> #3B4048
+' --- sequence diagrams ---------------------------------------------------------
+skinparam SequenceMessageAlign left
+skinparam SequenceArrowThickness 1.3
+skinparam SequenceTitleFontSize 18
+skinparam SequenceParticipantBorderColor #2E5C8A
+skinparam SequenceParticipantBackgroundColor #DCE8F5
+skinparam SequenceParticipantFontStyle bold
+skinparam SequenceParticipantFontColor #1F3A5F
+skinparam SequenceParticipantBorderThickness 1.3
+skinparam SequenceStereotypeFontStyle italic
+skinparam SequenceStereotypeFontColor #4A6382
+skinparam SequenceStereotypeFontSize 11
+skinparam SequenceMessageFontColor #1B2631
+skinparam SequenceActorBorderColor #1F3A5F
+skinparam SequenceActorBackgroundColor #FFFFFF
+skinparam SequenceActorFontStyle bold
+skinparam SequenceLifeLineBorderColor #8FA7C2
+skinparam SequenceLifeLineBackgroundColor #EAF2FB
+skinparam SequenceGroupBorderColor #4A6382
+skinparam SequenceGroupBorderThickness 1.2
+skinparam SequenceGroupBackgroundColor #E4ECF5
+skinparam SequenceGroupHeaderFontColor #1F3A5F
+skinparam SequenceGroupFontStyle bold
+skinparam SequenceBoxBorderColor #B8C7D9
+skinparam SequenceBoxFontColor #1F3A5F
+skinparam SequenceBoxFontStyle bold
+skinparam SequenceDividerBorderColor #4A6382
+skinparam SequenceDividerBackgroundColor #EEF3F9
+skinparam SequenceReferenceBorderColor #4A6382
+skinparam SequenceReferenceHeaderBackgroundColor #E4ECF5
+skinparam BoundaryBorderColor #1F3A5F
+skinparam BoundaryFontStyle bold
+skinparam BoundaryFontColor #1F3A5F
+skinparam BoundaryBackgroundColor #DCE8F5
+skinparam ControlBorderColor #1F3A5F
+skinparam ControlFontStyle bold
+skinparam ControlFontColor #1F3A5F
+skinparam ControlBackgroundColor #DCE8F5
+skinparam EntityBorderColor #1F3A5F
+skinparam EntityFontStyle bold
+skinparam EntityBackgroundColor #DCE8F5
+skinparam DatabaseBorderColor #6B4E9B
+skinparam DatabaseFontColor #3E2A63
+skinparam DatabaseBackgroundColor #ECE5F6
+skinparam CollectionsBorderColor #2E5C8A
+skinparam CollectionsBackgroundColor #DCE8F5
+' --- activity and state diagrams -----------------------------------------------
+skinparam ActivityBorderColor #2E5C8A
+skinparam ActivityBackgroundColor #EAF2FB
+skinparam ActivityBorderThickness 1.3
+skinparam ActivityFontColor #1B2631
+skinparam ActivityDiamondBorderColor #B07D1A
+skinparam ActivityDiamondBackgroundColor #FBEBC8
+skinparam ActivityDiamondFontColor #3D3420
+skinparam ActivityStartColor #1F3A5F
+skinparam ActivityEndColor #1F3A5F
+skinparam ActivityBarColor #1F3A5F
+skinparam SwimlaneBorderColor #8FA7C2
+skinparam SwimlaneBorderThickness 1.4
+skinparam SwimlaneTitleFontColor #1F3A5F
+skinparam SwimlaneTitleFontStyle bold
+skinparam SwimlaneTitleFontSize 14
+skinparam StateBorderColor #2E5C8A
+skinparam StateBackgroundColor #EAF2FB
+skinparam StateBorderThickness 1.3
+skinparam StateFontStyle bold
+skinparam StateFontColor #1F3A5F
+skinparam StateAttributeFontColor #1B2631
+skinparam StateAttributeFontStyle plain
+skinparam StateAttributeFontSize 12
+skinparam StateStartColor #1F3A5F
+skinparam StateEndColor #1F3A5F
+' --- deployment and component diagrams -----------------------------------------
+skinparam NodeBorderColor #1F3A5F
+skinparam NodeBackgroundColor #F2F6FB
+skinparam NodeFontColor #1F3A5F
+skinparam NodeBorderThickness 1.4
+skinparam ComponentBorderColor #2E5C8A
+skinparam ComponentBackgroundColor #DCE8F5
+skinparam ArtifactBorderColor #2E5C8A
+skinparam ArtifactBackgroundColor #FFFFFF
+skinparam CloudBorderColor #7A7F87
+skinparam CloudBackgroundColor #F3F4F6
+skinparam StorageBorderColor #6B4E9B
+skinparam StorageBackgroundColor #ECE5F6
+skinparam FolderBorderColor #2E5C8A
+skinparam FolderBackgroundColor #EEF4FB
+skinparam FolderBorderThickness 1.3
+skinparam FolderFontColor #1B2631
+skinparam FrameBorderColor #8FA7C2
+skinparam FrameBackgroundColor #FBFCFE
+' ======================== end of style header =========================
+
+' Generated from backend/prisma/schema.prisma and backend/src/constants/enums.ts by
+' tools/gen_class.py; edit the generator, not this file.
+hide circle
+hide empty members
+hide <<entity>> stereotype
+skinparam linetype ortho
+skinparam nodesep 70
+skinparam ranksep 90
+skinparam ArrowFontSize 11
+skinparam ClassHeaderBackgroundColor<<P0>> #DCE8F5
+skinparam ClassHeaderBackgroundColor<<P1>> #DDEFE2
+skinparam ClassHeaderBackgroundColor<<P2>> #FBE3D3
+skinparam ClassHeaderBackgroundColor<<P3>> #ECE5F6
+skinparam ClassHeaderBackgroundColor<<P4>> #E3F1F4
+hide <<P0>> stereotype
+hide <<P1>> stereotype
+hide <<P2>> stereotype
+hide <<P3>> stereotype
+hide <<P4>> stereotype
+title Complete class diagram — LeaseManager domain model: 25 entities, 31 enumerations
+
+package "Organisations and identity" {
+  class Tenant <<P0>> {
+    id : String {id}
+    name : String
+    slug : String {unique}
+    contact_email : String
+    status : TenantStatus
+    subscription_plan : String
+    max_users : Int
+    max_spaces : Int
+    organization_type : OrganizationType
+    reporting_embeds : Json [0..1]
+    brevo_contact_id : String [0..1]
+    application_profile : Json [0..1]
+    application_documents : Json [0..1]
+    created_at : DateTime
+  }
+  class User <<P0>> {
+    id : String {id}
+    role : UserRole
+    email : String {unique}
+    password : String
+    first_name : String [0..1]
+    last_name : String [0..1]
+    phone_number : String [0..1]
+    status : UserStatus
+    must_change_password : Boolean
+    refreshToken : String [0..1]
+    session_refresh_token : String [0..1]
+    avatar_url : String [0..1]
+    last_login_at : DateTime [0..1]
+    crisp_session_id : String [0..1]
+    notification_preferences : Json [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class UserSession <<P0>> {
+    id : String {id}
+    refresh_token : String {unique}
+    created_at : DateTime
+    last_used_at : DateTime
+  }
+  class TenantApplication <<P0>> {
+    id : String {id}
+    status : TenantApplicationStatus
+    typeform_response_id : String [0..1] {unique}
+    contact_email : String [0..1]
+    company_name : String [0..1]
+    raw_payload : Json [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class TenantOnboardingSequence <<P0>> {
+    id : String {id}
+    baseline_at : DateTime
+    day0_sent_at : DateTime [0..1]
+    day1_sent_at : DateTime [0..1]
+    day3_sent_at : DateTime [0..1]
+    day7_sent_at : DateTime [0..1]
+    day30_sent_at : DateTime [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+}
+package "Property portfolio" {
+  class Building <<P1>> {
+    id : String {id}
+    name : String
+    slug : String {unique}
+    description : String [0..1]
+    address : String [0..1]
+    total_area_sqm : Float
+    total_floors_in_building : Int [0..1]
+    year_built : Int [0..1]
+    status : String
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class Floor <<P1>> {
+    id : String {id}
+    name : String
+    floor_number : Int
+    area_sqm : Float [0..1]
+    floor_plan_url : String [0..1]
+    status : String
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class Space <<P1>> {
+    id : String {id}
+    name : String
+    slug : String {unique}
+    description : String [0..1]
+    type : SpaceType
+    status : SpaceStatus
+    capacity : Int [0..1]
+    area_sqm : Float [0..1]
+    hourly_rate : Float [0..1]
+    daily_rate : Float [0..1]
+    monthly_rate : Float [0..1]
+    currency : String
+    map_x : Float [0..1]
+    map_y : Float [0..1]
+    map_w : Float [0..1]
+    map_h : Float [0..1]
+    photos : String[]
+    virtual_tour_url : String [0..1]
+    is_listed : Boolean
+    requires_approval : Boolean
+    is_published : Boolean
+    address : String [0..1]
+    city : String [0..1]
+    state : String [0..1]
+    zip : String [0..1]
+    country : String [0..1]
+    map_lat : Float [0..1]
+    map_lng : Float [0..1]
+    transportation_notes : String [0..1]
+    coworker_listing_id : String [0..1]
+    liquidspace_listing_id : String [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class SpaceFeature <<P1>> {
+    id : String {id}
+    name : String
+    description : String [0..1]
+    created_at : DateTime
+  }
+  class AddOnService <<P1>> {
+    id : String {id}
+    name : String
+    description : String [0..1]
+    price : Float
+    billing_cycle : BillingCycle
+    category : String [0..1]
+    status : String
+    is_active : Boolean
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class SpaceAddOnService <<P1>> {
+    id : String {id}
+    created_at : DateTime
+  }
+}
+package "Applications and bookings" {
+  class BookingApplication <<P2>> {
+    id : String {id}
+    guest_name : String [0..1]
+    guest_email : String [0..1]
+    guest_phone : String [0..1]
+    applicant_type : ApplicantType
+    company_name : String [0..1]
+    start_date : DateTime
+    duration_months : Int
+    headcount : Int
+    intended_use : String
+    message : String [0..1]
+    status : BookingApplicationStatus
+    reviewed_at : DateTime [0..1]
+    refusal_reason : String [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class BookingApplicationAddOn <<P2>> {
+    id : String {id}
+    quantity : Float
+    unit_price : Float
+    created_at : DateTime
+  }
+  class Booking <<P2>> {
+    id : String {id}
+    booking_number : String {unique}
+    start_time : DateTime
+    end_time : DateTime
+    status : BookingStatus
+    total_amount : Float
+    total_price : Float [0..1]
+    attendee_count : Int
+    notes : String [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class BookingAddOn <<P2>> {
+    id : String {id}
+    quantity : Float
+    unit_price : Float
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class BookingDocument <<P2>> {
+    id : String {id}
+    file_url : String
+    file_name : String
+    document_type : BookingDocumentType
+    uploaded_at : DateTime
+  }
+}
+package "Leases and billing" {
+  class LeaseContract <<P3>> {
+    id : String {id}
+    contract_number : String {unique}
+    start_date : DateTime
+    end_date : DateTime
+    monthly_rent : Float [0..1]
+    status : ContractStatus
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class Invoice <<P3>> {
+    id : String {id}
+    invoice_number : String {unique}
+    type : InvoiceType
+    amount : Float
+    subtotal : Float
+    tax_rate : Float
+    tax_amount : Float
+    total_amount : Float
+    currency : String
+    due_date : DateTime [0..1]
+    issue_date : DateTime
+    status : InvoiceStatus
+    paid_at : DateTime [0..1]
+    overdue_reminder_max_day : Int
+    crisp_session_id : String [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class InvoiceLine <<P3>> {
+    id : String {id}
+    description : String
+    quantity : Float
+    unit_price : Float
+    tax_rate : Float
+    line_total : Float
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class Payment <<P3>> {
+    id : String {id}
+    payment_number : String [0..1]
+    amount : Float
+    method : PaymentMethod
+    status : PaymentStatus
+    transaction_id : String [0..1] {unique}
+    cheque_document_url : String [0..1]
+    payment_date : DateTime [0..1]
+    paid_at : DateTime [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class PromotionCode <<P3>> {
+    id : String {id}
+    code : String
+    description : String [0..1]
+    discount : Float
+    type : DiscountType
+    valid_from : DateTime [0..1]
+    valid_until : DateTime [0..1]
+    max_uses : Int [0..1]
+    used_count : Int
+    is_active : Boolean
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+}
+package "Operations and supervision" {
+  class MaintenanceTicket <<P4>> {
+    id : String {id}
+    ticket_number : String {unique}
+    title : String
+    description : String [0..1]
+    category : TicketCategory
+    priority : TicketPriority
+    status : TicketStatus
+    cost : Float [0..1]
+    crisp_session_id : String [0..1]
+    equipment_installed_at : DateTime [0..1]
+    usage_hours_estimate : Float [0..1]
+    reported_at : DateTime
+    resolved_at : DateTime [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+  class Notification <<P4>> {
+    id : String {id}
+    title : String
+    message : String
+    type : NotificationType
+    channel : NotificationChannel
+    priority : NotificationPriority
+    is_read : Boolean
+    read_at : DateTime [0..1]
+    data : String [0..1]
+    created_at : DateTime
+  }
+  class AuditLog <<P4>> {
+    id : String {id}
+    action : AuditAction
+    resource_type : String [0..1]
+    resource_id : String [0..1]
+    entity_type : String [0..1]
+    entity_id : String [0..1]
+    severity : AuditSeverity
+    old_values : String [0..1]
+    new_values : String [0..1]
+    ip_address : String [0..1]
+    user_agent : String [0..1]
+    created_at : DateTime
+  }
+  class Report <<P4>> {
+    id : String {id}
+    type : ReportType
+    title : String
+    format : ReportFormat
+    status : String
+    parameters : Json [0..1]
+    payload : Json [0..1]
+    created_at : DateTime
+    updated_at : DateTime {updatedAt}
+  }
+}
+
+Tenant "1" *-- "0..*" User
+Tenant "0..1" -- "tenantCompanyUsers\n0..*" User : tenantCompany
+User "0..1" -- "receptionStaff\n0..*" User : managedBy
+User "1" *-- "0..*" UserSession
+Tenant "1" *-- "0..1" TenantOnboardingSequence
+Tenant "1" *-- "0..*" TenantApplication : landlord_tenant
+Tenant "0..1" -- "0..1" TenantApplication : applicant_tenant
+Space "0..1" -- "0..*" TenantApplication
+Tenant "1" *-- "0..*" Building
+Building "1" *-- "0..*" Floor
+Floor "1" *-- "0..*" Space
+Space "1" *-- "0..*" SpaceFeature
+Tenant "1" *-- "0..*" AddOnService
+Space "1" *-- "availableAddOns\n0..*" SpaceAddOnService
+AddOnService "1" -- "spaceLinks\n0..*" SpaceAddOnService
+Space "1" -- "0..*" BookingApplication
+User "0..1" -- "0..*" BookingApplication : user
+User "0..1" -- "0..*" BookingApplication : reviewedBy
+BookingApplication "1" *-- "addOns\n0..*" BookingApplicationAddOn
+AddOnService "1" -- "applicationAddOns\n0..*" BookingApplicationAddOn
+BookingApplication "0..1" -- "0..1" Booking
+Tenant "1" -- "0..*" Booking
+User "1" -- "0..*" Booking : user
+User "0..1" -- "0..*" Booking : receptionist
+Space "1" -- "0..*" Booking
+Booking "1" *-- "addOns\n0..*" BookingAddOn
+AddOnService "1" -- "bookingAddOns\n0..*" BookingAddOn
+Booking "1" *-- "0..5" BookingDocument
+User "1" -- "0..*" BookingDocument : uploadedBy
+Invoice "0..1" -- "0..*" Booking
+Payment "0..*" -- "0..*" Booking
+Tenant "1" -- "0..*" LeaseContract
+User "0..1" -- "0..*" LeaseContract
+LeaseContract "0..1" o-- "0..*" Invoice
+Tenant "1" -- "0..*" Invoice
+User "0..1" -- "0..*" Invoice : user
+Invoice "1" *-- "lines\n0..*" InvoiceLine
+PromotionCode "0..1" -- "0..*" Invoice
+Tenant "1" *-- "0..*" PromotionCode
+Invoice "0..1" -- "0..*" Payment
+Tenant "1" -- "0..*" Payment
+User "0..1" -- "0..*" Payment : user
+User "0..1" -- "0..*" Payment : recordedBy
+Tenant "1" -- "0..*" MaintenanceTicket
+Space "0..1" -- "0..*" MaintenanceTicket
+Booking "0..1" -- "0..*" MaintenanceTicket
+User "0..1" -- "0..*" MaintenanceTicket : user
+User "0..1" -- "0..*" MaintenanceTicket : createdBy
+User "0..1" -- "0..*" MaintenanceTicket : assignee
+Tenant "1" *-- "0..*" Notification
+User "0..1" -- "0..*" Notification
+Tenant "1" *-- "0..*" AuditLog
+User "0..1" -- "0..*" AuditLog
+User "1" *-- "0..*" Report
+
+package "Enumerations (backend/src/constants/enums.ts)" as ENUMS {
+  enum OrganizationType <<enumeration>> {
+    CLIENT
+    RENTER
+  }
+  enum TenantStatus <<enumeration>> {
+    ACTIVE
+    SUSPENDED
+    CLOSED
+    TRIAL
+    PENDING
+  }
+  enum TenantApplicationStatus <<enumeration>> {
+    AWAITING_SUBMISSION
+    SUBMITTED
+    APPROVED
+    REJECTED
+  }
+  enum UserRole <<enumeration>> {
+    SUPER_ADMIN
+    CLIENT_ADMIN
+    MANAGER
+    FINANCE
+    MAINTENANCE
+    RECEPTIONIST
+    TENANT_ADMIN
+    TENANT_EMPLOYEE
+    GUEST
+  }
+  enum UserStatus <<enumeration>> {
+    ACTIVE
+    INACTIVE
+    PENDING
+    SUSPENDED
+  }
+  enum SpaceType <<enumeration>> {
+    DEDICATED_OFFICE
+    FLEXIBLE_DESK
+    HOT_DESK
+    MEETING_ROOM
+    CONFERENCE_ROOM
+    PHONE_BOOTH
+    EVENT_SPACE
+  }
+  enum SpaceStatus <<enumeration>> {
+    AVAILABLE
+    OCCUPIED
+    RESERVED
+    MAINTENANCE
+    OUT_OF_SERVICE
+  }
+  enum BillingCycle <<enumeration>> {
+    HOURLY
+    DAILY
+    WEEKLY
+    MONTHLY
+    QUARTERLY
+    YEARLY
+  }
+  enum ApplicantType <<enumeration>> {
+    INDIVIDUAL
+    COMPANY
+  }
+  enum BookingApplicationStatus <<enumeration>> {
+    PENDING
+    ACCEPTED
+    REFUSED
+  }
+  enum BookingStatus <<enumeration>> {
+    DRAFT
+    PENDING_APPROVAL
+    PENDING_PHONE_CONFIRMATION
+    AWAITING_PHYSICAL_VISIT
+    DOCUMENTS_PENDING_UPLOAD
+    ACTIVE
+    CONFIRMED
+    CHECKED_IN
+    COMPLETED
+    CANCELLED
+    REFUSED
+    NO_SHOW
+  }
+  enum BookingDocumentType <<enumeration>> {
+    cr_copy
+    qid_copy
+    trade_license
+    signed_lease_contract
+    payment_proof
+    contract «deprecated»
+    cheque «deprecated»
+    id «deprecated»
+    other
+  }
+  enum ContractStatus <<enumeration>> {
+    DRAFT
+    ACTIVE
+    EXPIRED
+    TERMINATED
+    RENEWED
+  }
+  enum InvoiceType <<enumeration>> {
+    MONTHLY_RENT
+    ONE_TIME_CHARGE
+    DEPOSIT
+    PENALTY
+    CREDIT
+  }
+  enum InvoiceStatus <<enumeration>> {
+    DRAFT
+    ISSUED
+    SENT
+    PARTIALLY_PAID
+    PAID
+    OVERDUE
+    CANCELLED
+  }
+  enum DiscountType <<enumeration>> {
+    PERCENTAGE
+    FIXED_AMOUNT
+  }
+  enum PaymentMethod <<enumeration>> {
+    CASH
+    BANK_TRANSFER
+    CREDIT_CARD
+    DEBIT_CARD
+    CHECK
+    ONLINE_PAYMENT
+  }
+  enum PaymentStatus <<enumeration>> {
+    PENDING
+    COMPLETED
+    FAILED
+    REFUNDED
+  }
+  enum TicketCategory <<enumeration>> {
+    PLUMBING
+    ELECTRICAL
+    HVAC
+    CLEANING
+    FURNITURE
+    IT_EQUIPMENT
+    OTHER
+  }
+  enum TicketPriority <<enumeration>> {
+    LOW
+    NORMAL
+    HIGH
+    URGENT
+    EMERGENCY
+  }
+  enum TicketStatus <<enumeration>> {
+    OPEN
+    ASSIGNED
+    IN_PROGRESS
+    RESOLVED
+    CLOSED
+    CANCELLED
+  }
+  enum NotificationType <<enumeration>> {
+    BOOKING_CONFIRMATION
+    BOOKING_REMINDER
+    MARKETPLACE_INQUIRY
+    INVOICE_ISSUED
+    INVOICE_OVERDUE
+    PAYMENT_RECEIVED
+    TICKET_UPDATED
+    CONTRACT_EXPIRING
+    LOGIN_SUCCESS
+    SECURITY_ALERT
+    TENANT_APPLICATION
+  }
+  enum NotificationChannel <<enumeration>> {
+    IN_APP
+    EMAIL
+    SMS
+  }
+  enum NotificationPriority <<enumeration>> {
+    LOW
+    NORMAL
+    HIGH
+    URGENT
+  }
+  enum AuditAction <<enumeration>> {
+    CREATE
+    UPDATE
+    DELETE
+    LOGIN
+    LOGOUT
+    LOGIN_FAILED
+    APPROVE
+    REJECT
+  }
+  enum AuditSeverity <<enumeration>> {
+    INFO
+    WARNING
+    ERROR
+    CRITICAL
+  }
+  enum ReportType <<enumeration>> {
+    OCCUPANCY_RATE
+    REVENUE_BY_SITE
+    BOOKING_ANALYTICS
+    PAYMENT_STATUS
+    MAINTENANCE_SUMMARY
+    FINANCIAL_SUMMARY
+  }
+  enum ReportFormat <<enumeration>> {
+    PDF
+    CSV
+    EXCEL
+    JSON
+  }
+  enum SiteStatus <<enumeration>> {
+    ACTIVE
+    INACTIVE
+    CLOSED
+  }
+  enum ContractItemType <<enumeration>> {
+    SPACE
+    ADDON_SERVICE
+    EQUIPMENT
+    SERVICE
+  }
+  enum DepositRefundStatus <<enumeration>> {
+    NOT_REFUNDED
+    PARTIALLY_REFUNDED
+    FULLY_REFUNDED
+  }
+}
+InvoiceLine -[hidden]down- OrganizationType
+BookingDocument -[hidden]down- OrganizationType
+AuditLog -[hidden]down- OrganizationType
+OrganizationType -[hidden]down- BookingDocumentType
+BookingDocumentType -[hidden]down- NotificationChannel
+OrganizationType -[hidden]right- TenantStatus
+TenantStatus -[hidden]right- TenantApplicationStatus
+TenantApplicationStatus -[hidden]right- UserRole
+UserRole -[hidden]right- UserStatus
+UserStatus -[hidden]right- SpaceType
+SpaceType -[hidden]right- SpaceStatus
+SpaceStatus -[hidden]right- BillingCycle
+BillingCycle -[hidden]right- ApplicantType
+ApplicantType -[hidden]right- BookingApplicationStatus
+BookingApplicationStatus -[hidden]right- BookingStatus
+BookingDocumentType -[hidden]right- ContractStatus
+ContractStatus -[hidden]right- InvoiceType
+InvoiceType -[hidden]right- InvoiceStatus
+InvoiceStatus -[hidden]right- DiscountType
+DiscountType -[hidden]right- PaymentMethod
+PaymentMethod -[hidden]right- PaymentStatus
+PaymentStatus -[hidden]right- TicketCategory
+TicketCategory -[hidden]right- TicketPriority
+TicketPriority -[hidden]right- TicketStatus
+TicketStatus -[hidden]right- NotificationType
+NotificationChannel -[hidden]right- NotificationPriority
+NotificationPriority -[hidden]right- AuditAction
+AuditAction -[hidden]right- AuditSeverity
+AuditSeverity -[hidden]right- ReportType
+ReportType -[hidden]right- ReportFormat
+ReportFormat -[hidden]right- SiteStatus
+SiteStatus -[hidden]right- ContractItemType
+ContractItemType -[hidden]right- DepositRefundStatus
+
+legend bottom right
+|= Header colour |= Package |
+|<back:#DCE8F5>          </back>| Organisations and identity |
+|<back:#DDEFE2>          </back>| Property portfolio |
+|<back:#FBE3D3>          </back>| Applications and bookings |
+|<back:#ECE5F6>          </back>| Leases and billing |
+|<back:#E3F1F4>          </back>| Operations and supervision |
+Foreign keys are drawn as the associations they implement, with the multiplicity at each
+end and the Prisma relation field as role name. Filled diamond: composition (the part is
+deleted with the whole); hollow diamond: aggregation. Enumeration-typed attributes are
+stored as String columns; ApplicantType is the DTO literal type of applicant_type.
+SiteStatus, ContractItemType and DepositRefundStatus are declared in enums.ts but type no column.
+endlegend
+@enduml

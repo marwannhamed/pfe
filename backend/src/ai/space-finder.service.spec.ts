@@ -58,7 +58,7 @@ describe('SpaceFinderService — only ever shows what the public map shows', () 
         type: 'DEDICATED_OFFICE',
         min_capacity: null,
         max_monthly_budget: null,
-        city: null,
+        area: null,
         keywords: [],
       },
       rows: [row()],
@@ -105,7 +105,7 @@ describe('SpaceFinderService — only ever shows what the public map shows', () 
         type: 'DEDICATED_OFFICE',
         min_capacity: 8,
         max_monthly_budget: 12000,
-        city: 'Lusail',
+        area: 'Lusail',
         keywords: ['parking'],
       },
       rows: [row()],
@@ -115,13 +115,71 @@ describe('SpaceFinderService — only ever shows what the public map shows', () 
       ask('office for 8 people in Lusail under 12k'),
     );
 
-    expect(prisma.space.findMany.mock.calls[0][0].where).toMatchObject({
+    const where = prisma.space.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({
       type: 'DEDICATED_OFFICE',
       capacity: { gte: 8 },
       monthly_rate: { lte: 12000 },
+    });
+    expect(where.OR).toContainEqual({
       city: { contains: 'Lusail', mode: 'insensitive' },
     });
     expect(r.criteria.keywords).toEqual(['parking']);
+  });
+
+  it('finds a district, not only a city', async () => {
+    // Every space's city is Doha or Lusail. "Msheireb" lives in the address
+    // and the building, so matching the city alone found nothing.
+    const { prisma, service } = makeService({
+      json: { type: 'DEDICATED_OFFICE', area: 'Msheireb' },
+      rows: [row()],
+    });
+
+    await service.find(ask('an office in Msheireb'));
+
+    const { OR } = prisma.space.findMany.mock.calls[0][0].where;
+    const term = { contains: 'Msheireb', mode: 'insensitive' };
+    expect(OR).toEqual(
+      expect.arrayContaining([
+        { address: term },
+        { floor: { building: { name: term } } },
+        { floor: { building: { address: term } } },
+      ]),
+    );
+  });
+
+  it('reads the district from the visitor’s words when the model names none', async () => {
+    const { prisma, service } = makeService({ json: {}, rows: [row()] });
+
+    const r = await service.find(ask('I need a desk near Msheireb metro'));
+
+    expect(r.criteria.area).toBe('Msheireb');
+    expect(prisma.space.findMany.mock.calls[0][0].where.OR).toBeDefined();
+  });
+
+  it('keeps only the place from "district, city" answers', async () => {
+    const { service } = makeService({
+      json: { area: 'Msheireb Downtown, Doha' },
+      rows: [row()],
+    });
+
+    const r = await service.find(ask('Msheireb Downtown please'));
+
+    expect(r.criteria.area).toBe('Msheireb Downtown');
+  });
+
+  it('shows other areas rather than nothing when the named one is full', async () => {
+    const { prisma, service } = makeService({ json: { area: 'The Pearl' } });
+    prisma.space.findMany
+      .mockResolvedValueOnce([]) // nothing at The Pearl
+      .mockResolvedValueOnce([]) // still nothing without the limits
+      .mockResolvedValueOnce([row()]); // free elsewhere
+
+    const r = await service.find(ask('an office at The Pearl'));
+
+    expect(r.relaxed).toBe(true);
+    expect(r.matches).toHaveLength(1);
+    expect(prisma.space.findMany.mock.calls[2][0].where.OR).toBeUndefined();
   });
 
   it('widens the search rather than showing a visitor nothing', async () => {
@@ -160,6 +218,21 @@ describe('SpaceFinderService — only ever shows what the public map shows', () 
     const system = openAi.chat.mock.calls[0][1];
     expect(system).toContain('Dedicated Office 4');
     expect(system).toMatch(/never invent/i);
+  });
+
+  it('tells the model where each listing is, and that it is in the place asked about', async () => {
+    // The city of every Msheireb space is "Doha": without the address the
+    // model told visitors there was nothing in Msheireb while showing three.
+    const { openAi, service } = makeService({
+      json: { area: 'Msheireb' },
+      rows: [row({ address: 'Sikkat Al Wadi, Msheireb Downtown Doha' })],
+    });
+
+    await service.find(ask('an office in Msheireb'));
+
+    const system = openAi.chat.mock.calls[0][1];
+    expect(system).toContain('Msheireb Downtown Doha');
+    expect(system).toMatch(/in or near Msheireb/);
   });
 
   it('still returns real listings when the model is unavailable', async () => {

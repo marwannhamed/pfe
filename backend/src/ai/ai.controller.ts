@@ -33,8 +33,11 @@ import {
   MaintenanceSuggestDto,
 } from './dto/ai-chat.dto';
 
+// CLIENT_ADMIN reaches the staff contracts and maintenance pages that call
+// these routes, and the triage service already assigns on their behalf.
 const AI_ROLES = [
   USER_ROLE.SUPER_ADMIN,
+  USER_ROLE.CLIENT_ADMIN,
   USER_ROLE.MANAGER,
   USER_ROLE.TENANT_ADMIN,
   USER_ROLE.TENANT_EMPLOYEE,

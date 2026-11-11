@@ -13,6 +13,7 @@ import {
   NOTIFICATION_CHANNEL,
   NOTIFICATION_PRIORITY,
   NOTIFICATION_TYPE,
+  ORGANIZATION_TYPE,
   TENANT_APPLICATION_STATUS,
   TENANT_STATUS,
   USER_ROLE,
@@ -270,6 +271,9 @@ export class TypeformWebhookService {
         slug,
         contact_email: email,
         status: TENANT_STATUS.PENDING,
+        // The schema defaults to CLIENT (a property company); an applicant
+        // from this form is a company looking for space.
+        organization_type: ORGANIZATION_TYPE.RENTER,
         application_profile: { ...profile, hidden } as object,
         application_documents: documents as object,
       },

@@ -24,6 +24,9 @@ import { useThemeStore } from '../../store/themeStore';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
+import { formatMoney, formatMoneyCompact } from '../../constants/qatar';
+import { bucketByMonth, isEmptySeries } from '../../utils/months';
+import { humanize } from '../../utils/labels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -35,13 +38,7 @@ function toArray<T>(raw: unknown): T[] {
   if (Array.isArray(nested)) return nested as T[];
   return EMPTY_LIST as unknown as T[];
 }
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-}
-function fmtAmt(n: number) {
-  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
+const fmtAmt = (n: number) => formatMoneyCompact(n);
 function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
@@ -86,7 +83,7 @@ function ChartTooltip({ active, payload, label, isCurrency = false }: ChartToolt
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#fff' }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#94a3b8' }}>{p.name}:</span>
-          <strong>{isCurrency ? `$${Number(p.value).toLocaleString()}` : p.value}</strong>
+          <strong>{isCurrency ? formatMoney(p.value) : p.value}</strong>
         </div>
       ))}
     </div>
@@ -260,26 +257,21 @@ export default function AdminDashboard() {
   const criticalCount = contracts.filter(c => { const d = daysUntil(c.end_date); return c.status === 'ACTIVE' && d <= 30; }).length;
 
   // Charts
-  const revenueChart = useMemo(() => {
-    const buckets: Record<string, number> = {};
-    payments.filter(p => p.status === 'COMPLETED').forEach(p => {
-      const k = fmtMonth(p.payment_date);
-      buckets[k] = (buckets[k] || 0) + parseFloat(p.amount || '0');
-    });
-    return Object.entries(buckets).slice(-6).map(([date, Revenue]) => ({ date, Revenue: Math.round(Revenue) }));
-  }, [payments]);
+  const revenueChart = useMemo(() => bucketByMonth(
+    payments.filter(p => p.status === 'COMPLETED'), 6, p => p.payment_date || p.created_at,
+    () => ({ Revenue: 0 }),
+    (v, p) => { v.Revenue += parseFloat(p.amount || '0'); },
+  ).map(m => ({ ...m, Revenue: Math.round(m.Revenue) })), [payments]);
 
-  const bookingChart = useMemo(() => {
-    const buckets: Record<string, { Confirmed: number; Pending: number; Cancelled: number }> = {};
-    bookings.forEach(b => {
-      const k = fmtMonth(b.created_at);
-      if (!buckets[k]) buckets[k] = { Confirmed: 0, Pending: 0, Cancelled: 0 };
-      if (['CONFIRMED','CHECKED_IN','COMPLETED'].includes(b.status)) buckets[k].Confirmed++;
-      else if (b.status === 'PENDING_APPROVAL') buckets[k].Pending++;
-      else if (b.status === 'CANCELLED') buckets[k].Cancelled++;
-    });
-    return Object.entries(buckets).slice(-6).map(([date, v]) => ({ date, ...v }));
-  }, [bookings]);
+  const bookingChart = useMemo(() => bucketByMonth(
+    bookings, 6, b => b.created_at,
+    () => ({ Confirmed: 0, Pending: 0, Cancelled: 0 }),
+    (v, b) => {
+      if (['CONFIRMED','CHECKED_IN','COMPLETED'].includes(b.status)) v.Confirmed++;
+      else if (b.status === 'PENDING_APPROVAL') v.Pending++;
+      else if (b.status === 'CANCELLED') v.Cancelled++;
+    },
+  ), [bookings]);
 
   const spaceStatusChart = [
     { name: 'Available',   value: available, color: '#22c55e' },
@@ -292,11 +284,11 @@ export default function AdminDashboard() {
     const counts: Record<string, number> = {};
     invoices.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
     const colors: Record<string, string> = { PAID: '#10b981', ISSUED: '#2563eb', SENT: '#8b5cf6', PARTIALLY_PAID: '#f59e0b', OVERDUE: '#ef4444', DRAFT: '#94a3b8', CANCELLED: '#e5e7eb' };
-    return Object.entries(counts).map(([name, value]) => ({ name, value, color: colors[name] ?? '#94a3b8' }));
+    return Object.entries(counts).map(([status, value]) => ({ name: humanize(status), value, color: colors[status] ?? '#94a3b8' }));
   }, [invoices]);
 
   const siteOccupancyChart = useMemo(() => {
-    return sites.slice(0, 6).map(s => {
+    return sites.slice(0, 8).map(s => {
       const siteSpaces = spaces.filter(sp => sp.floor?.building?.id === s.id);
       const occ = siteSpaces.filter(sp => sp.status === 'OCCUPIED').length;
       const rate = siteSpaces.length > 0 ? Math.round((occ / siteSpaces.length) * 100) : 0;
@@ -366,8 +358,8 @@ export default function AdminDashboard() {
 
       {/* KPI Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-        <KpiCard label="Revenue Collected" value={`$${Math.round(totalRevenue).toLocaleString()}`}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
-        <KpiCard label="Pending Revenue"   value={`$${Math.round(totalPending).toLocaleString()}`}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
+        <KpiCard label="Revenue Collected" value={formatMoney(totalRevenue)}  sub={`${collectionRate}% collection rate`}           color="#059669" bg="#f0fdf4" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
+        <KpiCard label="Pending Revenue"   value={formatMoney(totalPending)}  sub="Awaiting payment"                               color="#d97706" bg="#fffbeb" icon={<CreditCardOutlined />} path={billingPath}      loading={isLoading} />
         <KpiCard label="Total Bookings"    value={bookings.length}   sub={`${confirmedBooks} confirmed · ${pendingBooks} pending`}                 color="#2563eb" bg="#eff6ff" icon={<CalendarOutlined />}    path="/admin/bookings"     loading={isLoading} />
         <KpiCard label="Open Tickets"      value={mxStats?.open ?? 0} sub={`${(mxStats as MaintenanceStats | undefined)?.inProgress ?? 0} in progress`}          color="#dc2626" bg="#fef2f2" icon={<ToolOutlined />}        path="/admin/maintenance"  loading={isLoading} />
       </div>
@@ -377,9 +369,9 @@ export default function AdminDashboard() {
         <div style={{ ...CARD, padding: '20px 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div><div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>💰 Revenue Collected</div><div style={{ fontSize: 12, color: t.textSub }}>Monthly payments</div></div>
-            <div style={{ textAlign: 'right' }}><div style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>${Math.round(completedPays).toLocaleString()}</div><div style={{ fontSize: 11, color: t.textSub }}>total</div></div>
+            <div style={{ textAlign: 'right' }}><div style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>{formatMoney(completedPays)}</div><div style={{ fontSize: 11, color: t.textSub }}>total</div></div>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : revenueChart.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(revenueChart) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}><div style={{ fontSize: 28 }}>📊</div><div style={{ fontSize: 12 }}>No payment data yet</div></div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
@@ -392,7 +384,7 @@ export default function AdminDashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.divider} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: t.textMuted }} />
-                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={45} />
+                <YAxis tickFormatter={fmtAmt} tick={{ fontSize: 11, fill: t.textMuted }} width={92} />
                 <Tooltip content={<ChartTooltip isCurrency />} />
                 <Area type="monotone" dataKey="Revenue" name="Revenue" stroke="#059669" strokeWidth={2.5} fill="url(#revGrad)" dot={{ r: 3, fill: '#059669' }} activeDot={{ r: 5 }} />
               </AreaChart>
@@ -405,7 +397,7 @@ export default function AdminDashboard() {
             <div><div style={{ fontWeight: 700, fontSize: 14, color: t.text }}>📅 Booking Trends</div><div style={{ fontSize: 12, color: t.textSub }}>Monthly by status</div></div>
             <div style={{ textAlign: 'right' }}><div style={{ fontSize: 20, fontWeight: 800, color: '#2563eb' }}>{bookings.length}</div><div style={{ fontSize: 11, color: t.textSub }}>total</div></div>
           </div>
-          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : bookingChart.length === 0 ? (
+          {isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : isEmptySeries(bookingChart) ? (
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted, flexDirection: 'column', gap: 8 }}><div style={{ fontSize: 28 }}>📅</div><div style={{ fontSize: 12 }}>No booking data yet</div></div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
@@ -516,9 +508,9 @@ export default function AdminDashboard() {
       <div style={{ ...CARD, padding: '16px 24px', marginBottom: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 1 }}>
           {[
-            { label: 'Total Invoiced',  value: `$${Math.round(totalInvoiced).toLocaleString()}`, color: '#2563eb' },
-            { label: 'Collected',       value: `$${Math.round(totalRevenue).toLocaleString()}`,  color: '#059669' },
-            { label: 'Pending',         value: `$${Math.round(totalPending).toLocaleString()}`,  color: '#f59e0b' },
+            { label: 'Total Invoiced',  value: formatMoney(totalInvoiced), color: '#2563eb' },
+            { label: 'Collected',       value: formatMoney(totalRevenue),  color: '#059669' },
+            { label: 'Pending',         value: formatMoney(totalPending),  color: '#f59e0b' },
             { label: 'Overdue',         value: `${overdueInv} invoices`,                          color: overdueInv > 0 ? '#dc2626' : t.textMuted },
             { label: 'Collection Rate', value: `${collectionRate}%`,                              color: collectionRate >= 80 ? '#059669' : '#d97706' },
           ].map((item, i) => (
@@ -582,7 +574,7 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 10, color: t.textMuted }}>{b.space?.name ?? 'Space'} · {new Date(b.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>${parseFloat(b.total_price).toLocaleString()}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>{formatMoney(b.total_price, b.currency)}</div>
                     <span style={{ background: bs.bg, color: bs.color, fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 20 }}>{bs.label}</span>
                   </div>
                 </div>
@@ -615,7 +607,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{inv.invoice_number}</div>
                 <div style={{ fontSize: 11, color: t.textSub }}>{inv.type?.replace(/_/g,' ').toLowerCase()}</div>
                 <div style={{ fontSize: 12, color: isOverdue ? '#dc2626' : t.text, fontWeight: isOverdue ? 700 : 400 }}>{formatDate(inv.due_date)}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>${parseFloat(inv.total_amount).toLocaleString()}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{formatMoney(inv.total_amount, inv.currency)}</div>
                 <span style={{ background: isPaid ? '#dcfce7' : isOverdue ? '#fee2e2' : '#dbeafe', color: isPaid ? '#15803d' : isOverdue ? '#b91c1c' : '#1d4ed8', fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 20 }}>
                   {inv.status}
                 </span>
@@ -647,7 +639,7 @@ export default function AdminDashboard() {
                     <span style={{ background: site.status === 'ACTIVE' ? '#dcfce7' : '#fee2e2', color: site.status === 'ACTIVE' ? '#15803d' : '#b91c1c', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>{site.status}</span>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: t.text, marginBottom: 2 }}>{site.name}</div>
-                  <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 10 }}>{site.city}, {site.country}</div>
+                  <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 10 }}>{site.address || [site.city, site.country].filter(Boolean).join(', ')}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 11 }}>
                     <span style={{ color: t.textSub }}>Occupancy</span>
                     <span style={{ fontWeight: 700, color: occColor }}>{occR}%</span>

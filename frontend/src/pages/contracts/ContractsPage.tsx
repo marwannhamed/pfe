@@ -16,7 +16,7 @@ import { contractApi, tenantApi, bookingApi } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import type { ApiError, Booking, ContractStatus, LeaseContract, Tenant } from '../../types';
 import { mapBookings } from '../../utils/booking';
-import { DEFAULT_CURRENCY } from '../../constants/qatar';
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, formatMoney } from '../../constants/qatar';
 import {
   CONTRACT_BOOKING_STATUSES,
   prefillFromBooking,
@@ -238,7 +238,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
           {isSuperAdmin && (
             <div style={{ background: th.tableHead, border: `2px solid ${isFromBooking ? '#2563eb' : '#e5e7eb'}`, borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: isFromBooking ? '#2563eb' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                ?? Tenant {isFromBooking && <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PRE-FILLED</span>}
+                🏢 Tenant {isFromBooking && <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PRE-FILLED</span>}
               </div>
               <Field label="Select Tenant" required error={errors.tenant_id}>
                 <Select value={form.tenant_id || undefined} onChange={v => setF('tenant_id', v)} placeholder="Select tenant..." style={{ width: '100%' }}
@@ -250,7 +250,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
           {/* Contract Period */}
           <div style={{ border: `2px solid ${isFromBooking ? '#059669' : '#e5e7eb'}`, borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: isFromBooking ? '#059669' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-              ?? Contract Period {isFromBooking && <span style={{ background: '#dcfce7', color: '#15803d', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PRE-FILLED FROM BOOKING</span>}
+              📅 Contract Period {isFromBooking && <span style={{ background: '#dcfce7', color: '#15803d', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PRE-FILLED FROM BOOKING</span>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
@@ -282,7 +282,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
           {/* Financials — needs to be filled manually */}
           <div style={{ border: '2px solid #f59e0b', borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-              ?? Financials <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PLEASE FILL IN</span>
+              💰 Financials <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 8px', borderRadius: 10, fontSize: 10, marginLeft: 6, fontWeight: 700 }}>PLEASE FILL IN</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
               <div>
@@ -307,7 +307,7 @@ function NewContractModal({ onClose, tenantId, userId, isSuperAdmin, prefillData
               <div>
                 <Field label="Currency">
                   <Select value={form.currency} onChange={v => setF('currency', v)} style={{ width: '100%' }}
-                    options={['USD','EUR','GBP','AED','TND'].map(c => ({ value: c, label: c }))} />
+                    options={CURRENCY_OPTIONS.map(c => ({ value: c, label: c }))} />
                 </Field>
                 {isFromBooking && <div style={{ fontSize: 11, color: '#15803d', marginTop: 3 }}>✓ Auto-filled</div>}
               </div>
@@ -461,9 +461,9 @@ function ContractDetailModal({ contract, onClose, canManage, isTenantAdmin }: {
               </div>
             )}
             <div style={{ background: th.tableHead, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 24 }}>
-              <div><div style={{ fontSize: 10, color: th.textMuted, fontWeight: 500, marginBottom: 2 }}>Monthly Rent</div><div style={{ fontSize: 20, fontWeight: 800, color: th.text }}>{contract.currency} {parseFloat(contract.monthly_rent).toLocaleString()}</div></div>
+              <div><div style={{ fontSize: 10, color: th.textMuted, fontWeight: 500, marginBottom: 2 }}>Monthly Rent</div><div style={{ fontSize: 20, fontWeight: 800, color: th.text }}>{formatMoney(contract.monthly_rent, contract.currency)}</div></div>
               <div style={{ borderLeft: `1px solid ${th.cardBorder}`, margin: '0 4px' }} />
-              <div><div style={{ fontSize: 10, color: th.textMuted, fontWeight: 500, marginBottom: 2 }}>Deposit</div><div style={{ fontSize: 20, fontWeight: 800, color: th.text }}>{contract.currency} {parseFloat(contract.deposit_amount).toLocaleString()}</div></div>
+              <div><div style={{ fontSize: 10, color: th.textMuted, fontWeight: 500, marginBottom: 2 }}>Deposit</div><div style={{ fontSize: 20, fontWeight: 800, color: th.text }}>{Number(contract.deposit_amount) > 0 ? formatMoney(contract.deposit_amount, contract.currency) : '—'}</div></div>
               {contract.auto_renew && <><div style={{ borderLeft: `1px solid ${th.cardBorder}`, margin: '0 4px' }} /><div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600 }}><RedoOutlined /> Auto-renew</div></>}
             </div>
             {([
@@ -472,7 +472,11 @@ function ContractDetailModal({ contract, onClose, canManage, isTenantAdmin }: {
               ['End Date',   formatDate(contract.end_date)],
               ['Days Left',  daysLeft > 0 ? `${daysLeft} days` : `Ended ${Math.abs(daysLeft)} days ago`],
               ['Payment Due',`Day ${contract.payment_due_day} of each month`],
-              ['Signed At',  contract.signed_at ? formatDate(contract.signed_at) : 'Not signed yet'],
+              // No signing date is stored, so a lease past DRAFT read "Not signed
+              // yet" while marked Active. Show the row only when it means something.
+              ...(contract.signed_at || contract.status === 'DRAFT'
+                ? [['Signed At', contract.signed_at ? formatDate(contract.signed_at) : 'Not signed yet']]
+                : []),
               ['Created',    formatDate(contract.created_at)],
             ] as [string, string][]).map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${th.divider}`, fontSize: 13 }}>
@@ -570,7 +574,7 @@ function EditContractModal({ contract, onClose, isSuperAdmin }: { contract: Leas
             <Field label="Deposit" required error={errors.deposit_amount}><input type="number" step="0.01" min="0" style={INPUT} value={form.deposit_amount} onChange={e => setF('deposit_amount', e.target.value)} /></Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Currency"><select style={INPUT} value={form.currency} onChange={e => setF('currency', e.target.value)}>{['USD','EUR','GBP','AED','TND'].map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
+            <Field label="Currency"><select style={INPUT} value={form.currency} onChange={e => setF('currency', e.target.value)}>{CURRENCY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
             <Field label="Payment Due Day"><select style={INPUT} value={form.payment_due_day} onChange={e => setF('payment_due_day', e.target.value)}>{Array.from({ length: 28 }, (_, i) => <option key={i+1} value={i+1}>{i+1}</option>)}</select></Field>
           </div>
           <Field label="Auto Renew"><select style={INPUT} value={form.auto_renew} onChange={e => setF('auto_renew', e.target.value)}><option value="false">No</option><option value="true">Yes</option></select></Field>
@@ -679,7 +683,7 @@ export default function ContractsPage() {
             { label: 'Active',       value: active,           sub: 'Signed & running',     color: '#059669', bg: '#f0fdf4', icon: '✅' },
             { label: 'Draft',        value: draft,            sub: isTenantAdmin && draft > 0 ? '✍ Needs your signature' : 'Pending signature', color: draft > 0 ? '#d97706' : '#94a3b8', bg: draft > 0 ? '#fffbeb' : '#f8fafc', icon: draft > 0 && isTenantAdmin ? '⚠️' : '📝' },
             { label: 'Closed',       value: closed,           sub: 'Expired / Terminated', color: '#dc2626', bg: '#fef2f2', icon: '🔒' },
-            { label: canManage ? 'Monthly Rent' : 'Monthly Cost', value: `$${Math.round(totalRent).toLocaleString()}`, sub: 'From active contracts', color: '#7c3aed', bg: '#f5f3ff', icon: '💰' },
+            { label: canManage ? 'Monthly Rent' : 'Monthly Cost', value: formatMoney(totalRent), sub: 'From active contracts', color: '#7c3aed', bg: '#f5f3ff', icon: '💰' },
           ].map(s => (
             <div key={s.label} style={{ border: `1px solid ${s.label === 'Draft' && draft > 0 && isTenantAdmin ? '#fde68a' : '#e5e7eb'}`, borderRadius: 10, padding: '12px 14px', background: s.label === 'Draft' && draft > 0 && isTenantAdmin ? '#fffbeb' : '#fff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -752,8 +756,8 @@ export default function ContractsPage() {
                 </div>
                 <div style={{ fontSize: 12, color: th.text }}>{formatDate(c.start_date)}</div>
                 <div style={{ fontSize: 12, color: expiringSoon ? '#d97706' : overdue ? '#dc2626' : '#374151', fontWeight: expiringSoon || overdue ? 600 : 400 }}>{formatDate(c.end_date)}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: th.text }}>{c.currency} {parseFloat(c.monthly_rent).toLocaleString()}</div>
-                <div style={{ fontSize: 12, color: th.textSub }}>{c.currency} {parseFloat(c.deposit_amount).toLocaleString()}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: th.text }}>{formatMoney(c.monthly_rent, c.currency)}</div>
+                <div style={{ fontSize: 12, color: th.textSub }}>{Number(c.deposit_amount) > 0 ? formatMoney(c.deposit_amount, c.currency) : '—'}</div>
                 <span style={{ background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-block' }}>{sm.label}</span>
                 <div style={{ display: 'flex', gap: 5 }}>
                   <button onClick={() => setSelected(c)} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${th.cardBorder}`, background: th.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="View"><EyeOutlined style={{ fontSize: 12, color: th.textSub }} /></button>
@@ -773,7 +777,7 @@ export default function ContractsPage() {
           })}
           <div style={{ padding: '12px 20px', borderTop: `1px solid ${th.divider}`, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: th.textMuted }}>
             <span>Showing {filtered.length} of {contracts.length} contracts</span>
-            <span>{isTenantAdmin ? `${active} active · ${draft} pending signature` : `${active} active · ${draft} pending · $${Math.round(totalRent).toLocaleString()}/mo`}</span>
+            <span>{isTenantAdmin ? `${active} active · ${draft} pending signature` : `${active} active · ${draft} pending · ${formatMoney(totalRent)}/mo`}</span>
           </div>
         </div>
       )}

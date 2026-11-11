@@ -28,6 +28,7 @@ import { useAuthReady } from '../../hooks/useAuthReady';
 import PageShell from '../../components/ui/PageShell';
 import PageHeader from '../../components/ui/PageHeader';
 import RoleDashboardHero from '../../components/RoleDashboardHero';
+import { formatMoney } from '../../constants/qatar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const EMPTY_LIST: readonly unknown[] = [];
@@ -333,7 +334,7 @@ export default function TenantDashboard() {
                           {bs.label}
                         </span>
                         <div style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
-                          ${parseFloat(b.total_price || '0').toLocaleString()}
+                          {formatMoney(b.total_price, b.currency)}
                         </div>
                       </div>
                     </div>
@@ -504,7 +505,7 @@ export default function TenantDashboard() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                           <span style={{ background: rm.bg, color: rm.color, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
-                            {m.role === 'TENANT_ADMIN' ? 'Admin' : 'TENANT_EMPLOYEE'}
+                            {m.role === 'TENANT_ADMIN' ? 'Admin' : 'Employee'}
                           </span>
                           <div style={{ width: 7, height: 7, borderRadius: '50%', background: m.status === 'ACTIVE' ? '#22c55e' : '#94a3b8' }} title={m.status} />
                         </div>

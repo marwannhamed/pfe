@@ -9,6 +9,7 @@ import { message } from '../../utils/feedback';
 import type { Booking, BookingDocumentType } from '../../types';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
+import { formatMoney } from '../../constants/qatar';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -156,7 +157,7 @@ export default function BookingDetailPage() {
       <Card title="Booking details" style={{ marginBottom: 20, borderRadius: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
           <div><Text type="secondary">Start</Text><div>{start ? new Date(start).toLocaleString() : '—'}</div></div>
-          <div><Text type="secondary">Total</Text><div>${Number(booking.total_amount ?? booking.total_price ?? 0).toLocaleString()}</div></div>
+          <div><Text type="secondary">Total</Text><div>{formatMoney(booking.total_amount ?? booking.total_price ?? 0, booking.currency)}</div></div>
           <div><Text type="secondary">Space</Text><div>{booking.space?.name}</div></div>
           <div><Text type="secondary">Receptionist</Text><div>{booking.receptionist ? `${booking.receptionist.first_name ?? ''} ${booking.receptionist.last_name ?? ''}`.trim() || 'Assigned' : '—'}</div></div>
         </div>

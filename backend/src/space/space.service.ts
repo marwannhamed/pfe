@@ -300,7 +300,9 @@ export class SpaceService {
     const where = this.access.spaceWhereForList(user, floorId, type, status);
     const spaces = await this.prisma.space.findMany({
       where,
-      include: { features: true },
+      // floor.building lets the dashboards group spaces by site; without it
+      // "Occupancy by Site" and "My Sites" read 0% for every building.
+      include: { features: true, floor: { include: { building: true } } },
       orderBy: { created_at: 'desc' },
     });
     return spaces.map((s) => this.mapSpaceForFrontend(s));

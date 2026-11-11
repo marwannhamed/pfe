@@ -344,6 +344,13 @@ export class BookingService {
     if (!space)
       throw new NotFoundException(`Espace #${dto.space_id} introuvable`);
 
+    const attendeeCount = dto.attendee_count ?? 1;
+    if (space.capacity && attendeeCount > space.capacity) {
+      throw new BadRequestException(
+        `${space.name} holds ${space.capacity} people; ${attendeeCount} were requested`,
+      );
+    }
+
     const startRaw = (dto as any).start_time ?? dto.start_datetime;
     const endRaw = (dto as any).end_time ?? dto.end_datetime;
     const startDate = new Date(startRaw);
@@ -384,6 +391,7 @@ export class BookingService {
         end_time: endDate,
         total_amount: grandTotal,
         total_price: spacePrice,
+        attendee_count: attendeeCount,
         addOns: addonRows.length
           ? {
               create: addonRows.map((a) => ({
@@ -750,8 +758,18 @@ export class BookingService {
   // ─── CANCEL ───────────────────────────────────────────────────
   async cancel(user: AuthUser, id: string, reason: string) {
     const booking = await this.findOneForUser(user, id);
-    if (booking.status === BOOKING_STATUS.CANCELLED) {
-      throw new BadRequestException(`Booking déjà annulé`);
+    // A booking that has ended (or never started) cannot be cancelled — the
+    // same rule the bookings page applies before showing the button.
+    const ended: string[] = [
+      BOOKING_STATUS.CANCELLED,
+      BOOKING_STATUS.COMPLETED,
+      BOOKING_STATUS.REFUSED,
+      BOOKING_STATUS.NO_SHOW,
+    ];
+    if (ended.includes(booking.status)) {
+      throw new BadRequestException(
+        `A ${booking.status} booking cannot be cancelled`,
+      );
     }
 
     const updated = await (this.prisma as any).booking.update({

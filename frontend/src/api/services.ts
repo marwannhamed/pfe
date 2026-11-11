@@ -1,5 +1,6 @@
 ﻿import { api, listFromApi } from './client';
 import type { AxiosResponse } from 'axios';
+import { mapBookings } from '../utils/booking';
 import type {
   AuditLog,
   Booking,
@@ -271,8 +272,11 @@ export const userApi = {
 
 // ─── BOOKINGS ─────────────────────────────────────────────────────────
 export const bookingApi = {
+  // Rows come back with the column names (start_time, user_id, total_amount);
+  // the pages read start_datetime and friends, and the ones that skipped
+  // mapBookings showed "Invalid Date" and an empty "This Week".
   getAll: (params?: { tenantId?: string; spaceId?: string; status?: string; createdBy?: string }) =>
-    dedupedGet<Booking[]>('/bookings', params),
+    dedupedGet<Booking[]>('/bookings', params).then((res) => ({ ...res, data: mapBookings(res.data) })),
   getOne: (id: string) => api.get(`/bookings/${id}`),
   create: (data: unknown) => api.post('/bookings', data),
   update: (id: string, data: unknown) => api.patch(`/bookings/${id}`, data),
@@ -465,8 +469,10 @@ export const analyticsApi = {
   getRevenueByTenant: (from: string, to: string) =>
     api.get(`/analytics/revenue-by-tenant?${analyticsQuery(from, to)}`),
   getOccupancyHeatmap: (siteId: string, from?: string, to?: string) =>
+    // The API names it buildingId (sites are buildings); sending siteId
+    // failed its UUID check: "The value passed as UUID is not a string".
     dedupedGet('/analytics/occupancy-heatmap', {
-      siteId,
+      buildingId: siteId,
       ...(from ? { from } : {}),
       ...(to ? { to } : {}),
     }),

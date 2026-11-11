@@ -15,9 +15,10 @@ function makeService() {
   const empty = () => jest.fn().mockResolvedValue([]);
   const prisma = {
     space: { findMany: empty() },
-    booking: { findMany: empty() },
+    booking: { findMany: empty(), count: jest.fn().mockResolvedValue(0) },
     invoice: { findMany: empty() },
-    maintenanceTicket: { findMany: empty() },
+    maintenanceTicket: { findMany: empty(), groupBy: empty() },
+    leaseContract: { findMany: empty() },
   };
   const access = { assertBuildingReadable: jest.fn() };
   return {
@@ -29,6 +30,24 @@ function makeService() {
 const whereOf = (fn: jest.Mock) => fn.mock.calls[0][0]?.where;
 const FROM = new Date('2026-01-01');
 const TO = new Date('2026-02-01');
+
+// A row is in an organisation's reach when the organisation holds it (a
+// renter's own bookings, invoices, tickets, leases) or when it sits in one of
+// the organisation's buildings (a property company's portfolio).
+const inBuildingsOf = (tenantId: string) => ({
+  space: { floor: { building: { tenant_id: tenantId } } },
+});
+const heldOrHosted = (tenantId: string, hosted: object) => ({
+  OR: [{ tenant_id: tenantId }, hosted],
+});
+const bookingScope = (t: string) => heldOrHosted(t, inBuildingsOf(t));
+const ticketScope = bookingScope;
+const invoiceScope = (t: string) =>
+  heldOrHosted(t, { bookings: { some: inBuildingsOf(t) } });
+const contractScope = (t: string) =>
+  heldOrHosted(t, {
+    invoices: { some: { bookings: { some: inBuildingsOf(t) } } },
+  });
 
 describe('AnalyticsService — dashboards cannot aggregate other organisations', () => {
   // Each of these computed a tenant filter and then never applied it to the
@@ -56,9 +75,9 @@ describe('AnalyticsService — dashboards cannot aggregate other organisations',
       TO,
     );
 
-    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject({
-      tenant_id: 'tenant-a',
-    });
+    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject(
+      ticketScope('tenant-a'),
+    );
   });
 
   it('scopes top spaces with no tenantId supplied', async () => {
@@ -70,9 +89,9 @@ describe('AnalyticsService — dashboards cannot aggregate other organisations',
       TO,
     );
 
-    expect(whereOf(prisma.booking.findMany)).toMatchObject({
-      tenant_id: 'tenant-a',
-    });
+    expect(whereOf(prisma.booking.findMany)).toMatchObject(
+      bookingScope('tenant-a'),
+    );
   });
 
   it('scopes revenue-by-tenant to the caller’s own organisation', async () => {
@@ -86,9 +105,9 @@ describe('AnalyticsService — dashboards cannot aggregate other organisations',
       TO,
     );
 
-    expect(whereOf(prisma.invoice.findMany)).toMatchObject({
-      tenant_id: 'tenant-a',
-    });
+    expect(whereOf(prisma.invoice.findMany)).toMatchObject(
+      invoiceScope('tenant-a'),
+    );
   });
 
   it('still lets the platform owner aggregate across organisations', async () => {
@@ -112,9 +131,71 @@ describe('AnalyticsService — dashboards cannot aggregate other organisations',
       'tenant-b',
     );
 
-    expect(whereOf(prisma.booking.findMany)).toMatchObject({
-      tenant_id: 'tenant-b',
-    });
+    expect(whereOf(prisma.booking.findMany)).toMatchObject(
+      bookingScope('tenant-b'),
+    );
+  });
+});
+
+describe('AnalyticsService — a property company’s trends run through its buildings', () => {
+  // Invoices, bookings, tickets and leases carry the renter's tenant_id. These
+  // queries filtered on tenant_id alone, so a property manager's Analytics
+  // page showed an empty revenue trend, no bookings by status and a zero
+  // forecast while the lists elsewhere showed the real rows.
+  const manager = userWith(USER_ROLE.MANAGER, 'tenant-a');
+
+  it('reaches revenue through the bookings in its buildings', async () => {
+    const { prisma, service } = makeService();
+    await service.getRevenueTrend(manager, FROM, TO);
+    expect(whereOf(prisma.invoice.findMany)).toMatchObject(
+      invoiceScope('tenant-a'),
+    );
+  });
+
+  it('counts bookings by status in its buildings', async () => {
+    const { prisma, service } = makeService();
+    await service.getBookingsByStatus(manager, FROM, TO);
+    for (const [args] of prisma.booking.count.mock.calls) {
+      expect(args.where).toMatchObject(bookingScope('tenant-a'));
+    }
+  });
+
+  it('builds the bookings trend from its buildings', async () => {
+    const { prisma, service } = makeService();
+    await service.getBookingsTrend(manager, FROM, TO);
+    expect(whereOf(prisma.booking.findMany)).toMatchObject(
+      bookingScope('tenant-a'),
+    );
+  });
+
+  it('forecasts from the leases it hosts', async () => {
+    const { prisma, service } = makeService();
+    await service.getRevenueForecast(manager);
+    expect(whereOf(prisma.leaseContract.findMany)).toMatchObject(
+      contractScope('tenant-a'),
+    );
+  });
+
+  it('scores maintenance risk on the tickets in its buildings', async () => {
+    const { prisma, service } = makeService();
+    await service.getPredictiveMaintenance(manager);
+    expect(whereOf(prisma.maintenanceTicket.findMany)).toMatchObject(
+      ticketScope('tenant-a'),
+    );
+  });
+
+  it('keeps a renter on its own rows', async () => {
+    const { prisma, service } = makeService();
+    await service.getRevenueTrend(
+      userWith(USER_ROLE.TENANT_ADMIN, 'renter-x'),
+      FROM,
+      TO,
+    );
+    // The building branch names the renter too, and a renter owns no
+    // buildings, so it adds nothing: the renter sees only what it holds.
+    expect(whereOf(prisma.invoice.findMany)).toMatchObject(
+      invoiceScope('renter-x'),
+    );
   });
 });
 

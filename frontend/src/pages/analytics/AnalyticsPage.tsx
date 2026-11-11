@@ -28,10 +28,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import {
-  DollarOutlined,
   CalendarOutlined,
   HomeOutlined,
   ToolOutlined,
@@ -46,6 +46,7 @@ import { usePageTheme } from '../../hooks/usePageTheme';
 import PageShell from '../../components/ui/PageShell';
 import { AnalyticsOverview, RevenueTrend, BookingStatusData, SpaceUtilization, AnalyticsMaintenance, TopSpace, RevenueByTenant } from '../../types';
 import dayjs from 'dayjs';
+import { DEFAULT_CURRENCY, formatMoney, formatMoneyCompact } from '../../constants/qatar';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -106,7 +107,10 @@ export default function AnalyticsPage() {
 
       setOverview(overviewRes.data);
       setRevenueTrend(revenueRes.data);
-      setBookingStatus(bookingRes.data);
+      // The endpoint returns counts only; the table's Percentage column read 0% on every row.
+      const statusRows: BookingStatusData[] = bookingRes.data ?? [];
+      const statusTotal = statusRows.reduce((sum, r) => sum + r.count, 0);
+      setBookingStatus(statusRows.map((r) => ({ ...r, percentage: statusTotal ? Math.round((r.count / statusTotal) * 100) : 0 })));
       setSpaceUtilization(utilizationRes.data ?? []);
       setMaintenanceStats(maintenanceRes.data);
       setTopSpaces(topSpacesRes.data);
@@ -211,7 +215,7 @@ export default function AnalyticsPage() {
       title: 'Revenue',
       dataIndex: 'revenue',
       key: 'revenue',
-      render: (revenue: string) => <Text strong>${revenue}</Text>,
+      render: (revenue: string) => <Text strong>{formatMoney(revenue)}</Text>,
     },
   ];
 
@@ -268,8 +272,8 @@ export default function AnalyticsPage() {
                 <Statistic
                   title="Total Revenue"
                   value={overview.revenue?.current ?? 0}
-                  prefix={<DollarOutlined />}
-                  precision={2}
+                  prefix={DEFAULT_CURRENCY}
+                  precision={0}
                   styles={{ content: { color: '#3f8600'  } }}
                 />
               </Card>
@@ -314,8 +318,8 @@ export default function AnalyticsPage() {
                   <AreaChart data={revenueTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                    <YAxis tickFormatter={(v) => formatMoneyCompact(v)} width={92} />
+                    <Tooltip formatter={(value) => [formatMoney(Number(value)), 'Revenue']} />
                     <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#2563eb" fillOpacity={0.3} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -330,16 +334,18 @@ export default function AnalyticsPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }) => (percent >= 0.05 ? `${(percent * 100).toFixed(0)}%` : '')}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="count"
+                      nameKey="status"
                     >
                       {bookingStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value, name) => [value, String(name).replace(/_/g, ' ')]} />
+                    <Legend formatter={(value) => String(value).replace(/_/g, ' ')} />
                   </PieChart>
                 </ResponsiveContainer>
               </Card>
@@ -422,8 +428,8 @@ export default function AnalyticsPage() {
                   <BarChart data={revenueByTenant}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                    <YAxis tickFormatter={(v) => formatMoneyCompact(v)} width={92} />
+                    <Tooltip formatter={(value) => [formatMoney(Number(value)), 'Revenue']} />
                     <Bar dataKey="revenue" fill="#8b5cf6" />
                   </BarChart>
                 </ResponsiveContainer>

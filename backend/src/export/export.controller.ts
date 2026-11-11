@@ -45,6 +45,8 @@ export class ExportController {
     res.end();
   }
 
+  // TENANT_ADMIN exports its own company's rows: scopeFor() pins the renter to
+  // its tenant_id, and the renter portal offers these four exports.
   @Get('bookings')
   @UseGuards(RolesGuard)
   @Roles(
@@ -52,6 +54,7 @@ export class ExportController {
     USER_ROLE.CLIENT_ADMIN,
     USER_ROLE.MANAGER,
     USER_ROLE.FINANCE,
+    USER_ROLE.TENANT_ADMIN,
   )
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   @ApiQuery({ name: 'from', required: false })
@@ -83,6 +86,7 @@ export class ExportController {
     USER_ROLE.CLIENT_ADMIN,
     USER_ROLE.MANAGER,
     USER_ROLE.FINANCE,
+    USER_ROLE.TENANT_ADMIN,
   )
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   @ApiQuery({ name: 'from', required: false })
@@ -114,6 +118,7 @@ export class ExportController {
     USER_ROLE.CLIENT_ADMIN,
     USER_ROLE.MANAGER,
     USER_ROLE.FINANCE,
+    USER_ROLE.TENANT_ADMIN,
   )
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   @ApiQuery({ name: 'from', required: false })
@@ -171,6 +176,7 @@ export class ExportController {
     USER_ROLE.CLIENT_ADMIN,
     USER_ROLE.MANAGER,
     USER_ROLE.MAINTENANCE,
+    USER_ROLE.TENANT_ADMIN,
   )
   @ApiQuery({ name: 'format', required: false, enum: ['xlsx', 'csv'] })
   @ApiQuery({ name: 'from', required: false })

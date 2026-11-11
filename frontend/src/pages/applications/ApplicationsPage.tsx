@@ -18,6 +18,7 @@ import PageShell from '../../components/ui/PageShell';
 import { usePageTheme } from '../../hooks/usePageTheme';
 import { asApiError } from '../../utils/errors';
 import type { TenantApplication } from '../../types';
+import { humanize } from '../../utils/labels';
 
 const { Text, Paragraph } = Typography;
 
@@ -178,7 +179,7 @@ export default function ApplicationsPage() {
           placeholder="Select space"
           value={spaceId || undefined}
           onChange={v => setSpaceId(v)}
-          options={spaces.map(s => ({ value: s.id, label: `${s.name} (${s.type})` }))}
+          options={spaces.map(s => ({ value: s.id, label: `${s.name} (${humanize(s.type)})` }))}
         />
         <Button type="primary" block loading={createLink.isPending} disabled={!spaceId} onClick={() => createLink.mutate()}>
           Generate link
@@ -245,7 +246,7 @@ export default function ApplicationsPage() {
                 <div>
                   {row.space?.name && (
                     <Text type="secondary">
-                      {row.space.name} ({row.space.type})
+                      {row.space.name} ({humanize(row.space.type)})
                     </Text>
                   )}
                 </div>

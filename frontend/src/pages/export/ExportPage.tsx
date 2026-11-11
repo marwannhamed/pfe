@@ -25,13 +25,13 @@ interface ExportCard {
 }
 
 const EXPORTS: ExportCard[] = [
-  { endpoint: 'bookings',    icon: '📅', title: 'Bookings',            description: 'Your bookings with space, dates and pricing',                    color: '#2563eb', bg: '#eff6ff', hasDate: true,  roles: ['SUPER_ADMIN','MANAGER','TENANT_ADMIN','TENANT_EMPLOYEE'] },
-  { endpoint: 'invoices',    icon: '🧾', title: 'Invoices',            description: 'Your invoices with amounts, status and due dates',                color: '#7c3aed', bg: '#f5f3ff', hasDate: true,  roles: ['SUPER_ADMIN','FINANCE','MANAGER','TENANT_ADMIN'] },
-  { endpoint: 'payments',    icon: '💳', title: 'Payments',            description: 'Your recorded payments with invoice and method details',           color: '#059669', bg: '#f0fdf4', hasDate: true,  roles: ['SUPER_ADMIN','FINANCE','TENANT_ADMIN'] },
-  { endpoint: 'maintenance', icon: '🔧', title: 'Maintenance Tickets', description: 'Your maintenance requests and their status',                     color: '#dc2626', bg: '#fef2f2', hasDate: true,  roles: ['TENANT_ADMIN','TENANT_EMPLOYEE'] },
-  { endpoint: 'tenants',     icon: '🏗️', title: 'Tenants',             description: 'All tenants with contact info, status and activity counts',     color: '#0891b2', bg: '#ecfeff', hasDate: false, roles: ['SUPER_ADMIN'] },
-  { endpoint: 'spaces',      icon: '🏢', title: 'Spaces',              description: 'All spaces with type, capacity, pricing and booking counts',    color: '#d97706', bg: '#fffbeb', hasDate: false, roles: ['SUPER_ADMIN','MANAGER'] },
-  { endpoint: 'maintenance', icon: '🔧', title: 'Maintenance Tickets', description: 'All tickets with priority, status, assignee and resolution time', color: '#dc2626', bg: '#fef2f2', hasDate: true,  roles: ['SUPER_ADMIN','MANAGER','MAINTENANCE'] },
+  { endpoint: 'bookings',    icon: '📅', title: 'Bookings',            description: 'Your bookings with space, dates and pricing',                    color: '#2563eb', bg: '#eff6ff', hasDate: true,  roles: ['SUPER_ADMIN','CLIENT_ADMIN','MANAGER','FINANCE','TENANT_ADMIN'] },
+  { endpoint: 'invoices',    icon: '🧾', title: 'Invoices',            description: 'Your invoices with amounts, status and due dates',                color: '#7c3aed', bg: '#f5f3ff', hasDate: true,  roles: ['SUPER_ADMIN','CLIENT_ADMIN','FINANCE','MANAGER','TENANT_ADMIN'] },
+  { endpoint: 'payments',    icon: '💳', title: 'Payments',            description: 'Your recorded payments with invoice and method details',           color: '#059669', bg: '#f0fdf4', hasDate: true,  roles: ['SUPER_ADMIN','CLIENT_ADMIN','MANAGER','FINANCE','TENANT_ADMIN'] },
+  { endpoint: 'maintenance', icon: '🔧', title: 'Maintenance Tickets', description: 'Your maintenance requests and their status',                     color: '#dc2626', bg: '#fef2f2', hasDate: true,  roles: ['TENANT_ADMIN'] },
+  { endpoint: 'tenants',     icon: '🏗️', title: 'Tenants',             description: 'All tenants with contact info, status and activity counts',     color: '#0891b2', bg: '#ecfeff', hasDate: false, roles: ['SUPER_ADMIN','FINANCE'] },
+  { endpoint: 'spaces',      icon: '🏢', title: 'Spaces',              description: 'All spaces with type, capacity, pricing and booking counts',    color: '#d97706', bg: '#fffbeb', hasDate: false, roles: ['SUPER_ADMIN','CLIENT_ADMIN','MANAGER'] },
+  { endpoint: 'maintenance', icon: '🔧', title: 'Maintenance Tickets', description: 'All tickets with priority, status, assignee and resolution time', color: '#dc2626', bg: '#fef2f2', hasDate: true,  roles: ['SUPER_ADMIN','CLIENT_ADMIN','MANAGER','MAINTENANCE'] },
 ];
 
 // ─── Download helper ──────────────────────────────────────────────────────────

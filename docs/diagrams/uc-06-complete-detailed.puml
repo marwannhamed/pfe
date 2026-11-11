@@ -1,0 +1,497 @@
+@startuml uc-06-complete-detailed
+' ============================================================================
+'  LeaseManager — common style header (identical at the top of every diagram)
+'  Arial, navy ink, one light fill per element family, no shadows.
+'  Edit here, then run tools/render.py: it stamps this block on every file.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam defaultFontColor #1B2631
+skinparam defaultTextAlignment center
+skinparam classAttributeIconSize 0
+skinparam padding 2
+skinparam TitleFontSize 18
+skinparam TitleFontStyle bold
+skinparam TitleFontColor #1F3A5F
+skinparam TitleBorderThickness 0
+skinparam ArrowColor #3E5470
+skinparam ArrowThickness 1.3
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #2C3E50
+skinparam ArrowFontStyle plain
+skinparam stereotypeFontSize 11
+skinparam stereotypeFontColor #4A6382
+' --- notes and legends -------------------------------------------------------
+skinparam NoteBackgroundColor #FFF9E3
+skinparam NoteBorderColor #C9A63C
+skinparam NoteFontSize 12
+skinparam NoteFontColor #3D3420
+skinparam LegendBackgroundColor #FFF9E3
+skinparam LegendBorderColor #C9A63C
+skinparam LegendFontSize 12
+skinparam LegendFontColor #3D3420
+' --- use case diagrams ---------------------------------------------------------
+skinparam ActorBorderColor #1F3A5F
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorFontStyle bold
+skinparam ActorFontSize 13
+skinparam ActorBorderThickness 1.6
+skinparam UsecaseBorderColor #2E5C8A
+skinparam UsecaseBackgroundColor #EAF2FB
+skinparam UsecaseBorderThickness 1.3
+skinparam UsecaseFontColor #1B2631
+skinparam RectangleBorderColor #1F3A5F
+skinparam RectangleBorderThickness 1.8
+skinparam RectangleBackgroundColor #FBFCFE
+skinparam RectangleFontColor #1F3A5F
+skinparam RectangleFontStyle bold
+skinparam RectangleFontSize 15
+skinparam PackageBorderColor #8FA7C2
+skinparam PackageBackgroundColor #F2F6FB
+skinparam PackageFontColor #1F3A5F
+skinparam PackageFontStyle bold
+skinparam PackageFontSize 13
+skinparam PackageBorderThickness 1.2
+' --- class diagrams ------------------------------------------------------------
+skinparam ClassBorderColor #2E5C8A
+skinparam ClassBorderThickness 1.3
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassHeaderBackgroundColor #DCE8F5
+skinparam ClassFontStyle bold
+skinparam ClassFontColor #1F3A5F
+skinparam ClassFontSize 13
+skinparam ClassAttributeFontSize 12
+skinparam ClassAttributeFontColor #1B2631
+skinparam ClassStereotypeFontColor #4A6382
+skinparam ClassBorderColor<<enumeration>> #B07D1A
+skinparam ClassHeaderBackgroundColor<<enumeration>> #FBEBC8
+skinparam ClassFontColor<<enumeration>> #5C3F00
+skinparam ClassStereotypeFontColor<<enumeration>> #8A6416
+skinparam ClassBorderColor<<service>> #3B7A50
+skinparam ClassHeaderBackgroundColor<<service>> #DDEFE2
+skinparam ClassFontColor<<service>> #1E4A2C
+skinparam ClassStereotypeFontColor<<service>> #3B7A50
+skinparam ClassBorderColor<<repository>> #6B4E9B
+skinparam ClassHeaderBackgroundColor<<repository>> #ECE5F6
+skinparam ClassFontColor<<repository>> #3E2A63
+skinparam ClassStereotypeFontColor<<repository>> #6B4E9B
+skinparam ClassBorderColor<<external>> #7A7F87
+skinparam ClassHeaderBackgroundColor<<external>> #EEF0F2
+skinparam ClassFontColor<<external>> #3B4048
+' --- sequence diagrams ---------------------------------------------------------
+skinparam SequenceMessageAlign left
+skinparam SequenceArrowThickness 1.3
+skinparam SequenceTitleFontSize 18
+skinparam SequenceParticipantBorderColor #2E5C8A
+skinparam SequenceParticipantBackgroundColor #DCE8F5
+skinparam SequenceParticipantFontStyle bold
+skinparam SequenceParticipantFontColor #1F3A5F
+skinparam SequenceParticipantBorderThickness 1.3
+skinparam SequenceStereotypeFontStyle italic
+skinparam SequenceStereotypeFontColor #4A6382
+skinparam SequenceStereotypeFontSize 11
+skinparam SequenceMessageFontColor #1B2631
+skinparam SequenceActorBorderColor #1F3A5F
+skinparam SequenceActorBackgroundColor #FFFFFF
+skinparam SequenceActorFontStyle bold
+skinparam SequenceLifeLineBorderColor #8FA7C2
+skinparam SequenceLifeLineBackgroundColor #EAF2FB
+skinparam SequenceGroupBorderColor #4A6382
+skinparam SequenceGroupBorderThickness 1.2
+skinparam SequenceGroupBackgroundColor #E4ECF5
+skinparam SequenceGroupHeaderFontColor #1F3A5F
+skinparam SequenceGroupFontStyle bold
+skinparam SequenceBoxBorderColor #B8C7D9
+skinparam SequenceBoxFontColor #1F3A5F
+skinparam SequenceBoxFontStyle bold
+skinparam SequenceDividerBorderColor #4A6382
+skinparam SequenceDividerBackgroundColor #EEF3F9
+skinparam SequenceReferenceBorderColor #4A6382
+skinparam SequenceReferenceHeaderBackgroundColor #E4ECF5
+skinparam BoundaryBorderColor #1F3A5F
+skinparam BoundaryFontStyle bold
+skinparam BoundaryFontColor #1F3A5F
+skinparam BoundaryBackgroundColor #DCE8F5
+skinparam ControlBorderColor #1F3A5F
+skinparam ControlFontStyle bold
+skinparam ControlFontColor #1F3A5F
+skinparam ControlBackgroundColor #DCE8F5
+skinparam EntityBorderColor #1F3A5F
+skinparam EntityFontStyle bold
+skinparam EntityBackgroundColor #DCE8F5
+skinparam DatabaseBorderColor #6B4E9B
+skinparam DatabaseFontColor #3E2A63
+skinparam DatabaseBackgroundColor #ECE5F6
+skinparam CollectionsBorderColor #2E5C8A
+skinparam CollectionsBackgroundColor #DCE8F5
+' --- activity and state diagrams -----------------------------------------------
+skinparam ActivityBorderColor #2E5C8A
+skinparam ActivityBackgroundColor #EAF2FB
+skinparam ActivityBorderThickness 1.3
+skinparam ActivityFontColor #1B2631
+skinparam ActivityDiamondBorderColor #B07D1A
+skinparam ActivityDiamondBackgroundColor #FBEBC8
+skinparam ActivityDiamondFontColor #3D3420
+skinparam ActivityStartColor #1F3A5F
+skinparam ActivityEndColor #1F3A5F
+skinparam ActivityBarColor #1F3A5F
+skinparam SwimlaneBorderColor #8FA7C2
+skinparam SwimlaneBorderThickness 1.4
+skinparam SwimlaneTitleFontColor #1F3A5F
+skinparam SwimlaneTitleFontStyle bold
+skinparam SwimlaneTitleFontSize 14
+skinparam StateBorderColor #2E5C8A
+skinparam StateBackgroundColor #EAF2FB
+skinparam StateBorderThickness 1.3
+skinparam StateFontStyle bold
+skinparam StateFontColor #1F3A5F
+skinparam StateAttributeFontColor #1B2631
+skinparam StateAttributeFontStyle plain
+skinparam StateAttributeFontSize 12
+skinparam StateStartColor #1F3A5F
+skinparam StateEndColor #1F3A5F
+' --- deployment and component diagrams -----------------------------------------
+skinparam NodeBorderColor #1F3A5F
+skinparam NodeBackgroundColor #F2F6FB
+skinparam NodeFontColor #1F3A5F
+skinparam NodeBorderThickness 1.4
+skinparam ComponentBorderColor #2E5C8A
+skinparam ComponentBackgroundColor #DCE8F5
+skinparam ArtifactBorderColor #2E5C8A
+skinparam ArtifactBackgroundColor #FFFFFF
+skinparam CloudBorderColor #7A7F87
+skinparam CloudBackgroundColor #F3F4F6
+skinparam StorageBorderColor #6B4E9B
+skinparam StorageBackgroundColor #ECE5F6
+skinparam FolderBorderColor #2E5C8A
+skinparam FolderBackgroundColor #EEF4FB
+skinparam FolderBorderThickness 1.3
+skinparam FolderFontColor #1B2631
+skinparam FrameBorderColor #8FA7C2
+skinparam FrameBackgroundColor #FBFCFE
+' ======================== end of style header =========================
+
+' Generated by tools/gen_usecase.py from one use case model; edit the generator, not this file.
+left to right direction
+skinparam packageStyle rectangle
+skinparam nodesep 8
+skinparam ranksep 200
+skinparam linetype polyline
+title Detailed use case diagram — every use case of LeaseManager
+
+actor "Signed-in User" as SU <<abstract>>
+actor "Visitor" as VIS
+actor "Tenant Administrator" as TA
+actor "Tenant Employee" as TE
+actor "Company Administrator" as CA
+actor "Property Manager" as PM
+actor "Receptionist" as RC
+actor "Finance Officer" as FI
+actor "Maintenance Technician" as MT
+actor "Platform Owner" as PO
+
+rectangle "LeaseManager" {
+  package "Account and notifications" {
+    usecase "Authenticate" as ACC_auth
+    usecase "Log out" as ACC_logout
+    usecase "Consult own dashboard" as ACC_dash
+    usecase "Search the platform" as ACC_search
+    usecase "Manage own profile" as ACC_profile
+    usecase "Manage active sessions" as ACC_sessions
+    usecase "Consult notifications" as ACC_notif
+    usecase "Reset a forgotten\npassword" as ACC_reset
+    usecase "Change password" as ACC_pwd
+    usecase "Upload a profile photo" as ACC_photo
+    usecase "Revoke a session" as ACC_revoke
+    usecase "Consult login activity" as ACC_activity
+    usecase "Set notification\npreferences" as ACC_prefs
+  }
+  package "Public catalogue" {
+    usecase "Browse the public map" as PUB_map
+    usecase "Search with the\nAI space finder" as PUB_ai
+    usecase "Consult pricing\nand offers" as PUB_pricing
+    usecase "Submit a booking\napplication" as PUB_apply
+    usecase "Submit a company\napplication (Typeform)" as PUB_company
+    usecase "Register a\nrenter company" as PUB_register
+    usecase "Consult space details" as PUB_details
+    usecase "Take the virtual tour" as PUB_tour
+    usecase "Choose add-on services" as PUB_addons
+  }
+  package "Tenant workspace" {
+    usecase "Browse the floor map" as TEN_floor
+    usecase "Book a space" as TEN_book
+    usecase "Follow own bookings" as TEN_mybookings
+    usecase "Check in and\ncheck out" as TEN_checkin
+    usecase "Report a maintenance\nproblem" as TEN_report
+    usecase "Follow own\nmaintenance tickets" as TEN_tickets
+    usecase "Ask the AI\ntenant assistant" as TEN_assistant
+    usecase "Chat with support\n(Crisp)" as TEN_support
+    usecase "Order add-on services" as TEN_order
+    usecase "Cancel a booking" as TEN_cancel
+    usecase "Get an AI triage\nsuggestion" as TEN_triage
+    usecase "Cancel a ticket" as TEN_cancelticket
+    usecase "Check availability\nand capacity" as TEN_check
+  }
+  package "Tenant administration" {
+    usecase "Manage team members" as TAD_team
+    usecase "Consult the company's\nbookings" as TAD_bookings
+    usecase "Consult lease contracts" as TAD_contracts
+    usecase "Sign a lease contract" as TAD_sign
+    usecase "Consult invoices" as TAD_invoices
+    usecase "Report a payment" as TAD_pay
+    usecase "Export the\ncompany's data" as TAD_export
+    usecase "Consult BI reports\n(Power BI, Tableau)" as TAD_reports
+    usecase "Configure the\nBI report embeds" as TAD_embeds
+    usecase "Invite a team member" as TAD_invite
+    usecase "Remove a team member" as TAD_remove
+    usecase "Consult the financial\nsummary" as TAD_summary
+    usecase "Attach a cheque scan" as TAD_cheque
+  }
+  package "Property portfolio" {
+    usecase "Manage buildings" as POR_buildings
+    usecase "Manage floors" as POR_floors
+    usecase "Manage spaces" as POR_spaces
+    usecase "Manage add-on services" as POR_addons
+    usecase "Manage promotion codes" as POR_promo
+    usecase "Upload a floor plan" as POR_plan
+    usecase "Publish a space on\nthe public map" as POR_publish
+    usecase "Position a space\non the floor map" as POR_position
+    usecase "Upload space photos" as POR_photos
+  }
+  package "Applications and bookings" {
+    usecase "Review booking\napplications" as APP_review
+    usecase "Send a company\napplication link" as APP_link
+    usecase "Review company\napplications" as APP_companies
+    usecase "Process booking\nrequests" as APP_requests
+    usecase "Consult the\nreception queues" as APP_queues
+    usecase "Conduct the\nin-person intake" as APP_intake
+    usecase "Finalize a\nlease booking" as APP_finalize
+    usecase "Accept the application" as APP_accept
+    usecase "Refuse the application" as APP_refuse
+    usecase "Approve the company\napplication" as APP_approve
+    usecase "Reject the company\napplication" as APP_reject
+    usecase "Approve a booking" as APP_bkapprove
+    usecase "Reject a booking" as APP_bkreject
+    usecase "Confirm the phone call" as APP_call
+    usecase "Mark the applicant\nunreachable" as APP_unreach
+    usecase "Mark the site\nvisit complete" as APP_visit
+    usecase "Upload supporting\ndocuments" as APP_docs
+    usecase "Check the signed\nlease document" as APP_checkdoc
+  }
+  package "Leases and billing" {
+    usecase "Delete an invoice" as BIL_delete
+    usecase "Manage lease\ncontracts" as LEA_manage
+    usecase "Manage invoices" as BIL_invoices
+    usecase "Manage payments" as BIL_payments
+    usecase "Follow contract\nrenewals" as LEA_renewals
+    usecase "Create a contract" as LEA_create
+    usecase "Renew a contract" as LEA_renew
+    usecase "Terminate a contract" as LEA_terminate
+    usecase "Ask the AI\nlease assistant" as LEA_assistant
+    usecase "Create an invoice" as BIL_create
+    usecase "Add invoice lines" as BIL_lines
+    usecase "Send an invoice" as BIL_send
+    usecase "Cancel an invoice" as BIL_cancel
+    usecase "Record a payment" as BIL_record
+    usecase "Confirm a reported\npayment" as BIL_confirm
+    usecase "Refund a payment" as BIL_refund
+  }
+  package "Maintenance" {
+    usecase "Supervise maintenance" as MAI_supervise
+    usecase "Consult the\nrisk scoring" as MAI_risk
+    usecase "Handle maintenance\ntickets" as MAI_handle
+    usecase "Assign a technician" as MAI_assign
+    usecase "Accept an\nunassigned ticket" as MAI_accept
+    usecase "Start the work" as MAI_start
+    usecase "Resolve a ticket" as MAI_resolve
+    usecase "Close a ticket" as MAI_close
+  }
+  package "Analytics and reporting" {
+    usecase "Consult analytics" as ANA_analytics
+    usecase "Export data\n(CSV, Excel)" as ANA_export
+    usecase "Consult BI reports\n(Power BI, Tableau)" as ANA_reports
+    usecase "Configure the\nBI report embeds" as ANA_embeds
+    usecase "Consult the\noccupancy heatmap" as ANA_heat
+    usecase "Consult the\nrevenue forecast" as ANA_forecast
+  }
+  package "Company and staff" {
+    usecase "Edit the\ncompany profile" as ORG_edit
+    usecase "Delete a user account" as ORG_delete
+    usecase "Consult the\ncompany profile" as ORG_view
+    usecase "Manage staff accounts" as ORG_staff
+    usecase "Invite a staff member" as ORG_invite
+  }
+  package "Platform administration" {
+    usecase "Administer organisations" as PLA_orgs
+    usecase "Administer all\nuser accounts" as PLA_users
+    usecase "Oversee the operations\nof every organisation" as PLA_oversee
+    usecase "Consult audit logs" as PLA_audit
+    usecase "Supervise e-mail\ndelivery" as PLA_mail
+    usecase "Monitor the\nsystem health" as PLA_health
+    usecase "Send a notification" as PLA_notify
+    usecase "Provision a\nproperty company" as PLA_provision
+    usecase "Suspend or reactivate\nan organisation" as PLA_suspend
+  }
+}
+
+' actor columns, top to bottom; a specialised role sits below its parent
+TA <|- TE : " "
+CA <|- PM : " "
+VIS -[hidden]> TA
+TE -[hidden]> CA
+PM -[hidden]> RC
+RC -[hidden]> FI
+FI -[hidden]> MT
+MT -[hidden]> PO
+' every role specialises the abstract Signed-in User (its own column)
+SU <|-- TA
+SU <|-- CA
+SU <|-- RC
+SU <|-- FI
+SU <|-- MT
+SU <|-- PO
+
+SU --- ACC_auth
+SU --- ACC_logout
+SU --- ACC_dash
+SU --- ACC_search
+SU --- ACC_profile
+SU --- ACC_sessions
+SU --- ACC_notif
+VIS -- PUB_map
+VIS -- PUB_ai
+VIS -- PUB_pricing
+VIS -- PUB_apply
+VIS -- PUB_company
+VIS -- PUB_register
+TA -- TAD_team
+TA -- TAD_bookings
+TA -- TAD_contracts
+TA -- TAD_sign
+TA -- TAD_invoices
+TA -- TAD_pay
+TA -- TAD_export
+TA -- TAD_reports
+TA -- TAD_embeds
+TE -- TEN_floor
+TE -- TEN_book
+TE -- TEN_mybookings
+TE -- TEN_checkin
+TE -- TEN_report
+TE -- TEN_tickets
+TE -- TEN_assistant
+TE -- TEN_support
+CA -- ORG_edit
+CA -- ORG_delete
+CA -- BIL_delete
+PM -- POR_buildings
+PM -- POR_floors
+PM -- POR_spaces
+PM -- POR_addons
+PM -- POR_promo
+PM -- APP_review
+PM -- APP_link
+PM -- APP_companies
+PM -- APP_requests
+PM -- APP_queues
+PM -- APP_intake
+PM -- APP_finalize
+PM -- LEA_manage
+PM -- BIL_invoices
+PM -- BIL_payments
+PM -- MAI_supervise
+PM -- MAI_risk
+PM -- ANA_analytics
+PM -- ANA_export
+PM -- ANA_reports
+PM -- ANA_embeds
+PM -- ORG_view
+PM -- ORG_staff
+RC -- APP_queues
+RC -- APP_intake
+RC -- TEN_checkin
+FI -- BIL_invoices
+FI -- BIL_payments
+FI -- BIL_delete
+FI -- LEA_renewals
+FI -- ANA_analytics
+FI -- ANA_export
+FI -- ANA_reports
+MT -- MAI_handle
+MT -- MAI_risk
+PO -- PLA_orgs
+PO -- PLA_users
+PO -- PLA_oversee
+PO -- APP_companies
+PO -- PLA_audit
+PO -- PLA_mail
+PO -- PLA_health
+PO -- PLA_notify
+PO -- ANA_analytics
+PO -- ANA_export
+PO -- ANA_reports
+PO -- ANA_embeds
+
+ACC_auth <.. ACC_reset : <<extend>>
+ACC_profile <.. ACC_pwd : <<extend>>
+ACC_profile <.. ACC_photo : <<extend>>
+ACC_sessions <.. ACC_revoke : <<extend>>
+ACC_sessions <.. ACC_activity : <<extend>>
+ACC_notif <.. ACC_prefs : <<extend>>
+PUB_map <.. PUB_details : <<extend>>
+PUB_map <.. PUB_tour : <<extend>>
+PUB_apply <.. PUB_addons : <<extend>>
+TEN_book <.. TEN_order : <<extend>>
+TEN_mybookings <.. TEN_cancel : <<extend>>
+TEN_report <.. TEN_triage : <<extend>>
+TEN_tickets <.. TEN_cancelticket : <<extend>>
+TAD_team <.. TAD_invite : <<extend>>
+TAD_team <.. TAD_remove : <<extend>>
+TAD_invoices <.. TAD_summary : <<extend>>
+TAD_pay <.. TAD_cheque : <<extend>>
+POR_floors <.. POR_plan : <<extend>>
+POR_spaces <.. POR_publish : <<extend>>
+POR_spaces <.. POR_position : <<extend>>
+POR_spaces <.. POR_photos : <<extend>>
+APP_review <.. APP_accept : <<extend>>
+APP_review <.. APP_refuse : <<extend>>
+APP_companies <.. APP_approve : <<extend>>
+APP_companies <.. APP_reject : <<extend>>
+APP_requests <.. APP_bkapprove : <<extend>>
+APP_requests <.. APP_bkreject : <<extend>>
+APP_intake <.. APP_call : <<extend>>
+APP_intake <.. APP_unreach : <<extend>>
+APP_intake <.. APP_visit : <<extend>>
+APP_intake <.. APP_docs : <<extend>>
+LEA_manage <.. LEA_create : <<extend>>
+LEA_manage <.. LEA_renew : <<extend>>
+LEA_manage <.. LEA_terminate : <<extend>>
+LEA_manage <.. LEA_assistant : <<extend>>
+BIL_invoices <.. BIL_create : <<extend>>
+BIL_invoices <.. BIL_lines : <<extend>>
+BIL_invoices <.. BIL_send : <<extend>>
+BIL_invoices <.. BIL_cancel : <<extend>>
+BIL_payments <.. BIL_record : <<extend>>
+BIL_payments <.. BIL_confirm : <<extend>>
+BIL_payments <.. BIL_refund : <<extend>>
+MAI_supervise <.. MAI_assign : <<extend>>
+MAI_handle <.. MAI_accept : <<extend>>
+MAI_handle <.. MAI_start : <<extend>>
+MAI_handle <.. MAI_resolve : <<extend>>
+MAI_handle <.. MAI_close : <<extend>>
+ANA_analytics <.. ANA_heat : <<extend>>
+ANA_analytics <.. ANA_forecast : <<extend>>
+ORG_staff <.. ORG_invite : <<extend>>
+PLA_orgs <.. PLA_provision : <<extend>>
+PLA_orgs <.. PLA_suspend : <<extend>>
+TEN_book ..> TEN_check : <<include>>
+APP_finalize ..> APP_checkdoc : <<include>>
+
+note as N1
+  Every use case of a signed-in actor «include»s
+  **Authenticate**. The Visitor needs no account.
+end note
+@enduml

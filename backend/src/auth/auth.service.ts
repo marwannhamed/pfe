@@ -113,8 +113,10 @@ export class AuthService {
       },
     });
 
+    // Same answer for an unknown email and a wrong password, so the login
+    // form cannot be used to find out which addresses have an account.
     if (!user) {
-      throw new NotFoundException(`No user found for email: ${email}`);
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -132,7 +134,7 @@ export class AuthService {
           newValues: { email: user.email, reason: 'invalid_password' },
         },
       );
-      throw new UnauthorizedException('Invalid password!');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const { accessToken, refreshToken, sessionId } =
